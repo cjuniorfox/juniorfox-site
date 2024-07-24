@@ -21,7 +21,7 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use("/assets", express.static(path.resolve(__dirname, 'assets')))
 
 //Routes
-app.use("/", require("./routes/web"))
+app.use("/", require("./routes"))
 
 app.listen(app.get("port"), () =>
   console.log("Server started on port " + app.get("port"))

@@ -9,6 +9,7 @@ router.use( async (req, res, next) =>{
 })
 
 router.use("/",require("./home"))
+router.use("/article/",require("./article"))
 
 router.use((req, res) => {
     res.redirect("/404")
