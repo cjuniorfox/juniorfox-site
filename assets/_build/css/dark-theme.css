@@ -1,0 +1,14 @@
+body.dark-mode {
+  background-color: #1e1e1e;
+  color: #333333;
+}
+
+a.dark-mode {
+  color: #99caff;
+}
+a.dark-mode:hover {
+  text-decoration: none;
+  color: #66b0ff;
+}
+
+/*# sourceMappingURL=dark-theme.css.map */

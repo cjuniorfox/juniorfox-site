@@ -1,0 +1,93 @@
+/* Variables for colors */
+@import 'variables';
+@import 'styles';
+@import 'dark-theme';
+
+/* Base styles */
+body {
+    font-family: Arial, sans-serif;
+    color: $text-color;
+    background-color: $light-background-color;
+}
+
+/* Header styles */
+header {
+    background-color: $link-color;
+    color: $light-background-color;
+    padding: 10px;
+    nav ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        li {
+            display: inline-block;
+            margin-right: 10px;
+            a {
+                color: $light-background-color;
+                text-decoration: none;
+                &:hover {
+                    text-decoration: underline;
+                }
+            }
+        }
+    }
+}
+
+/* Main styles */
+main {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px;
+    .article-content {
+        /* Styles for article content */
+        p {
+            margin-bottom: 10px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    }
+    aside {
+        /* Styles for sidebar */
+        width: 25%;
+        h2 {
+            margin-bottom: 10px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            li {
+                margin-bottom: 5px;
+                a {
+                    color: $link-color;
+                    text-decoration: none;
+                    &:hover {
+                        text-decoration: underline;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* Footer styles */
+footer {
+    text-align: center;
+    padding: 10px;
+    background-color: $link-color;
+    color: $light-background-color;
+}
+
+/* Dark theme */
+body[data-theme='dark'] {
+    background-color: $dark-background-color;
+    color: $light-background-color;
+    header,
+    footer {
+        background-color: $dark-background-color;
+        color: $light-background-color;
+    }
+}

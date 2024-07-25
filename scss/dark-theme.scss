@@ -1,0 +1,15 @@
+@import 'variables';
+
+// Dark theme styles
+body.dark-mode {
+    background-color: $dark-background-color;
+    color: $text-color;
+}
+
+a.dark-mode {
+    color: lighten($link-color, 30%);
+    &:hover {
+        text-decoration: none;
+        color: lighten($link-color, 20%);
+    }
+}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="//localhost:35729/livereload.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/assets/_build/css/main.css">
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/default.min.css">
+    <title>Your IT Blog</title>
+</head>
+<body class="<%= darkModeClass %>">
+    <header>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/articles">Articles</a></li>
+                <li><a href="/about">About</a></li>
+                <!-- Add more navigation links as needed -->
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <!-- Article Section -->
+        <%- body %>
+        <!-- Sidebar Section (optional) -->
+        <aside>
+            <h2>Recent Posts</h2>
+            <ul>
+                <li><a href="/articles/article1">Article 1</a></li>
+                <li><a href="/articles/article2">Article 2</a></li>
+                <!-- Add more recent posts or categories -->
+            </ul>
+        </aside>
+    </main>
+    <footer>
+        <p>Contact: info@example.com | Follow us on social media: <a href="#">Twitter</a>, <a href="#">Facebook</a></p>
+        <p>&copy; 2024 Your IT Blog. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>

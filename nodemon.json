@@ -1,0 +1,10 @@
+{
+  "execMap": {
+    "js": "node --inspect"
+  },
+  "ext": "js,ejs,scss",
+  "events": {
+    "start": "",
+    "restart": "npm run scss"
+  }
+}
