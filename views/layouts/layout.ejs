@@ -1,41 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="//localhost:35729/livereload.js"></script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/assets/_build/css/main.css">
-    <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/default.min.css">
-    <title>Your IT Blog</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/assets/_build/css/main.css"> <!-- Assuming main.css is the compiled file -->
+  <title>Your IT Blog</title>
 </head>
 <body class="<%= darkModeClass %>">
-    <header>
-        <nav>
-            <ul>
-                <li><a href="/">Home</a></li>
-                <li><a href="/articles">Articles</a></li>
-                <li><a href="/about">About</a></li>
-                <!-- Add more navigation links as needed -->
-            </ul>
-        </nav>
-    </header>
-    <main>
-        <!-- Article Section -->
-        <%- body %>
-        <!-- Sidebar Section (optional) -->
-        <aside>
-            <h2>Recent Posts</h2>
-            <ul>
-                <li><a href="/articles/article1">Article 1</a></li>
-                <li><a href="/articles/article2">Article 2</a></li>
-                <!-- Add more recent posts or categories -->
-            </ul>
-        </aside>
-    </main>
-    <footer>
-        <p>Contact: info@example.com | Follow us on social media: <a href="#">Twitter</a>, <a href="#">Facebook</a></p>
-        <p>&copy; 2024 Your IT Blog. All rights reserved.</p>
-    </footer>
-
+  <header>
+    <nav>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/article">Articles</a></li>
+        <li><a href="/about">About</a></li>
+      </ul>
+    </nav>
+    <div class="toggle-container">
+      <label for="toggle-dark-mode">Dark Mode</label>
+      <input type="checkbox" id="toggle-dark-mode">
+    </div>
+  </header>
+  <main>
+    <!-- Article Section -->
+    <div class="article-content">
+      <%- body %>
+    </div>
+    <!-- Sidebar Section (optional) -->
+    <aside>
+      <h2>Recent Posts</h2>
+      <ul>
+        <% articles.forEach(article => { %>
+            <li><a href="/articles/<%= article %>"><%= article %></a></li>
+        <% }) %>
+      </ul>
+    </aside>
+  </main>
+  <footer>
+    <p>Contact: info@example.com | Follow us on social media: <a href="#">Twitter</a>, <a href="#">Facebook</a></p>
+    <p>&copy; 2024 Your IT Blog. All rights reserved.</p>
+  </footer>
+  <script src="/assets/js/dark-mode-toggle.js"></script>
 </body>
 </html>

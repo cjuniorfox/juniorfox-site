@@ -1,4 +1,15 @@
-$light-background-color: #ffffff;
-$dark-background-color: #1e1e1e;
-$text-color: #333333;
+// Define your color variables
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;
+
+$text-color: #333;
+$light-background-color: #f8f9fa;
 $link-color: #007bff;
+$dark-background-color: #1e1e1e;
+$footer-dark: #02264c;
+$text-color-dark: #ffffff;
+$link-color-dark: #99caff;
+$code-background-color: #d9dde1;
+$code-background-color-dark : #292a2a;

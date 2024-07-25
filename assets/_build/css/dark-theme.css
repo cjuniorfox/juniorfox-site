@@ -26,7 +26,10 @@ body.dark-mode .article-content a {
   color: #99caff;
 }
 body.dark-mode .article-content pre {
-  background-color: #191b1a;
+  background-color: #292a2a;
+}
+body.dark-mode .article-content code {
+  background-color: #292a2a;
 }
 
 a.dark-mode {

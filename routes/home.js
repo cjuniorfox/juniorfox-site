@@ -1,15 +1,11 @@
 const express = require("express")
-const hljs = require('highlight.js/lib/core');
-hljs.registerLanguage('javascript', require('highlight.js/lib/languages/javascript'));
+const getArticlesList = require("../lib/get-articles-list")
 
 const router = express.Router()
 
 router.get("/", async (req, res) => {
-    const highlightedCode = hljs.highlight(
-        'hljs.registerLanguage(\'javascript\', javascript);',
-        { language: 'javascript' }
-      ).value
-    res.render("home/",{code:highlightedCode,darkModeClass: res.locals.darkMode})
+    
+    res.render("home/",{articles:getArticlesList(),darkModeClass: res.locals.darkMode})
 })
 
 module.exports = router;

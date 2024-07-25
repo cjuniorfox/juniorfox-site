@@ -1,10 +1,7 @@
 const express = require("express")
-const router = express("router")
+const router = express.Router()
 
 router.use( async (req, res, next) =>{
-    console.log(req.headers['sec-ch-ua'])
-    const prefersDarkMode = req.headers['sec-ch-ua'] && req.headers['sec-ch-ua'].includes('Dart');
-    res.locals.darkMode = prefersDarkMode ? 'dark-mode' : '';
     next()
 })
 
