@@ -1,3 +1,12 @@
+---
+title: "Old iPad as a Second Screen"
+date: "2024-07-25"
+author: "Carlos junior"
+category: "Linux"
+brief: "Have a new life to an old iPad as a very capable second screen using Moonlight and Sunshine"
+image: "/path/to/image.jpg"
+keywords : ["ipad","second screen", "windows", "linux", "hyprland", "moonlight", "sunshine", "apple", "retina display"]
+---
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Sunshine and Moonlight](#sunshine-and-moonlight)
