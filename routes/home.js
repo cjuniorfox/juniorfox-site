@@ -1,5 +1,5 @@
 const express = require("express")
-const getArticlesList = require("../lib/get-articles-list")
+const getArticlesList = require("../utils/get-articles-list")
 
 const router = express.Router()
 
@@ -8,4 +8,4 @@ router.get("/", async (req, res) => {
     res.render("home/",{articles:getArticlesList(),darkModeClass: res.locals.darkMode})
 })
 
-module.exports = router;
+module.exports = router

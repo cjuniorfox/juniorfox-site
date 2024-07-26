@@ -4,14 +4,14 @@
 @import 'pieces/toggle';
 @import 'article'; // Import the article styles
 
-/* Base styles */
+
 body {
   font-family: Arial, sans-serif;
   color: $text-color;
   background-color: $light-background-color;
 }
 
-/* Header styles */
+
 header {
   display: flex;
   justify-content: space-between;
@@ -41,7 +41,6 @@ header {
   }
 }
 
-/* Toggle container styles */
 .toggle-container {
   display: flex;
   align-items: center;
@@ -52,13 +51,13 @@ header {
   }
 
   input[type="checkbox"] {
-    width: 30px; /* Smaller width */
-    height: 15px; /* Smaller height */
+    width: 30px; 
+    height: 15px; 
     -webkit-appearance: none;
     appearance: none;
     background-color: #ccc;
     outline: none;
-    border-radius: 15px; /* Adjusted for smaller size */
+    border-radius: 15px;
     position: relative;
     cursor: pointer;
     transition: background-color 0.3s;
@@ -67,15 +66,15 @@ header {
       background-color: #2196F3;
 
       &::before {
-        transform: translateX(15px); /* Adjusted for smaller size */
+        transform: translateX(15px);
       }
     }
 
     &::before {
       content: "";
       position: absolute;
-      width: 13px; /* Smaller size */
-      height: 13px; /* Smaller size */
+      width: 13px;
+      height: 13px;
       border-radius: 50%;
       background-color: white;
       top: 1px;
@@ -85,7 +84,6 @@ header {
   }
 }
 
-/* Main styles */
 main {
   display: flex;
   flex-direction: column;
