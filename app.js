@@ -17,6 +17,13 @@ app.use(express.static(path.join(__dirname)))
 app.use(expressLayouts)
 app.use(bodyParser.urlencoded({ extended: false }))
 
+// Global Variables Middleware
+app.use((req, res, next) => {
+  res.locals.title = "Carlos Junior";
+  res.locals.darkModeClass = req.headers['sec-ch-ua'] && req.headers['sec-ch-ua'].includes('Dart') ? 'dark-mode' : '';
+  next();
+});
+
 //Locals
 app.use("/assets", express.static(path.resolve(__dirname, 'assets')))
 
