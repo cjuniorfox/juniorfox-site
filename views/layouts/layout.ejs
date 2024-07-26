@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="/assets/_build/css/main.css"> <!-- Assuming main.css is the compiled file -->
-  <title>Your IT Blog</title>
+  <link rel="stylesheet" href="/assets/_build/css/main.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/default.min.css" id="hljs-light-theme">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/atom-one-dark.min.css" id="hljs-dark-theme" disabled>
+  <title><%= title %></title>
 </head>
 <body class="<%= darkModeClass %>">
   <header>
@@ -27,10 +29,14 @@
     </div>
     <!-- Sidebar Section (optional) -->
     <aside>
-      <h2>Recent Posts</h2>
       <ul>
         <% articles.forEach(article => { %>
-            <li><a href="/articles/<%= article %>"><%= article %></a></li>
+          <li>
+            <a href="/articles/<%= article.name %>">
+              <h3><%= article.title %></h3>
+              <p><small>By <%= article.author %> on <%= article.date %></small></p>
+            </a>
+          </li>
         <% }) %>
       </ul>
     </aside>
