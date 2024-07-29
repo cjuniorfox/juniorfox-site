@@ -24,7 +24,7 @@ other-langs : [{"lang":"en","article":"old-ipad-as-a-second-screen"}]
    - [Driver de Display Virtual](#driver-de-display-virtual)
    - [Sunshine](#sunshine)
    - [Configuração do Sunshine no Windows](#configuração-do-sunshine-no-windows)
-5. [Instalar Moonlight no seu iPad antigo](#instalar-moonlight-no-seu-ipad-antigo)
+5. [Instalar Moonlight no iPad antigo](#instalar-moonlight-no-ipad-antigo)
 6. [Configurar Moonlight](#configurar-moonlight)
    - [Solução de Problemas](#solução-de-problemas)
    - [Desconectar](#desconectar)
@@ -250,13 +250,13 @@ _Se você não souber qual é o nome, o Sunshine tem uma ferramenta para isso. V
 
 Só um detalhe: A instalação do Sunshine estará vinculada a esta tela, mesmo que você queira jogar remotamente. Então, você precisará fazer algumas configurações manuais para usar o Sunshine para outros propósitos além de estender a tela.
 
-## Instalar o Moonlight no seu iPad antigo
+## Instalar Moonlight no iPad antigo
 
 Como mencionado no inicio, a Apple quer que eu jogue fora meu iPad 3ª geração perfeitamente funcional em um aterro sanitário e gaste uma fortuna em um novo, e eles fazem isso ao deixar de oferecer suporte para dispositivos antigos. A receita é simples. Eles param de lançar novas versões do sistema operacional, fazendo com que esses dispositivos fiquem presos a uma versão mais antiga do SO, enquanto deixam de oferecer suporte ao software para o SO que está rodando nele, tornando o sistema desatualizado e inseguro. O tempo passa, e o suporte é retirado programa a programa, tornando o dispositivo inútil. Este iPad não é capaz de rodar aplicativos nativos para nenhuma das principais redes sociais ou clientes de e-mail, mesmo sendo fisicamente capaz de fazê-lo. Isso é **obsolescência programada**, literalmente, porque seus servidores são programados para tornar esses dispositivos obsoletos. Por causa disso, instalar novos aplicativos nesses dispositivos antigos não é uma tarefa fácil. Se você tem o aplicativo na sua biblioteca e esse ofereceu suporte para a versão do iOS que está rodando no gadget em algum momento no passado, sorte sua, pois a Apple ainda oferece a opção de instalar uma versão mais antiga do aplicativo, que atende às nossas necessidades no caso do Moonlight. Se você não tinha o software na sua biblioteca, sinto muito, mas você está em uma situação ruim, porque a Apple não permite que você adicione software desatualizado à sua biblioteca. Para superar isso, você tem duas opções. A mais fácil é ter um dispositivo iOS mais novo (novamente, a Apple implorando para gastar uma fortuna em um novo dispositivo) e nele, se a versão do iOS que está rodando for suficientemente mais nova, você poderá adicionar o **Moonlight** à sua biblioteca através deste dispositivo e, em seguida, instalar uma versão mais antiga no seu dispositivo mais antigo. Por sorte minha, minha prima gentilmente me deu um iPhone 6s que serve bem para esse propósito. A outra maneira é usar alguma solução de jailbreak que eu não abordo neste artigo. Já criei muitos problemas com a Apple e não quero criar um novo.
 
 ![Moonlight no iPad Antigo](/assets/images/old-ipad-as-a-second-screen/moonlight-on-ancient-ipad.webp)
 
-## Configurar o Moonlight
+## Configurar Moonlight
 
 A partir deste momento, é apenas uma questão de configurar o Moonlight no seu Tablet. Este passo é autoexplicativo, mas, de qualquer forma, vamos fazer juntos.
 
@@ -278,7 +278,7 @@ A partir deste momento, é apenas uma questão de configurar o Moonlight no seu 
 - Se você tiver um espelho da tela principal ou receber um erro mencionando que não foi possível iniciar o aplicativo, verifique se você criou corretamente o script para adicionar a tela virtual (Linux), certificando-se de que o script está de acordo com o seu Compositor e a Configuração do Sunshine.
 - (Linux) Se você não instalou a versão Flatpak do Sunshine e, em vez disso, instalou o pacote para a sua distro, remova `flatpak-spawn --host` dos comandos na etapa de configuração do Aplicativo.
 
-### Desconectando
+### Desconectar
 
 - Quando terminar de usar a segunda tela, volte deslizando a tela para trás, mantenha o dedo na aplicação `Second Screen` e toque em `Quit app`. A tela virtual criada ficará indisponível.
 
