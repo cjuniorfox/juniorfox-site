@@ -26,8 +26,12 @@
         <span class="bar"></span>
       </div>
       <ul class="nav-list">
-        <li><a href="/"><%= lang.home %></a></li>
-        <li><a href="/article"><About Me></a></li>
+        <li><a href="/">
+            <%= __('home') %>
+          </a></li>
+        <li><a href="/article">
+            <%= __('aboutMe') %>
+          </a></li>
         <li><a href="https://github.com/cjuniorfox/">Github</a></li>
         <li><a href="https://www.linkedin.com/in/carlos-anselmo-mendes-junior-35543031/">LinkedIn</a></li>
         <li class="dark-mode-toggle-container">
@@ -49,7 +53,7 @@
   <footer>
     <div class="footer-content">
       <p class="footer-left">
-        Carlos Junior &copy; <%= new Date().getFullYear() %>
+        <%= __('footer_text', { year: new Date().getFullYear() }) %>
       </p>
       <p class="footer-right">
         <a href="https://github.com/cjuniorfox/">Github</a>

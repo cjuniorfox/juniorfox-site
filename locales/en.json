@@ -1,0 +1,7 @@
+{
+    "home":"Home",
+    "aboutMe" : "About Me",
+    "darkMode" : "Dark Mode",
+    "footer_text": "Carlos Junior &copy; {{year}}",
+    "notFoundText" : "This page does not exists"
+}

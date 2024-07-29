@@ -27,6 +27,7 @@
     "fs": "^0.0.1-security",
     "gray-matter": "^4.0.3",
     "highlight.js": "^11.10.0",
+    "i18n": "^0.15.1",
     "livereload": "^0.9.3",
     "marked": "^13.0.2",
     "marked-highlight": "^2.1.3",
