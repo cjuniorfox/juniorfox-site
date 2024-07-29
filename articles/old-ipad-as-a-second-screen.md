@@ -6,7 +6,8 @@ category: "Linux"
 brief: "Have a new life to an old iPad as a very capable second screen using Moonlight and Sunshine"
 image: "/assets/images/old-ipad-as-a-second-screen/ipad-as-monitor.webp"
 keywords : ["ipad","second screen", "windows", "linux", "hyprland", "moonlight", "sunshine", "apple", "retina display"]
-langs : [{"lang":"pt","article":"antigo-pad-como-segunda-tela"}]
+lang : "en"
+other-langs : [{"lang":"pt","article":"antigo-ipad-como-segunda-tela"}]
 ---
 ## Table of Contents
 
