@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const matter = require('gray-matter');
+const calculateReadingTime = require('./calculate-reading-time')
 
 function getArticlesList() {
   const articlesDir = path.join(__dirname, '..', 'articles');
@@ -11,7 +12,8 @@ function getArticlesList() {
       const fileContent = fs.readFileSync(filePath, 'utf8');
       const { data: metadata, content } = matter(fileContent);
       const articleName = file.replace('.md', '');
-      return { name: articleName, ...metadata };
+      const readingTime = calculateReadingTime(content)
+      return { name: articleName, ...metadata, readingTime: readingTime };
     });
 }
 

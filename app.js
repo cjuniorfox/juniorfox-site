@@ -5,6 +5,7 @@ const express = require("express")
 const expressLayouts = require("express-ejs-layouts")
 const path = require("path")
 const bodyParser = require("body-parser")
+const getArticlesList = require('./utils/get-articles-list');
 
 const app = express()
 
@@ -19,8 +20,9 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 // Global Variables Middleware
 app.use((req, res, next) => {
-  res.locals.title = "Carlos Junior";
-  res.locals.darkModeClass = req.headers['sec-ch-ua'] && req.headers['sec-ch-ua'].includes('Dart') ? 'dark-mode' : '';
+  articles = getArticlesList()
+  title = "Carlos Junior";
+  darkModeClass= res.locals.darkModeClass;
   next();
 });
 

@@ -8,7 +8,6 @@ const calculateReadingTime = require('../utils/calculate-reading-time');
 const { markedHighlight } = require('marked-highlight');
 const hljs = require('highlight.js');
 const router = express.Router();
-const getArticlesList = require('../utils/get-articles-list');
 
 const renderer = new marked.Renderer();
 renderer.heading = function (text, level) {
@@ -44,8 +43,7 @@ router.get("/:articleName", (req, res) => {
     const { data: metadata, content } = matter(data);
     const htmlContent = marked.parse(content);
     const readingTime = calculateReadingTime(content);
-    res.render('article', {
-      articles: getArticlesList(), 
+    res.render('article', { 
       title: metadata.title,
       author: metadata.author,
       date: metadata.date,
@@ -54,7 +52,7 @@ router.get("/:articleName", (req, res) => {
       keywords: metadata.keywords,
       image: metadata.image,
       content: htmlContent, 
-      darkModeClass: res.locals.darkMode,
+      
       readingTime: readingTime
     })
   });

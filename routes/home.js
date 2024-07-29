@@ -5,7 +5,7 @@ const router = express.Router()
 
 router.get("/", async (req, res) => {
     
-    res.render("home/",{articles:getArticlesList(),darkModeClass: res.locals.darkMode})
+    res.render("home/")
 })
 
 module.exports = router
