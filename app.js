@@ -7,6 +7,7 @@ const expressLayouts = require("express-ejs-layouts");
 const path = require("path");
 const bodyParser = require("body-parser");
 const i18n = require('i18n');
+const moment = require('moment');
 const getArticlesList = require('./utils/get-articles-list');
 
 const app = express();
@@ -37,7 +38,9 @@ app.use((req, res, next) => {
   res.locals.articles = getArticlesList();
   res.locals.title = "Carlos Junior";
   res.locals.darkModeClass = res.locals.darkModeClass || '';
-  res.locals.__ = res.__; // Make the translation function available in views
+  res.locals.__ = res.__;
+  res.locals.moment = moment;
+  res.locals.locale = req.getLocale();
   next();
 });
 

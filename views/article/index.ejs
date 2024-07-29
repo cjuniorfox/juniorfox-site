@@ -5,7 +5,7 @@
         <div class="article-metadata">
             <h4><%= author %></h4>
             <div class="article-data-content">
-                <small><time><%= date %></time> • <%=__('readingTime',{min:readingTime}) %></small>
+                <small><time><%= moment(date).locale(locale).format('LL') %></time> • <%=__('readingTime',{min:readingTime}) %></small>
             </div>
         </div>
     </div>   

@@ -11,7 +11,7 @@
             <p><small><%= article.category %></small></p>
             <h1> <%= article.title %></h1>
             <p> <%= article.brief %> </p>
-            <p> <%= __('authorDate',{author:article.author,date:article.date}) %> </p>
+            <p> <%= __('authorDate',{author:article.author,date:moment(article.date).locale(locale).format('LL')}) %> </p>
             <p><small> <%=__('readingTime',{min:article.readingTime}) %> </small></p>
           </div>
         </a>
