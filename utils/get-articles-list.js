@@ -15,7 +15,8 @@ function getArticlesList(lang) {
       const readingTime = calculateReadingTime(content);
       return { name: articleName, ...metadata, readingTime: readingTime };
     })
-    .filter(article => article.lang === lang);
+    .filter(article => article.lang === lang)
+    .sort((a,b) => new Date(b.date) - new Date(a.date));
 }
 
 module.exports = getArticlesList;

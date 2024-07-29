@@ -9,6 +9,7 @@
   <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
   <script src="/assets/js/dark-mode-toggle.js"></script>
   <script src="/assets/js/mobile-menu.js"></script>
+  <script src="/assets/js/language-toggle.js"></script>
   <title><%= title %></title>
 </head>
 <body class="<%= darkModeClass %>">
@@ -21,12 +22,19 @@
       </div>
       <ul class="nav-list">
         <li><a href="/"><%= __('home') %></a></li>
-        <li><a href="/article"><%= __('aboutMe') %></a></li>
+        <li><a href="/article/about-me"><%= __('aboutMe') %></a></li>
         <li><a href="https://github.com/cjuniorfox/">Github</a></li>
         <li><a href="https://www.linkedin.com/in/carlos-anselmo-mendes-junior-35543031/">LinkedIn</a></li>
         <li class="dark-mode-toggle-container">
           <label for="toggle-dark-mode"><%= __('darkMode') %></label>
           <input type="checkbox" id="toggle-dark-mode">
+        </li>
+        <li class="language-selector">
+          <label for="language-select"><%= __('language') %></label>
+          <select id="language-select">
+            <option value="en" <%= locale === 'en' ? 'selected' : '' %>>English</option>
+            <option value="pt" <%= locale === 'pt' ? 'selected' : '' %>>Português</option>
+          </select>
         </li>
       </ul>
     </nav>

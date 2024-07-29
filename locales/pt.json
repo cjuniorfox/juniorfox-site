@@ -5,5 +5,6 @@
     "footer_text": "Carlos Junior &copy; {{year}}",
     "notFoundText": "Essa página não existe.",
     "authorDate": "Por {{author}} em {{date}}",
-    "readingTime": "{{min}} minutos de leitura."
+    "readingTime": "{{min}} minutos de leitura.",
+    "language": "Idioma"
 }
