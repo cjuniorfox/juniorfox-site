@@ -1,4 +1,3 @@
-// assets/js/dark-mode-toggle.js
 document.addEventListener('DOMContentLoaded', () => {
   const toggleButton = document.getElementById('toggle-dark-mode')
   const currentTheme = localStorage.getItem('theme')
@@ -6,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const lightThemeLink = document.getElementById('hljs-light-theme')
   const darkThemeLink = document.getElementById('hljs-dark-theme')
 
-  let darkMode = false
+  let darkMode9 = false
   if (currentTheme) {
     darkMode = currentTheme === 'dark-mode'
   } else {
