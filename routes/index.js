@@ -1,16 +1,19 @@
-const express = require("express")
-const router = express.Router()
+const express = require("express");
+const router = express.Router();
 
-router.use( async (req, res, next) =>{
-    next()
-})
+router.use("/", require("./home"));
+router.use("/article", require("./article"));
 
-router.use("/",require("./home"))
-router.use("/article/",require("./article"))
+// Language switch route
+router.get('/lang/:locale', (req, res) => {
+    res.cookie('locale', req.params.locale);
+    res.setLocale(req.params.locale);
+    res.redirect('back');
+});
 
-
+// 404 route
 router.use((req, res) => {
-    res.redirect("/404")
-})
+    res.status(404).render("404");
+});
 
-module.exports = router
+module.exports = router;

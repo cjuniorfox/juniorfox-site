@@ -1,22 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/assets/_build/css/main.css">
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/default.min.css"
-    id="hljs-light-theme">
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/atom-one-dark.min.css"
-    id="hljs-dark-theme" disabled>
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/default.min.css" id="hljs-light-theme">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/atom-one-dark.min.css" id="hljs-dark-theme" disabled>
   <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
   <script src="/assets/js/dark-mode-toggle.js"></script>
   <script src="/assets/js/mobile-menu.js"></script>
-  <title>
-    <%= title %>
-  </title>
+  <title><%= title %></title>
 </head>
-
 <body class="<%= darkModeClass %>">
   <header>
     <nav class="nav-container">
@@ -26,34 +20,26 @@
         <span class="bar"></span>
       </div>
       <ul class="nav-list">
-        <li><a href="/">
-            <%= __('home') %>
-          </a></li>
-        <li><a href="/article">
-            <%= __('aboutMe') %>
-          </a></li>
+        <li><a href="/"><%= __('home') %></a></li>
+        <li><a href="/article"><%= __('aboutMe') %></a></li>
         <li><a href="https://github.com/cjuniorfox/">Github</a></li>
         <li><a href="https://www.linkedin.com/in/carlos-anselmo-mendes-junior-35543031/">LinkedIn</a></li>
         <li class="dark-mode-toggle-container">
-          <label for="toggle-dark-mode">Dark Mode</label>
+          <label for="toggle-dark-mode"><%= __('darkMode') %></label>
           <input type="checkbox" id="toggle-dark-mode">
         </li>
       </ul>
     </nav>
   </header>
-
   <main>
-    <!-- Article Section -->
     <div class="article-content">
       <%- body %>
     </div>
-    <!-- Sidebar Section (optional) -->
-
   </main>
   <footer>
     <div class="footer-content">
       <p class="footer-left">
-        <%= __('footer_text', { year: new Date().getFullYear() }) %>
+        <%-__('footer_text', { year: new Date().getFullYear() }) %>
       </p>
       <p class="footer-right">
         <a href="https://github.com/cjuniorfox/">Github</a>
@@ -62,5 +48,4 @@
     </div>
   </footer>
 </body>
-
 </html>
