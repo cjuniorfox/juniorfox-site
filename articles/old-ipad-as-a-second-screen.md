@@ -120,13 +120,13 @@ What Linux has in security and reliability, it lacks in automatically configurin
 </service>
 ```
 
-2. Reload firewalld to make the service available:
+2. Reload `firewalld` to make the service available:
 
 ```bash
 sudo firewall-cmd reload
 ```
 
-3. Add the newly created service to the local network zone. By default, firewalld configures the default adapter to the public zone or home zone. You can check what zone with the command `sudo firewall-cmd --get-zone-of-interface=enp6s0` assuming that your network adapter is named enp6s0. In my case, the zone of my network adapter is home. So let's add the service to the home zone:
+3. Add the newly created service to the local network zone. By default, firewalld configures the default adapter to the public zone or home zone. You can check what zone with the command `sudo firewall-cmd --get-zone-of-interface=enp6s0` assuming that your network adapter is named `enp6s0`. In my case, the zone of my network adapter is home. So let's add the service to the home zone:
 
 ```bash
 sudo firewall-cmd --add-service=sunshine --zone=home
@@ -137,7 +137,9 @@ sudo firewall-cmd --runtime-to-permanent
 
 ### Script for adding the virtual screen
 
-A little disclaimer: This script is for Hyprland. If you're using another compositor like Gnome, KDE, or Sway, you must adapt the commands accordingly to your compositor. Also, the intended resolution is for the iPad 3rd generation. Configure the resolution to match the gadget you should use as a second monitor. Create the file `/home/username/.local/bin/virtual-screen.sh` with the following content:
+A little disclaimer: This script is for Hyprland. If you're using another compositor like Gnome, KDE, or Sway, you must adapt the commands accordingly to your compositor. Also, the intended resolution is for the iPad 3rd generation. Configure the resolution to match the gadget you should use as a second monitor. 
+
+- Create the file `/home/username/.local/bin/virtual-screen.sh` with the following content:
 
 ```bash
 RESOLUTION=1024x768
@@ -216,20 +218,20 @@ As mentioned, Windows doesn't offer an out-of-the-box solution for creating a ne
 2048,1536, 60
 ```
 
-5. **IMPORTANT!** Right-click on the `installCert.bat` file and click on `Run as Administrator`. 
-   - Ignore the concerned message of Windows bragging "I protected your computer" by clicking on `more information` and then, on `Execute anyway`. 
-   - Click on `Yes` on the other concerned message about security. 
-6. Open `Device Manager` by typing `device manager` in the search box from the taskbar. 
-7. Click on any device and then, on `Action` button and `Add legacy driver` menu item. 
-   - You will be presented with a Wizard. Click on `Next`. 
-   - Click on `Add from a list` and on `Next`. 
-   - Select `Display adapters` and click on `Next`. 
-   - Click on `Have disk`, and `Search` and go to the directory you unzipped `IddSampleDriver` containing the `.inf` file. 
-   - Select the only option `Virtual Display Driver by MTT` and click on `Next` and `Next`. 
+5. **IMPORTANT!** Right-click on the `installCert.bat` file and click on `Run as Administrator`.
+   - Ignore the concerned message of Windows bragging "I protected your computer" by clicking on `more information` and then, on `Execute anyway`.
+   - Click on `Yes` on the other concerned message about security.
+6. Open `Device Manager` by typing `device manager` in the search box from the taskbar.
+7. Click on any device and then, on `Action` button and `Add legacy driver` menu item.
+   - You will be presented with a Wizard. Click on `Next`.
+   - Click on `Add from a list` and on `Next`.
+   - Select `Display adapters` and click on `Next`.
+   - Click on `Have disk`, and `Search` and go to the directory you unzipped `IddSampleDriver` containing the `.inf` file.
+   - Select the only option `Virtual Display Driver by MTT` and click on `Next` and `Next`.
 
 If everything goes as intended, the screen will make a little close as a "vignette" and open up again. That means that the display driver was successfully installed and is working. The `option.txt` at the `C:\IddSampleDriver` contains all the modes enabled. You can add or remove resolutions as your needs. In my case, 1024x768 and 2048x1536 are the only resolutions I intend to use.
 
-To enable and disable the display, you'll need to manually enable and disable the `Display options` with a `right-click` on your desktop.
+To enable and disable the display, you'll need to manually enable and disable the `Display options` with a right-click on your desktop.
 
 ### Sunshine
 
@@ -243,7 +245,7 @@ Here we configure it in a similar way as we did on Linux. Because I know that if
 2. Ignore the security risk warning and click on "Go anyway".
 3. Configure your username and password and update the page.
 4. Log in with the newly created credentials.
-5. Go to the output name and type the correct display name for the virtual display.
+5. Click on `configuration`, `Audio/Video` and on the field `output name`, insert the correct name for your virtual display.
 
 _If you don't know what the name is, Sunshine has a tool for that. Just open the containing installation of Sunshine `C:\\Program Files\\Sunshine\\tools`. Right-click, open in Terminal, and then type `dxgi-info.exe`. Mine was named `.\\DISPLAY9`._
 
@@ -251,7 +253,7 @@ Just one more thing. With that, the Sunshine installation will be tied to this d
 
 ## Install Moonlight on your ancient iPad
 
-As mentioned in my disclaimer, Apple wants me to throw away my perfectly working iPad 3rd generation into a landfill and spend a grand on a new one, and they do that by dropping support for old devices. The recipe is simple. They cease new operating system releases, making these devices stuck on an older version of the OS, while dropping the software support for the OS running on it, making the system outdated and insecure. Time passes, and the support is being dropped software by software, making the device useless. This iPad isn't capable of running native apps for all mainstream social networks or email clients, even being physically capable of doing so. This is programmed obsolescence, literally speaking, because their servers are programmed to do so. With that in mind, installing new software on these older devices is not an easy task. If you have the software in your library and this software offered support for the iOS version running on the gadget at some moment in the past, lucky you. Apple still offers the choice of installing an older version of the app, which is up to our needs in the case of Moonlight. If you didn't have the software in your library, sorry to say, but you are in a bad situation because Apple doesn't allow you to add outdated software to your library. To overcome that, you have two choices. The easiest one is having a newer device (again, Apple begging you to spend a grand on a new one). On this newer device, if the iOS version running on it is sufficiently newer, you will be allowed to add Moonlight to your library through this device and then, install the older version on your older device. Lucky for me, my cousin kindly gave me an iPhone 6s that serves that purpose well. The other way around is using some jailbreak solution that I do not get into in this article. I already have created many problems with Apple and don't want to create a new one.
+As mentioned in my disclaimer, Apple wants me to throw away my perfectly working iPad 3rd generation into a landfill and spend a grand on a new one, and they do that by dropping support for old devices. The recipe is simple. They cease new operating system releases, making these devices stuck on an older version of the OS, while dropping the software support for the OS running on it, making the system outdated and insecure. Time passes, and the support is being dropped app by app, making the device useless. This iPad isn't capable of running native apps for all mainstream social networks or email clients, even being physically capable of doing so. This is **programmed obsolescence**, literally speaking, because their servers are programmed to do so. With that in mind, installing new software on these older devices is not an easy task. If you have the app in your library and this app offered support for the iOS version running on the gadget at some moment in the past, lucky you. Apple still offers the choice of installing an older version of the app, which is up to our needs in the case of Moonlight. If you didn't have the software in your library, sorry to say, but you are in a bad situation because Apple doesn't allow you to add outdated software to your library. To overcome that, you have two choices. The easiest one is having a newer device (again, Apple begging you to spend a grand on a new one). On this newer device, if the iOS version running on it is sufficiently newer, you will be allowed to add Moonlight to your library through this device and then, install the older version on your older device. Lucky for me, my cousin kindly gave me an iPhone 6s that serves that purpose well. The other way around is using some jailbreak solution that I do not get into in this article. I already have created many problems with Apple and don't want to create a new one.
 
 ![Moonlight on Ancient iPad](/assets/images/old-ipad-as-a-second-screen/moonlight-on-ancient-ipad.webp)
 
@@ -264,7 +266,7 @@ From this moment on, it's just a matter of configuring Moonlight on your Tablet.
 
 2. **Pair Your Devices**:
    - Tap your computer. A pin-number will be displayed on your Tablet.
-   - Go to your computer, browse to `http://localhost:47990`, log in, and click on the Pin tab.
+   - Go to your computer, browse to `http://localhost:47990`, log in, and click on the **Pin** tab.
    - Input the PIN displayed on your Tablet. The padlock will disappear.
 
 3. **Select the Second Screen**:
@@ -274,8 +276,8 @@ From this moment on, it's just a matter of configuring Moonlight on your Tablet.
 
 ### Troubleshooting
 
-- If instead, you have a mirror of the main display or got an error mentioning that it was unable to start the application, verify if you correctly created the script for adding the virtual screen, making sure that the script is up to your Compositor and the Sunshine Configuration.
-- If you haven't installed the Flatpak version of Sunshine and, instead, installed the package for your distro, remove `flatpak-spawn --host` from the commands on the Application configuration step.
+- If you have a mirror of the main display or got an error mentioning that it was unable to start the application, verify if you correctly created the script for adding the virtual screen (Linux), making sure that the script is up to your Compositor and the Sunshine Configuration.
+- (Linux) If you haven't installed the Flatpak version of Sunshine and, instead, installed the package for your distro, remove `flatpak-spawn --host` from the commands on the Application configuration step.
 
 ### Disconnecting
 
