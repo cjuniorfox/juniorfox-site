@@ -6,8 +6,10 @@ category: "Linux"
 brief: "Have a new life to an old iPad as a very capable second screen using Moonlight and Sunshine"
 image: "/assets/images/old-ipad-as-a-second-screen/ipad-as-monitor.webp"
 keywords : ["ipad","second screen", "windows", "linux", "hyprland", "moonlight", "sunshine", "apple", "retina display"]
+langs : [{"lang":"pt","article":"antigo-pad-como-segunda-tela"}]
 ---
 ## Table of Contents
+
 1. [Introduction](#introduction)
 2. [Sunshine and Moonlight](#sunshine-and-moonlight)
 3. [Linux](#linux)
@@ -15,12 +17,12 @@ keywords : ["ipad","second screen", "windows", "linux", "hyprland", "moonlight",
    - [Create a service for "setcap" on Sunshine](#create-a-service-for-setcap-on-sunshine)
    - [Firewall](#firewall)
    - [Script for adding the virtual screen](#script-for-adding-the-virtual-screen)
-   - [Sunshine Configuration](#sunshine-configuration)
+   - [Sunshine Configuration on Linux](#sunshine-configuration-on-linux)
 4. [Windows](#windows)
    - [HDMI Headless Dongle](#hdmi-headless-dongle)
    - [Virtual Display Driver](#virtual-display-driver)
    - [Sunshine](#sunshine)
-   - [Sunshine Configuration](#sunshine-configuration-1)
+   - [Sunshine Configuration on Windows](#sunshine-configuration-on-windows)
 5. [Install Moonlight on your ancient iPad](#install-moonlight-on-your-ancient-ipad)
 6. [Setup Moonlight](#setup-moonlight)
    - [Troubleshooting](#troubleshooting)
@@ -154,9 +156,7 @@ else
 fi
 ```
 
-### Sunshine Configuration
-
-
+### Sunshine Configuration on Linux
 
 If you successfully made it this far, you have Sunshine successfully installed and working on your machine. Now it's time to configure it. Open your web browser and access the following URL: `http://localhost:47990`. Configure your username and password by typing them twice as mentioned on the page. Reload the page with F5, and you should be redirected to the main page. If everything is working as intended, you should have a page mostly like this.
 
@@ -164,20 +164,24 @@ If you successfully made it this far, you have Sunshine successfully installed a
 
 If instead, you have a big red alert on your screen, redo the steps above to fix the issue.
 With everthing up and working, do as followws:
+
 1. At very top of the page, click on `Configuration`, and then, the tab `Audio/Video`.
 2. Set the field `Display Number` as 1. If you have additional displays connected to you computer, set this value as 2 if you have two monitors, if you have three, set as 3 and so on.
 3. At very top of the page click on `Applications`. Here we need to add the commands for creating the virtual screen to be shared by Sunshine with the iPad or your gadget device.
    - Click on add. 
    - Define `Application Name` as `Second Screen`. 
    - At `command preparations`, click on the green plus `(+)` button. 
-   - Add on `Do Command` as 
-      ```
-      flatpak-spawn --host /home/username/.local/bin/virtual-screen.sh create
-      ```
+   - Add on `Do Command` as
+
+```sh
+   flatpak-spawn --host /home/username/.local/bin/virtual-screen.sh create
+```
+
    - To the `Undo Command`, set it as 
-      ```
-      flatpak-spawn --host /home/username/.local/bin/virtual-screen.sh remove
-      ```
+
+```sh
+   flatpak-spawn --host /home/username/.local/bin/virtual-screen.sh remove
+```
 
 ## Windows
 
@@ -195,18 +199,23 @@ The intent for this little dongle is to trick Windows and the Display Adapter in
 ### Virtual Display Driver
 
 As mentioned, Windows doesn't offer an out-of-the-box solution for creating a new screen. If you don't want to use a dongle because you don't have one or because you don't have a spare HDMI output hanging around, and you want a better suitable configuration for the output resolution and even HDR support, the answer is installing the `virtual display driver` that creates a `virtual display adapter` emulating the behavior of connecting a monitor to that adapter. We do this by installing this software: [Virtual Display Driver](https://github.com/itsmikethetech/Virtual-Display-Driver). So, do as follows:
+
 1. Download the Driver from [here](https://github.com/itsmikethetech/Virtual-Display-Driver). 
 2. Unzip the file and, on `Windows Explorer` go to the directory `IddSampleDriver`.
 3. Open another `Windows Explorer` window and at very top of `C:` drive, create the directory 
-   ```
+
+```cmd
    C:\IddSampleDriver
-   ```
+```
+
 4. Copy the file `option.txt` from the downloaded folder to `C:\IddSampleDriver` or create your own file. This file contains all available modes to your new adapter. I created mine one as follows:
-   ```txt
-   1
-   1024, 768, 60
-   2048,1536, 60
-   ```
+
+```txt
+1
+1024, 768, 60
+2048,1536, 60
+```
+
 5. **IMPORTANT!** Right-click on the `installCert.bat` file and click on `Run as Administrator`. 
    - Ignore the concerned message of Windows bragging "I protected your computer" by clicking on `more information` and then, on `Execute anyway`. 
    - Click on `Yes` on the other concerned message about security. 
@@ -226,7 +235,7 @@ To enable and disable the display, you'll need to manually enable and disable th
 
 While the Virtual Display Driver is a little junky setup, installing Sunshine on Windows is a walk on the beach. Just download the latest release for the software from their [Github](https://github.com/LizardByte/Sunshine/releases/), and install it, again, ignoring the concerns of Windows.
 
-### Sunshine Configuration
+### Sunshine Configuration on Windows
 
 Here we configure it in a similar way as we did on Linux. Because I know that if you're installing the Windows version, you didn't read a word for the Linux installation, I'll repeat some steps. But if you did (let's be honest, I know you didn't), you'll see many resemblances, but they are not identical.
 
@@ -235,8 +244,8 @@ Here we configure it in a similar way as we did on Linux. Because I know that if
 3. Configure your username and password and update the page.
 4. Log in with the newly created credentials.
 5. Go to the output name and type the correct display name for the virtual display.
-   
-   *If you don't know what the name is, Sunshine has a tool for that. Just open the containing installation of Sunshine `C:\\Program Files\\Sunshine\\tools`. Right-click, open in Terminal, and then type `dxgi-info.exe`. Mine was named `.\\DISPLAY9`.*
+
+_If you don't know what the name is, Sunshine has a tool for that. Just open the containing installation of Sunshine `C:\\Program Files\\Sunshine\\tools`. Right-click, open in Terminal, and then type `dxgi-info.exe`. Mine was named `.\\DISPLAY9`._
 
 Just one more thing. With that, the Sunshine installation will be tied to this display, even if you are willing to play remotely. So, you'll need to do some ricing to use Sunshine for other purposes apart from extending the display.
 
@@ -264,13 +273,13 @@ From this moment on, it's just a matter of configuring Moonlight on your Tablet.
    - Tap on the **Second Screen** `Linux` or **Desktop** `Windows`. You will see the second display on your tablet.
 
 ### Troubleshooting
-   - If instead, you have a mirror of the main display or got an error mentioning that it was unable to start the application, verify if you correctly created the script for adding the virtual screen, making sure that the script is up to your Compositor and the Sunshine Configuration.
-   - If you haven't installed the Flatpak version of Sunshine and, instead, installed the package for your distro, remove `flatpak-spawn --host` from the commands on the Application configuration step.
+
+- If instead, you have a mirror of the main display or got an error mentioning that it was unable to start the application, verify if you correctly created the script for adding the virtual screen, making sure that the script is up to your Compositor and the Sunshine Configuration.
+- If you haven't installed the Flatpak version of Sunshine and, instead, installed the package for your distro, remove `flatpak-spawn --host` from the commands on the Application configuration step.
 
 ### Disconnecting
-   - When you're done using the second screen, go back by swiping back the screen, hold the finger on the `Second Screen` application, and tap `Quit app`. The created virtual screen will be unavailable.
 
-![Placeholder for Setup Moonlight Image](URL)
+- When you're done using the second screen, go back by swiping back the screen, hold the finger on the `Second Screen` application, and tap `Quit app`. The created virtual screen will be unavailable.
 
 ## Conclusion
 
