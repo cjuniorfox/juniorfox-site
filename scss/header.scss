@@ -1,0 +1,134 @@
+header {
+    background-color: $link-color;
+    color: $light-background-color;
+    padding: 10px 20px;
+
+    .nav-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            border: 1px solid $light-background-color;
+            border-radius: 5px;
+            padding: 5px;
+            cursor: pointer;
+
+            .bar {
+                width: 25px;
+                height: 3px;
+                border-radius: 2px;
+                background-color: $light-background-color;
+                margin: 3px 0;
+                transition: 0.4s;
+            }
+
+            &.active .bar:nth-child(1) {
+                transform: rotate(-45deg) translate(-6px, 6px);
+            }
+
+            &.active .bar:nth-child(2) {
+                opacity: 0;
+            }
+
+            &.active .bar:nth-child(3) {
+                transform: rotate(45deg) translate(-6px, -6px);
+            }
+        }
+
+        .nav-list {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center; // Ensure items are aligned vertically
+            transition: max-height 0.4s ease-out;
+            overflow: hidden;
+
+            li {
+                display: inline-block;
+                margin-right: 10px;
+
+                a,
+                label {
+                    // Style label similarly to anchor tags
+                    color: $light-background-color;
+                    text-decoration: none;
+                    cursor: pointer;
+
+                    &:hover {
+                        text-decoration: underline;
+                    }
+                }
+            }
+
+            .dark-mode-toggle-container {
+                display: flex;
+                align-items: center; // Align items vertically
+                margin-right: 10px; // Ensure consistent spacing
+
+                input[type="checkbox"] {
+                    width: 30px;
+                    height: 15px;
+                    -webkit-appearance: none;
+                    appearance: none;
+                    background-color: #ccc;
+                    outline: none;
+                    border-radius: 15px;
+                    position: relative;
+                    cursor: pointer;
+                    transition: background-color 0.3s;
+
+                    &:checked {
+                        background-color: #2196F3;
+
+                        &::before {
+                            transform: translateX(15px);
+                        }
+                    }
+
+                    &::before {
+                        content: "";
+                        position: absolute;
+                        width: 13px;
+                        height: 13px;
+                        border-radius: 50%;
+                        background-color: white;
+                        top: 1px;
+                        left: 1px;
+                        transition: transform 0.3s;
+                    }
+                }
+            }
+        }
+    }
+
+    @media (max-width: $breakpoint-md) {
+        .nav-container {
+            .menu-toggle {
+                display: flex;
+            }
+
+            .nav-list {
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+                text-align: center;
+                max-height: 0; // Initially hide the menu
+
+                li {
+                    margin: 10px 0;
+                }
+            }
+
+            .nav-list.active {
+                max-height: 500px;
+            }
+        }
+    }
+}

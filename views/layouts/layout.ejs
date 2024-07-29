@@ -1,50 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/assets/_build/css/main.css">
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/default.min.css" id="hljs-light-theme">
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/atom-one-dark.min.css" id="hljs-dark-theme" disabled>
-  <title><%= title %></title>
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/default.min.css"
+    id="hljs-light-theme">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/atom-one-dark.min.css"
+    id="hljs-dark-theme" disabled>
+  <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
+  <script src="/assets/js/dark-mode-toggle.js"></script>
+  <script src="/assets/js/mobile-menu.js"></script>
+  <title>
+    <%= title %>
+  </title>
 </head>
+
 <body class="<%= darkModeClass %>">
   <header>
-    <nav>
-      <ul>
-        <li><a href="/">Home</a></li>
-        <li><a href="/article">Articles</a></li>
-        <li><a href="/about">About</a></li>
+    <nav class="nav-container">
+      <div class="menu-toggle" id="mobile-menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </div>
+      <ul class="nav-list">
+        <li><a href="/"><%= lang.home %></a></li>
+        <li><a href="/article"><About Me></a></li>
+        <li><a href="https://github.com/cjuniorfox/">Github</a></li>
+        <li><a href="https://www.linkedin.com/in/carlos-anselmo-mendes-junior-35543031/">LinkedIn</a></li>
+        <li class="dark-mode-toggle-container">
+          <label for="toggle-dark-mode">Dark Mode</label>
+          <input type="checkbox" id="toggle-dark-mode">
+        </li>
       </ul>
     </nav>
-    <div class="toggle-container">
-      <label for="toggle-dark-mode">Dark Mode</label>
-      <input type="checkbox" id="toggle-dark-mode">
-    </div>
   </header>
+
   <main>
     <!-- Article Section -->
     <div class="article-content">
       <%- body %>
     </div>
     <!-- Sidebar Section (optional) -->
-    <aside>
-      <ul>
-        <% articles.forEach(article => { %>
-          <li>
-            <a href="/articles/<%= article.name %>">
-              <h3><%= article.title %></h3>
-              <p><small>By <%= article.author %> on <%= article.date %></small></p>
-            </a>
-          </li>
-        <% }) %>
-      </ul>
-    </aside>
+
   </main>
   <footer>
-    <p>Contact: info@example.com | Follow us on social media: <a href="#">Twitter</a>, <a href="#">Facebook</a></p>
-    <p>&copy; 2024 Your IT Blog. All rights reserved.</p>
+    <div class="footer-content">
+      <p class="footer-left">
+        Carlos Junior &copy; <%= new Date().getFullYear() %>
+      </p>
+      <p class="footer-right">
+        <a href="https://github.com/cjuniorfox/">Github</a>
+        <a href="https://www.linkedin.com/in/carlos-anselmo-mendes-junior-35543031/">LinkedIn</a>
+      </p>
+    </div>
   </footer>
-  <script src="/assets/js/dark-mode-toggle.js"></script>
 </body>
+
 </html>

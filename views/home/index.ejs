@@ -1,13 +1,21 @@
-<h1><%= title %></h1>
-  <ul>
-    <% articles.forEach(article => { %>
-      <li>
+<h1>
+  <%= title %>
+</h1>
+<ul class="article-list">
+  <% articles.forEach(article=> { %> 
+    <li class="article-item">
+      <article>
         <a href="/article/<%= article.name %>">
           <img src="<%= article.image %>" alt="<%= article.title %>">
-          <h3><%= article.title %></h3>
-          <p><%= article.brief %></p>
-          <p><small>By <%= article.author %> on <%= article.date %></small></p>
+          <div class="article-details">
+            <p><small><%= article.category %></small></p>
+            <h1> <%= article.title %></h1>
+            <p> <%= article.brief %> </p>
+            <p>By <%= article.author %> on <%= article.date %> </p>
+            <p><small> <%=article.readingTime %> min read</small></p>
+          </div>
         </a>
-      </li>
+      </article>
+    </li>
     <% }) %>
-  </ul>
+</ul>

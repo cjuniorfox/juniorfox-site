@@ -1,12 +1,14 @@
 <article>
-    <p><small><%= category %></small></p>
-    <h1><%= title %></h1>
-    <div class="article-metadata">
-        <h4><%= author %></h4>
-        <div class="article-data-content">
-            <small><time><%= date %></time> • <%= readingTime %> min read</small>
+    <div class="article-header">
+        <p><small><%= category %></small></p>
+        <h1><%= title %></h1>
+        <div class="article-metadata">
+            <h4><%= author %></h4>
+            <div class="article-data-content">
+                <small><time><%= date %></time> • <%= readingTime %> min read</small>
+            </div>
         </div>
-    </div>
+    </div>   
     <div class="article-content">    
         <%- content %>
     </div>

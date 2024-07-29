@@ -37,6 +37,16 @@ body.dark-mode {
     
         color: $text-color-dark;
     }
+
+    .article-list {
+        article{
+            background-color: #222;
+            border-color: #333;
+        }
+        a{
+            color:#fff;
+        }
+    }
 }
 
 a.dark-mode {
@@ -47,3 +57,4 @@ a.dark-mode {
         color: lighten($link-color, 20%);
     }
 }
+

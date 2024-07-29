@@ -1,8 +1,10 @@
 /* Variables for colors */
 @import 'variables';
 @import 'dark-theme';
+@import 'home';
 @import 'pieces/toggle';
-@import 'article'; // Import the article styles
+@import 'article';
+@import 'header';
 
 
 body {
@@ -11,85 +13,11 @@ body {
   background-color: $light-background-color;
 }
 
-
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: $link-color;
-  color: $light-background-color;
-  padding: 10px;
-
-  nav ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-
-    li {
-      display: inline-block;
-      margin-right: 10px;
-
-      a {
-        color: $light-background-color;
-        text-decoration: none;
-
-        &:hover {
-          text-decoration: underline;
-        }
-      }
-    }
-  }
-}
-
-.toggle-container {
-  display: flex;
-  align-items: center;
-
-  label {
-    margin-right: 10px;
-    color: $light-background-color;
-  }
-
-  input[type="checkbox"] {
-    width: 30px; 
-    height: 15px; 
-    -webkit-appearance: none;
-    appearance: none;
-    background-color: #ccc;
-    outline: none;
-    border-radius: 15px;
-    position: relative;
-    cursor: pointer;
-    transition: background-color 0.3s;
-
-    &:checked {
-      background-color: #2196F3;
-
-      &::before {
-        transform: translateX(15px);
-      }
-    }
-
-    &::before {
-      content: "";
-      position: absolute;
-      width: 13px;
-      height: 13px;
-      border-radius: 50%;
-      background-color: white;
-      top: 1px;
-      left: 1px;
-      transition: transform 0.3s;
-    }
-  }
-}
-
 main {
-  display: flex;
-  flex-direction: column;
   margin: 20px auto;
   max-width: 1200px;
   padding: 0 20px;
+
 
   @media (min-width: $breakpoint-md) {
     flex-direction: row;
@@ -97,9 +25,6 @@ main {
   }
 
   .article-content {
-    flex: 1;
-    margin-right: 20px;
-
     @media (max-width: $breakpoint-md) {
       margin-right: 0;
     }
@@ -140,12 +65,38 @@ main {
 
 /* Footer styles */
 footer {
-  text-align: center;
-  padding: 10px;
-  background-color: $link-color;
-  color: $light-background-color;
+  background-color: $footer;
+  color: #ffffff;
+  padding: 10px 20px;
 
-  a {
-    color: $light-background-color;
+  .footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+
+    @media (max-width: $breakpoint-md) {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .footer-left,
+    .footer-right {
+      margin: 0;
+    }
+
+    .footer-right {
+      a {
+        color: #ffffff;
+        margin-left: 10px;
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
   }
 }
