@@ -3,7 +3,7 @@ const path = require('path');
 const matter = require('gray-matter');
 const calculateReadingTime = require('./calculate-reading-time')
 
-function getArticlesList() {
+function getArticlesList(lang) {
   const articlesDir = path.join(__dirname, '..', 'articles');
   return fs.readdirSync(articlesDir)
     .filter(file => file.endsWith('.md'))
@@ -12,9 +12,10 @@ function getArticlesList() {
       const fileContent = fs.readFileSync(filePath, 'utf8');
       const { data: metadata, content } = matter(fileContent);
       const articleName = file.replace('.md', '');
-      const readingTime = calculateReadingTime(content)
+      const readingTime = calculateReadingTime(content);
       return { name: articleName, ...metadata, readingTime: readingTime };
-    });
+    })
+    .filter(article => article.lang === lang);
 }
 
 module.exports = getArticlesList;
