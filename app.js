@@ -35,7 +35,6 @@ app.use(i18n.init);
 
 // Global Variables Middleware
 app.use((req, res, next) => {
-  res.locals.articles = getArticlesList();
   res.locals.title = "Carlos Junior";
   res.locals.darkModeClass = res.locals.darkModeClass || '';
   res.locals.__ = res.__;
