@@ -26,12 +26,6 @@ const highlight = markedHighlight({
 marked.use({ renderer }, highlight)
 
 
-router.get("/", (req, res) => {
-  const articles = getArticlesList();
-  res.render("index", { title: "Home", articles })
-})
-
-
 router.get("/:articleName", (req, res) => {
   const articleName = req.params.articleName
   const filePath = path.join(__dirname, '..', 'articles', `${articleName}.md`)
@@ -43,7 +37,14 @@ router.get("/:articleName", (req, res) => {
     const { data: metadata, content } = matter(data);
     const htmlContent = marked.parse(content);
     const readingTime = calculateReadingTime(content);
-    res.render('article', { 
+    if (metadata.lang && metadata.lang != res.locals.locale && metadata['other-langs']) {
+      const otherLangs = metadata['other-langs'];
+      const matchingLang = otherLangs.find(langObj => langObj.lang === res.locals.locale);
+      if (matchingLang) {
+        return res.redirect(`/article/${matchingLang.article}`);
+      }
+    }
+    res.render('article/article', {
       title: metadata.title,
       author: metadata.author,
       date: metadata.date,
@@ -51,8 +52,7 @@ router.get("/:articleName", (req, res) => {
       brief: metadata.brief,
       keywords: metadata.keywords,
       image: metadata.image,
-      content: htmlContent, 
-      
+      content: htmlContent,
       readingTime: readingTime
     })
   });
