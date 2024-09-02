@@ -2,6 +2,8 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 const express = require("express");
+require('dotenv').config();
+const mongoose = require('mongoose');
 const cookieParser = require("cookie-parser")
 const expressLayouts = require("express-ejs-layouts");
 const path = require("path");
@@ -28,6 +30,14 @@ app.use(cookieParser())
 app.use(express.static(path.join(__dirname)));
 app.use(expressLayouts);
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+
+const mongoURI = `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`;
+mongoose.connect(mongoURI, {
+  serverSelectionTimeoutMS: 5000
+})
+.then(() => console.log('MongoDB connected...'))
+.catch(err => console.log('MongoDB connection error:', err));
 
 
 // Initialize i18n

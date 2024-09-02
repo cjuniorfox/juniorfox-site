@@ -21,7 +21,7 @@
   "homepage": "https://github.com/cjuniorfox/juniorfox-net#readme",
   "dependencies": {
     "cookie-parser": "^1.4.6",
-    "ejs": "^3.1.9",
+    "ejs": "^3.1.10",
     "express": "^4.19.2",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.18.0",
@@ -30,19 +30,20 @@
     "highlight.js": "^11.10.0",
     "i18n": "^0.15.1",
     "livereload": "^0.9.3",
-    "marked": "^13.0.2",
-    "marked-highlight": "^2.1.3",
+    "marked": "^13.0.3",
+    "marked-highlight": "^2.1.4",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.45",
+    "mongoose": "^8.6.0",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "path": "^0.12.7",
     "prismjs": "^1.29.0",
-    "sass": "^1.74.1",
+    "sass": "^1.77.8",
     "slugify": "^1.6.6"
   },
   "devDependencies": {
     "dotenv": "^16.4.5",
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.4"
   }
 }
