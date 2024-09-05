@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const voteSchema = new mongoose.Schema({
-    ip: String,
+    userUUID: String,
     articleId: String,
     vote: Number, // 1 for upvote, -1 for downvote
     timestamp: { type: Date, default: Date.now }
