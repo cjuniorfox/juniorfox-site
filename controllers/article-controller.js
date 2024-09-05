@@ -20,7 +20,7 @@ const highlight = markedHighlight({
     return hljs.highlight(code, { language }).value;
   }
 })
-
+2
 module.exports = {
     article: (req, res) => {
         const articleName = req.params.articleName
