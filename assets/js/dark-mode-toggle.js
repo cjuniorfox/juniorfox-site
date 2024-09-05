@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const lightThemeLink = document.getElementById('hljs-light-theme')
   const darkThemeLink = document.getElementById('hljs-dark-theme')
 
-  let darkMode9 = false
+  let darkMode
   if (currentTheme) {
     darkMode = currentTheme === 'dark-mode'
   } else {
