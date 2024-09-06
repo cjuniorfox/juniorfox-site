@@ -1,0 +1,23 @@
+name: Build and Push Image to GHCR
+
+on:
+    push:
+        branches:
+            - develop
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v2
+
+        - name: Build Image
+          id: build_image
+          uses: redhat-actions/buildah-build@v2
+          with:
+            containerfiles: |
+                ./app/Containerfile
+            image: ${{ github.event.repository.name}}
+            oci: false
