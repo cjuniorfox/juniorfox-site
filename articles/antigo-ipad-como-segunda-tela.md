@@ -1,5 +1,6 @@
 ---
 title: "Antigo iPad como segunda tela"
+articleId: "old-ipad-as-a-second-screen"
 date: "2024-07-25"
 author: "Carlos Junior"
 category: "Linux"
