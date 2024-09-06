@@ -1,11 +1,25 @@
+<script src="/assets/js/vote.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        await updateVotes("<%=articleId%>");
+        await disableArrows("<%=articleId%>");
+    });
+</script>
 <article>
     <div class="article-header">
-        <p><small><%= category %></small></p>
-        <h1><%= title %></h1>
-        <div class="article-metadata">
-            <h4><%= author %></h4>
-            <div class="article-data-content">
-                <small><time><%= moment(date).locale(locale).format('LL') %></time> • <%=__('readingTime',{min:readingTime}) %></small>
+        <div class="vote-buttons">
+            <button onclick="vote('<%=articleId%>',1)" id="upvote">▲</button>
+            <div id="vote-count">&nbsp;</div>
+            <button onclick="vote('<%=articleId%>',-1)" id="downvote">▼</button>
+        </div>
+        <div>
+            <p><small><%= category %></small></p>
+            <h1><%= title %></h1>
+            <div class="article-metadata">
+                <h4><%= author %></h4>
+                <div class="article-data-content">
+                    <small><time><%= moment(date).locale(locale).format('LL') %></time> • <%=__('readingTime',{min:readingTime}) %></small>
+                </div>
             </div>
         </div>
     </div>   
@@ -15,5 +29,4 @@
     <p class="keywords">
         keywords: <%= keywords.join(' • ') %>
     </p>
-    
 </article>
