@@ -1,8 +1,9 @@
 ---
 title: "About Me"
+articleId: "about-me"
 date: "2024-07-20"
 author: "Carlos Junior"
-category: "personal"
+category: "Personal"
 brief: "Brief description about the creator of this blog site"
 image: "/assets/images/about-me/own-photo.webp"
 keywords: ["about"]
