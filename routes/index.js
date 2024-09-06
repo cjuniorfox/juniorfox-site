@@ -3,7 +3,7 @@ const router = express.Router();
 
 router.use("/", require("./home"));
 router.use("/article", require("./article"));
-router.use("/vote", require("./vote"))
+router.use("/api", require("./rest-api"))
 
 // Language switch route
 router.get('/lang/:locale', (req, res) => {
