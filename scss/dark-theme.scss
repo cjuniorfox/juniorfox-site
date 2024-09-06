@@ -4,17 +4,21 @@
 body.dark-mode {
     background-color: $dark-background-color;
     color: $text-color-dark;
+
     header {
         background-color: $footer-dark;
     }
-    
+
     footer {
         text-align: center;
         padding: 10px;
         background-color: $footer-dark;
         color: $text-color-dark;
     }
+
     .article-content {
+        color: $text-color-dark;
+
         h1,
         h2,
         h3,
@@ -23,28 +27,42 @@ body.dark-mode {
         h6 {
             color: $link-color-dark;
         }
+
         a {
             color: $link-color-dark;
+        }
+
+        .vote-buttons {
+            button {
+                color: $link-color-dark;
+
+                &:disabled {
+                    color: $link-color-disabled-dark;
+                }
+
+                 &:not(:disabled):hover {
+                    color: darken($link-color-dark, 10%);
+                }
+            }
         }
 
         pre {
             background-color: $code-background-color-dark;
         }
 
-        code { 
+        code {
             background-color: $code-background-color-dark;
         }
-    
-        color: $text-color-dark;
     }
 
     .article-list {
-        article{
+        article {
             background-color: #222;
             border-color: #333;
         }
-        a{
-            color:#fff;
+
+        a {
+            color: #fff;
         }
     }
 }
@@ -57,4 +75,3 @@ a.dark-mode {
         color: lighten($link-color, 20%);
     }
 }
-

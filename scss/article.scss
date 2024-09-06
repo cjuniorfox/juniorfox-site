@@ -1,36 +1,74 @@
 /* General styles for the article */
 article {
 
-  .article-header{
+  .article-header {
     width: 800px;
     margin: 30px auto;
+    display: flex;
+    align-items: center;
+
+    .vote-buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-right: 20px;
+
+      button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.5em;
+        color: $link-color;
+
+        &:disabled {
+          color: $link-color-disabled;
+          cursor: default;
+        }
+
+        &:not(:disabled):hover {
+          color: darken($link-color, 10%);
+        }
+      }
+
+      #vote-count {
+        font-size: 1.2em;
+        margin: 5px 0;
+      }
+    }
+
     h1 {
       font-size: 2em;
       margin: 0.3em 0;
     }
+
     .article-metadata {
-      h1,h4 {
+
+      h1,
+      h4 {
         margin: 0;
       }
+
       .article-data-content {
         opacity: 50%;
       }
     }
   }
-  
-  
-  .keywords{
+
+
+  .keywords {
     font-size: 0.7em;
     opacity: 50%;
     padding: 2em;
     font-style: italic;
   }
+
   .article-content {
     font-family: Arial, sans-serif;
     line-height: 1.6;
     color: $text-color;
     margin: 20px auto;
     width: 800px;
+
     img {
       width: 100%;
       margin-left: auto;
@@ -38,7 +76,7 @@ article {
       border-radius: 5px;
     }
 
-    h1{
+    h1 {
       font-size: 1em;
     }
 
