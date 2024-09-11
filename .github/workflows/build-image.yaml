@@ -60,4 +60,4 @@ jobs:
             peer ${{ secrets.ENDPOINT_PUBLIC }} \
             allowed-ips ${{ secrets.ALLOWED_IPS }} \
             endpoint ${{ secrets.ENDPOINT }}
-            ping -c 4 10.10.10.1
+          ping -c 4 10.10.10.1
