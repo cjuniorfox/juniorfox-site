@@ -55,5 +55,4 @@ jobs:
           sudo apt install wireguard
           echo echo "${{ secrets.PRIVATE }}" > privatekey
           sudo ip link add dev wg0 type wireguard
-          sudo ip address add dev wg0 ${{ secrets.IPS }}
-          
+         
