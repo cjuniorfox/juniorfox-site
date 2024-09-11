@@ -62,4 +62,5 @@ jobs:
             peer ${{ secrets.WG_ENDPOINT_PUBKEY }} \
             allowed-ips ${{ secrets.WG_ALLOWED_IPS }} \
             endpoint ${{ secrets.WG_ENDPOINT }}
+          sudo ip link set up dev wg0
           ping -c 4 10.10.10.1
