@@ -53,11 +53,12 @@ jobs:
       - name: Setup Wireguard
         run: |
           sudo apt install wireguard
-          echo ${{ secrets.WIREGUARD_PRIVATE_KEY }} > privatekey
+          echo "${{ secrets.WG_PRIVATE }}" 
+          echo "${{ secrets.WG_PRIVATE }}" > privatekey
           sudo ip link add dev wg0 type wireguard
           sudo ip address add dev wg0 10.10.10.4/27
           echo "Configuring wireguard connection"
-          sudo wg set wg0 listen-port 51820 private-key privatekey \
+          sudo wg set wg0 private-key privatekey \
             peer ${{ secrets.ENDPOINT_PUBLIC }} \
             allowed-ips ${{ secrets.ALLOWED_IPS }} \
             endpoint ${{ secrets.ENDPOINT }}
