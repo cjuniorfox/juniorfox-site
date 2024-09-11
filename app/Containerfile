@@ -1,20 +1,8 @@
-# Use the official Node.js image from the Docker Hub
-FROM node:14
-
-# Create and change to the app directory
+FROM node:20-alpine
+ENV NODE_ENV production
 WORKDIR /usr/src/app
-
-# Copy the package.json and package-lock.json files
-COPY package*.json ./
-
-# Install the dependencies
-RUN npm install
-
-# Copy the rest of the application code
-COPY . .
-
-# Expose the port the app runs on
+COPY --chown=node:node . /usr/src/app
+RUN npm ci --omit=dev
+USER node
 EXPOSE 3000
-
-# Define the command to run the app
-CMD ["node", "app.js"]
+CMD ["npm", "start"]

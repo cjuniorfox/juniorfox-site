@@ -11,16 +11,13 @@ jobs:
 
         steps:
         - name: Checkout repository
-          uses: actions/checkout@v2
-          with:
-            path: app
-            ref: develop
+          uses: actions/checkout@v4
 
         - name: Build Image
           id: build_image
           uses: redhat-actions/buildah-build@v2
           with:
             containerfiles: |
-                ./Containerfile
+                ./app/Containerfile
             image: ${{ github.event.repository.name}}
             oci: false
