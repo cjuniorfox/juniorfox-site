@@ -56,7 +56,7 @@ jobs:
           echo echo "${{ secrets.PRIVATE }}" > privatekey
           sudo ip link add dev wg0 type wireguard
           sudo ip address add dev wg0 ${{ secrets.IPS }}
-          wg set wg0 private-key privatekey \
+          sudo wg set wg0 private-key privatekey \
             peer ${{ secrets.ENDPOINT_PUBLIC }} \
             allowed-ips ${{ secrets.ALLOWED_IPS }} \
             endpoint ${{ secrets.ENDPOINT }}
