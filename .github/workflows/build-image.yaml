@@ -53,7 +53,7 @@ jobs:
       - name: Setup Wireguard
         run: |
           sudo apt install wireguard
-          echo echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > privatekey
+          echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > privatekey
           sudo ip link add dev wg0 type wireguard
           sudo ip address add dev wg0 10.10.10.4/27
           echo "Configuring wireguard connection"
