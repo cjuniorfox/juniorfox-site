@@ -20,6 +20,6 @@ jobs:
           uses: redhat-actions/buildah-build@v2
           with:
             containerfiles: |
-                ./Containerfile
+                ./app/Containerfile
             image: ${{ github.event.repository.name}}
             oci: false
