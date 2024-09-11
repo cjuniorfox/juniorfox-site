@@ -53,14 +53,13 @@ jobs:
       - name: Setup Wireguard
         run: |
           sudo apt install wireguard
-          echo "ip address ${{ secrets.WG_IP }}" 
           echo "${{ secrets.WG_PRIVATE }}" > privatekey
           sudo ip link add dev wg0 type wireguard
-          sudo ip address add dev wg0 ${{ secrets.WG_IP}}
+          sudo ip -4 address add ${{ secrets.WG_IP}} dev wg0 
           echo "Configuring wireguard connection"
           sudo wg set wg0 private-key privatekey \
             peer ${{ secrets.WG_ENDPOINT_PUBKEY }} \
             allowed-ips ${{ secrets.WG_ALLOWED_IPS }} \
             endpoint ${{ secrets.WG_ENDPOINT }}
-          sudo ip link set up dev wg0
-          ping -c 4 10.10.10.1
+          sudo ip link set mtu 1412 up dev wg0
+          ping -c 1 10.10.10.1
