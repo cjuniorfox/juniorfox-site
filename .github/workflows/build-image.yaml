@@ -22,10 +22,11 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           containerfiles: |
-              ./app/Containerfile
+              Containerfile
           image: ${{ github.event.repository.name}}
           oci: true
-      
+          workdir: ./app
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
