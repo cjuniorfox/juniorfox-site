@@ -31,7 +31,7 @@
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
-    "express": "^4.19.2",
+    "express": "^4.20.0",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.18.0",
     "fs": "^0.0.1-security",
@@ -43,16 +43,15 @@
     "marked-highlight": "^2.1.4",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.45",
-    "mongoose": "^8.6.1",
+    "mongoose": "^8.6.2",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "path": "^0.12.7",
     "prismjs": "^1.29.0",
-    "sass": "^1.77.8",
+    "sass": "^1.78.0",
     "slugify": "^1.6.6"
   },
   "devDependencies": {
-    
     "jest": "^29.7.0",
     "jest-mock": "^29.7.0",
     "mongo-unit": "^3.3.0",
