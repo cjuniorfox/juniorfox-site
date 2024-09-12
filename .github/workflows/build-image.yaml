@@ -81,8 +81,8 @@ jobs:
             podman pod create ${{ github.event.repository.name}}-pod
             podman run \
               --pull always \
-              --name ${{ github.event.repository.name}}
+              --name ${{ github.event.repository.name}} \
               --restart always \
-              --pod ${{ github.event.repository.name}}-pod
+              --pod ${{ github.event.repository.name}}-pod \
               "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name}}:latest"
           ENDSSH
