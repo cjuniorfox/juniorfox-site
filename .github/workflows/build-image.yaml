@@ -68,16 +68,20 @@ jobs:
           ping -c 1 10.10.10.1
 
       - name: Setup SSH key
+        # PRIVATE_SSH_KEY :: ssh-keygen -b 4096 -C "git@github.com" -f ./id_rsa.git
+        # on remote host, add id_rsa.pub to ~/.ssh/authorized_keys
         run: |
           env
           mkdir -p ~/.ssh
-          echo "${{ secrets.PRIVATE_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.PRIVATE_SSH_KEY }}" > ~/.ssh/id_rsa 
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p 22 ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
       
       - name: Deploy application on server
         run: |
           ssh -v ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }} << 'ENDSSH'
+            podman pod stop ${{ github.event.repository.name}}-pod
+            podman pod rm ${{ github.event.repository.name}}-pod
             podman pod create ${{ github.event.repository.name}}-pod
             podman run \
               --pull always \
