@@ -83,7 +83,7 @@ jobs:
             podman pod stop ${{ github.event.repository.name}}-pod
             podman pod rm ${{ github.event.repository.name}}-pod
             podman pod create ${{ github.event.repository.name}}-pod
-            podman run \
+            podman run -d \
               --pull always \
               --name ${{ github.event.repository.name}} \
               --restart always \
