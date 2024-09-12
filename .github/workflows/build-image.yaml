@@ -74,5 +74,5 @@ jobs:
           ssh-keyscan -p 22 ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
       - name: Deploy to server
         run: |
-          ssh -v ${{ secrets.SSH_USER }}@ ${{ secrets.ARTIFACT_HOST }} << 'ENDSSH'
+          ssh -v ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }} << 'ENDSSH'
           date >> teste.txt
