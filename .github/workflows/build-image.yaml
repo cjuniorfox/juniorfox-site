@@ -81,6 +81,10 @@ jobs:
           ssh-keyscan -p 22 ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
       - name: "Copy kubernetes files to the server"
         run: |
+          echo "creating directory for kube deployment"
+          ssh -v ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }} << 'ENDSSH'
+            mkdir ~/${{ github.event.repository.name }}
+          ENDSSH
           scp kubernetes/* ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }}:~/${{ github.event.repository.name }}
       
       - name: Deploy application on server
