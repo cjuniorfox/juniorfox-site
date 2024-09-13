@@ -8,7 +8,7 @@ export MONGO_DB="juniorfoxsite"
 cat <<EOF > secrets.json
 {
   "mongoUser": "${MONGO_USER}",
-  "mongoDatabase": ${MONGO_DB},
+  "mongoDatabase": "${MONGO_DB}",
   "mongoRootPassword": "$(echo -n ${MONGO_INITDB_PASSWORD} | base64)",
   "mongoPassword": "$(echo -n ${MONGO_PASS} | base64)"
 }
