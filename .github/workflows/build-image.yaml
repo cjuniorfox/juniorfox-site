@@ -81,11 +81,10 @@ jobs:
           ssh-keyscan -p 22 ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
       - name: "Copy kubernetes files to the server"
         run: |
-          scp kubernetes/* ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }}:~/
+          scp kubernetes/* ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }}:~/${{ github.event.repository.name}}/
       
       - name: Deploy application on server
         run: |
           ssh -v ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }} << 'ENDSSH'
-            podman kube down juniorfox-site.yaml
-            podman kube play juniorfox-site.yaml
+            podman kube play --replace ~/${{ github.event.repository.name}}/juniorfox-site.yaml
           ENDSSH
