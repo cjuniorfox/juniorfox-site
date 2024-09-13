@@ -13,9 +13,9 @@ data:
     mongo <<EOF
     use $MONGO_DBNAME
     db.createUser({
-      user: "$MONGO_USER",
-      pwd: "$MONGO_PASS",
-      roles: [{ role: "readWrite", db: "$MONGO_DBNAME" }]
+      "user" : "$MONGO_USER",
+      "pwd" : "$MONGO_PASS",
+      "roles" : [{ "role" : "readWrite", "db" : "$MONGO_DBNAME" }]
     })
     db.createCollection("Votes")
     db.createCollection("Users")
@@ -61,11 +61,11 @@ spec:
     - containerPort: 3000
       hostPort: 3000
   
-  - image: docker.io/library/mongo:3.6
+  - image: docker.io/library/mongo:4.4
     name: db
     env:
     - name: MONGO_INITDB_ROOT_USERNAME
-      value: admin
+      value: root
     - name: MONGO_INITDB_ROOT_PASSWORD
       valueFrom:
         secretKeyRef:
@@ -86,13 +86,23 @@ spec:
         secretKeyRef:
           name: juniorfox-site-secrets
           key: mongoDatabase
-    
     volumeMounts:
     - name: mongo-init-script
       mountPath: /docker-entrypoint-initdb.d/init-mongo.sh
       subPath: init-mongo.sh
       readOnly: true
+    - name: juniorfox-site-db-pvc
+      mountPath: /data/db
+    - name: juniorfox-site-configdb-pvc
+      mountPath: /data/configdb
+
   volumes:
   - name: mongo-init-script
     configMap:
       name: mongo-init-script
+  - name: juniorfox-site-db-pvc
+    persistentVolumeClaim:
+      claimName: juniorfox-site-db
+  - name: juniorfox-site-configdb-pvc
+    persistentVolumeClaim:
+      claimName: juniorfox-site-configdb
