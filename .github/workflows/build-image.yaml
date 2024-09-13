@@ -77,16 +77,16 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p 22 ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
       
-      - name: Deploy application on server
-        run: |
-          ssh -v ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }} << 'ENDSSH'
-            podman pod stop ${{ github.event.repository.name}}-pod
-            podman pod rm ${{ github.event.repository.name}}-pod
-            podman pod create ${{ github.event.repository.name}}-pod
-            podman run -d \
-              --pull always \
-              --name ${{ github.event.repository.name}} \
-              --restart always \
-              --pod ${{ github.event.repository.name}}-pod \
-              "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name}}:latest"
-          ENDSSH
+      #- name: Deploy application on server
+      #  run: |
+      #    ssh -v ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }} << 'ENDSSH'
+      #      podman pod stop ${{ github.event.repository.name}}-pod
+      #      podman pod rm ${{ github.event.repository.name}}-pod
+      #      podman pod create ${{ github.event.repository.name}}-pod
+      #      podman run -d \
+      #       --pull always \
+      #        --name ${{ github.event.repository.name}} \
+      #        --restart always \
+      #        --pod ${{ github.event.repository.name}}-pod \
+      #        "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name}}:latest"
+      #    ENDSSH
