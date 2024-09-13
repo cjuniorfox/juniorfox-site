@@ -81,7 +81,7 @@ jobs:
           ssh-keyscan -p 22 ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
       - name: "Copy kubernetes files to the server"
         run: |
-          scp kubernetes/* ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }}:~/${{ github.event.repository.name}}/
+          scp kubernetes/* ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }}:~/${{ github.event.repository.name }}
       
       - name: Deploy application on server
         run: |
