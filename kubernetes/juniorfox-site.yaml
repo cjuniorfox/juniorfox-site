@@ -11,14 +11,12 @@ data:
     done
 
     mongo <<EOF
-    use $MONGO_DBNAME
+    use ${MONGO_DBNAME}
     db.createUser({
-      "user" : "$MONGO_USER",
-      "pwd" : "$MONGO_PASS",
-      "roles" : [{ "role" : "readWrite", "db" : "$MONGO_DBNAME" }]
+      "user" : "${MONGO_USER}",
+      "pwd" : "${MONGO_PASS}",
+      "roles" : [{ "role" : "readWrite", "db" : "${MONGO_DBNAME}" }]
     })
-    db.createCollection("Votes")
-    db.createCollection("Users")
     EOF
     
 ---
@@ -33,11 +31,10 @@ spec:
   automountServiceAccountToken: false
   restartPolicy: Always
   containers:
-  - image: ghcr.io/cjuniorfox/juniorfox-site:latest
+  - image: localhost/juniorfox-site:develop
+  #- image: ghcr.io/cjuniorfox/juniorfox-site:latest
     name: site
     env:
-    - name: NODE_ENV
-      value: production
     - name: MONGO_USER
       valueFrom:
         secretKeyRef:
