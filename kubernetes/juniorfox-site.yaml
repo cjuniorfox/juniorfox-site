@@ -31,8 +31,8 @@ spec:
   automountServiceAccountToken: false
   restartPolicy: Always
   containers:
-  - image: localhost/juniorfox-site:develop
-  #- image: ghcr.io/cjuniorfox/juniorfox-site:latest
+  #- image: localhost/juniorfox-site:develop
+  - image: ghcr.io/cjuniorfox/juniorfox-site:latest
     name: site
     env:
     - name: MONGO_USER
