@@ -3,7 +3,7 @@ name: Build and Push Image to GHCR
 on:
   push:
     branches:
-    - develop
+    - master
 
 jobs:
     build_push:
