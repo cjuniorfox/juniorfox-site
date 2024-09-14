@@ -85,7 +85,7 @@ spec:
           key: mongoDatabase
     volumeMounts:
     - name: mongo-init-script
-      mountPath: /docker-entrypoint-initdb.d/init-mongo.sh
+      mountPath: /docker-entrypoint-initdb.d/
       subPath: init-mongo.sh
       readOnly: true
     - name: juniorfox-site-db-pvc
