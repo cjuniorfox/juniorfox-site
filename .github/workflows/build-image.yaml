@@ -83,7 +83,7 @@ jobs:
         run: |
           echo "creating directory for kube deployment"
           ssh -v ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }} << 'ENDSSH'
-            mkdir ~/${{ github.event.repository.name }}
+            mkdir -p ~/${{ github.event.repository.name }}
           ENDSSH
           scp kubernetes/* ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }}:~/${{ github.event.repository.name }}
       
