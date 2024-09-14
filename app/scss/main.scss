@@ -1,10 +1,10 @@
 /* Variables for colors */
-@import 'variables';
-@import 'dark-theme';
-@import 'home';
+@import '_variables';
+@import 'pieces/dark-theme';
 @import 'pieces/toggle';
-@import 'article';
-@import 'header';
+@import 'pieces/header';
+@import 'pages/home';
+@import 'pages/article';
 
 
 body {

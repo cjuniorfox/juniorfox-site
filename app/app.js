@@ -2,7 +2,6 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 const express = require("express");
-require('dotenv').config();
 const mongoose = require('mongoose');
 const cookieParser = require("cookie-parser")
 const expressLayouts = require("express-ejs-layouts");
@@ -32,7 +31,7 @@ app.use(expressLayouts);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-const mongoURI = `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`;
+const mongoURI = `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DBNAME}`;
 mongoose.connect(mongoURI, {
   serverSelectionTimeoutMS: 5000
 })

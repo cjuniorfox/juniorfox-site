@@ -129,4 +129,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-assets/_build/*
+**/assets/_build/
+**/secrets.yaml
+**/secrets.json
