@@ -1,134 +1,99 @@
-# MongoDB Setup with Node.js
+# Juniorfox.net Node.js Website
 
-This guide will help you set up a MongoDB container using Podman, create a database schema, create a `votingUser`, and configure a username and password for your Node.js application.
+This project is a Node.js-based website that uses Markdown files as articles. It also includes a MongoDB container for storing data, such as user information, articles, and more.
+
+## Table of Contents
+- [About](#about)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [MongoDB Container](#mongodb-container)
+- [MongoDB Schema, User, and Password](#mongodb-schema-user-and-password)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+
+## About
+This project is a personal website built using Node.js. It allows you to create and manage articles using Markdown files. The website also integrates with MongoDB for storing additional data, such as user information and article metadata.
 
 ## Prerequisites
+Before you begin, ensure you have the following installed on your machine:
+- [Docker](https://www.docker.com/get-started) (for running the MongoDB container)
+- [Node.js](https://nodejs.org/) (for running the website)
+- [MongoDB](https://www.mongodb.com/) (optional, if you want to run MongoDB locally without Docker)
 
-- [Podman](https://podman.io/getting-started/installation) installed on your machine
-- [Node.js](https://nodejs.org/) installed on your machine
-- [npm](https://www.npmjs.com/get-npm) installed on your machine
+## Setup
 
-## Step 1: Create a MongoDB Container
+### MongoDB Container
+To set up a MongoDB container using Docker, follow these steps:
 
-1. **Pull the MongoDB image:**
-    ```bash
-    podman pull mongo
-    ```
+1. Pull the MongoDB Docker image:
+```sh
+docker pull mongo
+```
 
-2. **Run the MongoDB container:**
-    ```bash
-    podman run --name mongodb -d -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=secret mongo
-    ```
+2. Run the MongoDB container:
+```sh
+docker run --name my-mongo -d -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=secret mongo
+```
 
-3. **Create the `voting` database and `votingUser`:**
-    Connect to the MongoDB container and create the database and user.
-    ```bash
-    podman exec -it mongodb mongo -u admin -p secret --authenticationDatabase admin
-    ```
+This command will:
+- Create a MongoDB container named `my-mongo`.
+- Expose MongoDB on port `27017`.
+- Set the root username to `admin` and the password to `secret`.
 
-    Inside the MongoDB shell:
-    ```js
-    use voting
-    db.createUser({
-        user: "votingUser",
-        pwd: "votingPassword",
-        roles: [{ role: "readWrite", db: "voting" }]
-    })
-    db.createCollection("votes")
-    ```
+### MongoDB Schema, User, and Password
+Once the MongoDB container is running, you can create a database schema, user, and password by following these steps:
 
-## Step 2: Set Up Your Node.js Application
+1. Access the MongoDB shell inside the container:
+```sh
+docker exec -it my-mongo mongo -u admin -p secret
+```
 
-1. **Install necessary dependencies:**
-    ```bash
-    npm install express mongoose body-parser
-    ```
+2. Create a new database and user:
+```js
+use myDatabase;
+db.createUser({
+  user: "myUser",
+  pwd: "myPassword",
+  roles: [{ role: "readWrite", db: "myDatabase" }]
+});
+```
 
-2. **Create the `vote-schema.js` file:**
-    ```javascript
-    const mongoose = require('mongoose');
+3. Create a collection (schema) for storing articles:
+```js
+db.createCollection("articles");
+```
 
-    const voteSchema = new mongoose.Schema({
-        ip: String,
-        articleId: String,
-        vote: Number, // 1 for upvote, -1 for downvote
-        timestamp: { type: Date, default: Date.now }
-    });
+Now, you have a MongoDB database named `myDatabase` with a user `myUser` and a collection `articles`.
 
-    const Vote = mongoose.model('Vote', voteSchema);
+## Usage
+To run the website locally, follow these steps:
 
-    module.exports = Vote;
-    ```
+1. Clone the repository:
+```sh
+git clone https://github.com/your-username/your-repo.git
+cd your-repo
+```
 
-3. **Create the `vote.js` router file:**
-    ```javascript
-    const express = require('express');
-    const router = express.Router();
-    const Vote = require('../models/vote-schema');
+2. Install the dependencies:
+```sh
+npm install
+```
 
-    router.post('/', async (req, res) => {
-        const { ip, articleId, vote } = req.body;
-        const newVote = new Vote({ ip, articleId, vote });
+3. Create a `.env` file in the root directory and add the following environment variables:
+```js
+MONGO_URI=mongodb://myUser:myPassword@localhost:27017/myDatabase
+```
 
-        try {
-            await newVote.save();
-            res.status(201).send(newVote);
-        } catch (error) {
-            res.status(400).send(error);
-        }
-    });
+4. Start the development server:
+```sh
+npm run dev
+```
 
-    module.exports = router;
-    ```
+5. Open your browser and navigate to `http://localhost:3000` to view the website.
 
-4. **Create the `app.js` file:**
-    ```javascript
-    require('dotenv').config();
-    const express = require('express');
-    const mongoose = require('mongoose');
-    const bodyParser = require('body-parser');
-    const voteRouter = require('./routes/vote'); // Adjust the path as necessary
-
-    const app = express();
-    app.use(bodyParser.json()); // Middleware to parse JSON request bodies
-
-    // MongoDB connection
-    const mongoURI = `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`;
-    mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-        .then(() => console.log('MongoDB connected...'))
-        .catch(err => console.log('MongoDB connection error:', err));
-
-    app.use('/vote', voteRouter); // Use the vote router
-
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-    });
-    ```
-
-5. **Create a `.env` file:**
-    ```env
-    MONGO_USERNAME=votingUser
-    MONGO_PASSWORD=votingPassword
-    MONGO_HOST=localhost
-    MONGO_PORT=27017
-    MONGO_DB=voting
-    ```
-
-## Step 3: Test Your Setup
-
-1. **Start your Node.js application:**
-    ```bash
-    node app.js
-    ```
-
-2. **Test the API using curl or Postman:**
-    ```bash
-    curl -X POST http://localhost:3000/vote -H "Content-Type: application/json" -d '{"ip": "192.168.1.1", "articleId": "123", "vote": 1}'
-    ```
-
-By following these steps, you should be able to set up your environment from scratch and connect your Node.js application to the MongoDB instance running in a Podman container.
+## Contributing
+If you'd like to contribute to this project, please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
-
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
