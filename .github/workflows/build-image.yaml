@@ -100,5 +100,5 @@ jobs:
         steps:
         - name: Sync articles database via API
           run: |
-            curl -X GET http://juniorfox.net/api/article/sync-database
+            curl -X GET https://juniorfox.net/api/article/sync-database
           
