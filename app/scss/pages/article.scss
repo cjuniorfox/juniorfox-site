@@ -2,7 +2,7 @@
 article {
 
   .article-header {
-    max-width: 800px;
+    width: 800px;
     margin: 30px auto;
     display: flex;
     align-items: center;
@@ -54,7 +54,6 @@ article {
     }
   }
 
-
   .keywords {
     font-size: 0.7em;
     opacity: 50%;
@@ -67,7 +66,7 @@ article {
     line-height: 1.6;
     color: $text-color;
     margin: 20px auto;
-    max-width: 800px;
+    width: 800px;
 
     img {
       width: 100%;
@@ -128,6 +127,60 @@ article {
 
     li {
       margin-bottom: 5px;
+    }
+  }
+
+  /* Media Queries for Responsiveness */
+  @media (max-width: 768px) {
+    .article-header {
+      flex-direction: row;
+      text-align: left;
+      max-width: 100%;
+
+      h1 {
+        font-size: 1.5em;
+        text-align: center;
+      }
+
+      .vote-buttons {
+        margin-right: 10px;
+        margin-bottom: 10px;
+      }
+    }
+
+    .article-content {
+      max-width: 100%;
+      padding: 0 10px;
+
+      h1 {
+        font-size: 1.2em;
+      }
+
+      img {
+        width: 100%;
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    .article-header {
+      h1 {
+        font-size: 1.2em;
+      }
+    }
+
+    .article-content {
+      h1 {
+        font-size: 1em;
+      }
+
+      p {
+        font-size: 0.9em;
+      }
+
+      pre {
+        font-size: 0.8em;
+      }
     }
   }
 }
