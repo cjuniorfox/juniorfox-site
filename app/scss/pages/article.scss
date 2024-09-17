@@ -131,7 +131,7 @@ article {
   }
 
   /* Media Queries for Responsiveness */
-  @media (max-width: 768px) {
+  @media (max-width: $breakpoint-md) {
     .article-header {
       flex-direction: row;
       text-align: left;
@@ -162,7 +162,7 @@ article {
     }
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: $breakpoint-sm) {
     .article-header {
       h1 {
         font-size: 1.2em;

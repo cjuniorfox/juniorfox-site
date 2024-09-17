@@ -8,6 +8,7 @@ header {
         justify-content: space-between;
         align-items: center;
         max-width: 1200px;
+        min-width: 900px;
         margin: 0 auto;
         width: 100%;
 
@@ -126,8 +127,9 @@ header {
         }
     }
 
-    @media (max-width: $breakpoint-md) {
+    @media (max-width: $breakpoint-lg) {
         .nav-container {
+            min-width: auto;
             .menu-toggle {
                 display: flex;
             }
