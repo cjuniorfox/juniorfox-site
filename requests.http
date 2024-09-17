@@ -24,3 +24,7 @@ content-type: application/json
 ##### Get votes for the user
 get http://localhost:3000/api/vote/66da07552fc0b015948ad07a/312312312 HTTP/1.1
 content-type: application/json
+
+##### Sync articles
+get http://localhost:3000/api/article/sync-database HTTP/1.1
+content-type: application/json
