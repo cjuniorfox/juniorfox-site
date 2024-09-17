@@ -1,16 +1,34 @@
 /* Variables for colors */
 @import '_variables';
-@import 'pieces/dark-theme';
+
 @import 'pieces/toggle';
 @import 'pieces/header';
+@import 'pieces/pagination';
 @import 'pages/home';
 @import 'pages/article';
 
+body.dark-mode {
+  background-color: $dark-background-color;
+  color: $text-color-dark;
+  @import 'dark-theme/layout';
+  @import 'dark-theme/article';
+  @import 'dark-theme/home';
+  @import 'dark-theme/pagination.scss';
+}
+
+a.dark-mode {
+  color: lighten($link-color, 30%);
+
+  &:hover {
+      text-decoration: none;
+      color: lighten($link-color, 20%);
+  }
+}
 
 body {
   font-family: Arial, sans-serif;
   color: $text-color;
-  background-color: $light-background-color;
+  background-color: $background-color;
 }
 
 main {

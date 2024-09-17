@@ -1,8 +1,18 @@
-const getArticlesList = require("../utils/get-articles-list");
+const articleService = require('../services/article-service')
 
 const homeController =  {
     index : async (req, res) => {
-        res.render("home", { articles: getArticlesList(res.locals.locale) });
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+
+        const { articles, totalArticles, currentPage, totalPages } = await articleService.getArticlesList(res.locals.locale, page, limit);
+
+        res.render("home", {
+            title: "Home",
+            articles,
+            currentPage,
+            totalPages
+        });
     }
 }
 

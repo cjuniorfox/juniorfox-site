@@ -4,15 +4,21 @@ $breakpoint-md: 768px;
 $breakpoint-lg: 992px;
 $breakpoint-xl: 1200px;
 
-$light-background-color: #f8f9fa;
+
+$background-card: #fff;
+$border-card: #ddd;
+$background-color: #f8f9fa;
 $link-color: #007bff;
+$hover-link-color: #0056b3;
 $link-color-disabled: #d5e9ff;
-$dark-background-color: #1e1e1e;
 $footer: #007bff;
-$footer-dark: #02264c;
 $text-color: #333;
+$code-background-color: #f0f2f5;
+
+$footer-dark: #02264c;
+$dark-background-color: #1e1e1e;
+$dark-background-card: #222;
+$code-background-color-dark : #292a2a;
 $text-color-dark: #ffffff;
 $link-color-dark: #99caff;
 $link-color-disabled-dark: #374a5d;
-$code-background-color: #f0f2f5;
-$code-background-color-dark : #292a2a;

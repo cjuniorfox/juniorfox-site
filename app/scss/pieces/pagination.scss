@@ -1,0 +1,67 @@
+.pagination {
+    display: flex;
+    justify-content: center; 
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+  
+    .page-item {
+      margin: 0 5px; 
+  
+      &.active {
+        .page-link {
+          background-color: $link-color; 
+          color: $background-color; 
+          border-color: $link-color;
+        }
+      }
+  
+      &:first-child .page-link {
+        border-top-left-radius: 5px;
+        border-bottom-left-radius: 5px;
+      }
+  
+      &:last-child .page-link {
+        border-top-right-radius: 5px;
+        border-bottom-right-radius: 5px;
+      }
+  
+      .page-link {
+        display: block;
+        padding: 10px 15px;
+        color: $link-color;
+        text-decoration: none;
+        background-color: $background-card;
+        border: 1px solid $border-card;
+        border-radius: 5px;
+        transition: background-color 0.3s, color 0.3s;
+  
+        &:hover {
+          background-color: $background-color;
+          color: $hover-link-color;
+        }
+  
+        &:focus {
+          outline: none;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); // Focus outline
+        }
+      }
+    }
+  
+    .page-item.disabled .page-link {
+      color: #6c757d;
+      pointer-events: none;
+      background-color: $background-card;
+      border-color: $border-card;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .pagination {
+      flex-wrap: wrap; // Allow pagination to wrap on smaller screens
+    }
+  
+    .page-item {
+      margin: 5px 0; // Adjust margin for smaller screens
+    }
+  }

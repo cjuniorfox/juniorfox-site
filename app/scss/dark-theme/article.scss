@@ -1,0 +1,38 @@
+.article-content {
+    color: $text-color-dark;
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        color: $link-color-dark;
+    }
+
+    a {
+        color: $link-color-dark;
+    }
+
+    .vote-buttons {
+        button {
+            color: $link-color-dark;
+
+            &:disabled {
+                color: $link-color-disabled-dark;
+            }
+
+             &:not(:disabled):hover {
+                color: darken($link-color-dark, 10%);
+            }
+        }
+    }
+
+    pre {
+        background-color: $code-background-color-dark;
+    }
+
+    code {
+        background-color: $code-background-color-dark;
+    }
+}

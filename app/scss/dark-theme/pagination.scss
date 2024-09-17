@@ -1,0 +1,19 @@
+.pagination {
+
+
+    .page-item {
+        
+        &.active {
+            .page-link {
+              background-color: $link-color; 
+              color: $background-color; 
+              border-color: $link-color;
+            }
+          }
+
+        .page-link {
+            background-color: $dark-background-card;
+            border-color: $text-color;
+        }
+    }
+}
