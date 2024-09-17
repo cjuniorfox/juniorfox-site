@@ -1,8 +1,18 @@
-const getArticlesFromFilesystem = require("../utils/get-articles-from-filesystem");
+const articleService = require('../services/article-service')
 
 const homeController =  {
     index : async (req, res) => {
-        res.render("home", { articles: getArticlesFromFilesystem(res.locals.locale) });
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+
+        const { articles, totalArticles, currentPage, totalPages } = await articleService.getArticlesList(res.locals.locale, page, limit);
+
+        res.render("home", {
+            title: "Home",
+            articles,
+            currentPage,
+            totalPages
+        });
     }
 }
 
