@@ -21,38 +21,40 @@ const highlight = markedHighlight({
   }
 })
 
-module.exports = {
-    article: (req, res) => {
-        const articleName = req.params.articleName
-        const filePath = path.join(__dirname, '..', 'articles', `${articleName}.md`)
-      
-        fs.readFile(filePath, 'utf8', (err, data) => {
-          if (err) {
-            return res.status(404).send('Article not found')
-          }
-          const { data: metadata, content } = matter(data);
-          const htmlContent = marked.parse(content);
-          const readingTime = calculateReadingTime(content);
-          if (metadata.lang && metadata.lang != res.locals.locale && metadata['other-langs']) {
-            const otherLangs = metadata['other-langs'];
-            const matchingLang = otherLangs.find(langObj => langObj.lang === res.locals.locale);
-            if (matchingLang) {
-              return res.redirect(`/article/${matchingLang.article}`);
-            }
-          }
-          res.render('article/article', {
-            articleName: articleName,
-            articleId: metadata.articleId,
-            title: metadata.title,
-            author: metadata.author,
-            date: metadata.date,
-            category: metadata.category,
-            brief: metadata.brief,
-            keywords: metadata.keywords,
-            image: metadata.image,
-            content: htmlContent,
-            readingTime: readingTime
-          })
-        });
-    }
+const articleController = {
+  article: (req, res) => {
+    const articleName = req.params.articleName
+    const filePath = path.join(__dirname, '..', 'articles', `${articleName}.md`)
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        return res.status(404).send('Article not found')
+      }
+      const { data: metadata, content } = matter(data);
+      const htmlContent = marked.parse(content);
+      const readingTime = calculateReadingTime(content);
+      if (metadata.lang && metadata.lang != res.locals.locale && metadata['other-langs']) {
+        const otherLangs = metadata['other-langs'];
+        const matchingLang = otherLangs.find(langObj => langObj.lang === res.locals.locale);
+        if (matchingLang) {
+          return res.redirect(`/article/${matchingLang.article}`);
+        }
+      }
+      res.render('article/article', {
+        articleName: articleName,
+        articleId: metadata.articleId,
+        title: metadata.title,
+        author: metadata.author,
+        date: metadata.date,
+        category: metadata.category,
+        brief: metadata.brief,
+        keywords: metadata.keywords,
+        image: metadata.image,
+        content: htmlContent,
+        readingTime: readingTime
+      })
+    });
+  }
 }
+
+module.exports = articleController
