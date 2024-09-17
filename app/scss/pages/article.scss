@@ -2,7 +2,7 @@
 article {
 
   .article-header {
-    width: 800px;
+    max-width: 800px;
     margin: 30px auto;
     display: flex;
     align-items: center;
@@ -67,7 +67,7 @@ article {
     line-height: 1.6;
     color: $text-color;
     margin: 20px auto;
-    width: 800px;
+    max-width: 800px;
 
     img {
       width: 100%;
