@@ -29,6 +29,7 @@
   "homepage": "https://github.com/cjuniorfox/juniorfox-net#readme",
   "dependencies": {
     "cookie-parser": "^1.4.6",
+    "dompurify": "^3.1.6",
     "ejs": "^3.1.10",
     "express": "^4.20.0",
     "express-ejs-layouts": "^2.5.1",
@@ -37,6 +38,7 @@
     "gray-matter": "^4.0.3",
     "highlight.js": "^11.10.0",
     "i18n": "^0.15.1",
+    "jsdom": "^25.0.0",
     "livereload": "^0.9.3",
     "marked": "^13.0.3",
     "marked-highlight": "^2.1.4",
@@ -51,8 +53,8 @@
     "slugify": "^1.6.6"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
     "dotenv": "^16.4.5",
+    "jest": "^29.7.0",
     "jest-mock": "^29.7.0",
     "mongo-unit": "^3.3.0",
     "nodemon": "^3.1.4"
