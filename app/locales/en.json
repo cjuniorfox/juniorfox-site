@@ -6,5 +6,9 @@
 	"notFoundText": "This page does not exist.",
 	"authorDate": "By {{author}} on {{date}}",
 	"readingTime": "{{min}} min read.",
-	"language": "Language"
+	"language": "Language",
+	"Github": "Github",
+	"LinkedIn": "LinkedIn",
+	"Bluesky": "Bluesky",
+	"Mastodon": "Mastodon"
 }

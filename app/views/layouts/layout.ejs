@@ -34,8 +34,9 @@
       <ul class="nav-list">
         <li><a href="/"><%= __('home') %></a></li>
         <li><a href="/article/about-me"><%= __('aboutMe') %></a></li>
-        <li><a href="https://github.com/cjuniorfox/">Github</a></li>
-        <li><a href="https://www.linkedin.com/in/carlos-anselmo-mendes-junior-35543031/">LinkedIn</a></li>
+        <% social.forEach(s => { %>
+          <li><a href="<%= s.link %>"><%= __(s.name) %></a></li>
+        <% }); %>
         <li class="dark-mode-toggle-container">
           <label for="toggle-dark-mode"><%= __('darkMode') %></label>
           <input type="checkbox" id="toggle-dark-mode">
@@ -61,8 +62,9 @@
         <%-__('footer_text', { year: new Date().getFullYear() }) %>
       </p>
       <p class="footer-right">
-        <a href="https://github.com/cjuniorfox/">Github</a>
-        <a href="https://www.linkedin.com/in/carlos-anselmo-mendes-junior-35543031/">LinkedIn</a>
+        <% social.forEach(s => { %>
+          <a href="<%= s.link %>"><%= __(s.name) %></a>
+        <% }); %>
       </p>
     </div>
   </footer>
