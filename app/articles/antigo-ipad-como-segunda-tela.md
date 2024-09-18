@@ -4,7 +4,7 @@ articleId: "old-ipad-as-a-second-screen"
 date: "2024-07-25"
 author: "Carlos Junior"
 category: "Linux"
-brief: "De uma nova vida a um antigo iPad como um excelente segundo monitor usando Moonlight e Sunshine"
+brief: "Dê uma nova vida a um antigo iPad como um excelente segundo monitor usando Moonlight e Sunshine"
 image: "/assets/images/old-ipad-as-a-second-screen/ipad-as-monitor.webp"
 keywords : ["ipad","segunda tela", "windows", "linux", "hyprland", "moonlight", "sunshine", "apple", "retina display"]
 lang : "pt"
