@@ -13,6 +13,7 @@ const articleSchema = new mongoose.Schema({
     lang: String,
     otherLangs: [{ lang: String, article: String }],
     readingTime: String,
+    metadataHash: String,
     removed: { type: Boolean, default: false }, // Flag for removed articles
     updatedAt: { type: Date, default: Date.now }
 });
