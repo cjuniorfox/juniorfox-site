@@ -163,7 +163,7 @@ firewall-cmd --add-masquerade --permanent
 
 ### Home gateway configuration
 
-My home gateway is behind a CGNAT (Carrier-Grade NAT), which means that my Gateway isn't publicly available on the internet. That's why I need to have a VPS on the cloud acting as a middleman between my premises and remote hosts and resources. This will act as a gateway and nameserver to allow my remote hosts to reach my premises.
+My home gateway is behind a CGNAT (Carrier-Grade NAT), which means that my Gateway isn't publicly available on the internet. That's why I need to have a VPS on the cloud acting as a middleman between my premises and remote hosts and resources. This will act as a gateway to allow my remote hosts to reach my premises.
 
 The VPN configuration will be the same as that of the other remote hosts. Have a look at the **PersistentKeepalive** key. The deal with it is to keep the connection alive due to the connection being dropped after a while.
 
