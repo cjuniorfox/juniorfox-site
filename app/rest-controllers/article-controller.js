@@ -14,11 +14,14 @@ async function syncDatabase(req, res) {
   try {
     console.time('SyncDatabaseTime'); // Start the timer
 
-    await article.syncDatabase();
+    const statistics = await article.syncDatabase();
 
     console.timeEnd('SyncDatabaseTime'); // End the timer and log the time taken
 
-    res.status(200).json({ message: 'Articles synchronized successfully' });
+    res.status(200).json({ 
+      statistics: statistics,  
+      message: 'Articles synchronized successfully' 
+    });
   } catch (error) {
     console.error('Error syncing articles:', error);
     res.status(500).json({ message: 'Error syncing articles' });

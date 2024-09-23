@@ -58,17 +58,32 @@ const syncDatabase = async () => {
     });
     const processedArticles = new Set();
 
+    let statistics = {
+        created : 0,
+        updated : 0,
+        articles : []
+    }
+
     for (const article of articlesFromFileSystem) {
         const existingArticle = articlesMap.get(article.name);
 
         if (existingArticle) {
-            const isUpdated = existingArticle.updatedAt < new Date(article.date);
+            const isUpdated = existingArticle.metadataHash != article.metadataHash;
             if (isUpdated) {
-                // Update the article in the database
                 await Article.updateOne({ name: article.name }, { ...article, removed: false, updatedAt: new Date() });
+                statistics.updated = statistics.updated + 1;
+                statistics.articles.push({
+                    action: 'update',
+                    articleId: article.articleId}
+                );
             }
         } else {
             await Article.create(article);
+            statistics.created = statistics.created + 1;
+            statistics.articles.push({
+                action: 'create',
+                articleId: article.articleId}
+            );
         }
 
         processedArticles.add(article.name);
@@ -79,6 +94,7 @@ const syncDatabase = async () => {
             await Article.updateOne({ name: article.name }, { removed: true });
         }
     }
+    return statistics;
 }
 
 module.exports = { articleFileExists, article, getArticlesList, syncDatabase };
