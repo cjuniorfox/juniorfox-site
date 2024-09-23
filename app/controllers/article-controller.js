@@ -59,6 +59,7 @@ const articleController = {
         readingTime: readingTime
       });
     } catch (err) {
+      console.log(err);
       res.redirect('/404')
     }
 
