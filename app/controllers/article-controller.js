@@ -59,7 +59,7 @@ const articleController = {
         readingTime: readingTime
       });
     } catch (err) {
-      return res.status(404).send('Article not found')
+      res.redirect('/404')
     }
 
 
