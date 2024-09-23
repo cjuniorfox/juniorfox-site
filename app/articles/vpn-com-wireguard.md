@@ -4,9 +4,9 @@ articleId: "vpn-com-wireguard"
 date: "2024-09-23"
 author: "Carlos Junior"
 category: "Rede"
-brief: "Vamos criar nosso próprio servidor VPN gratuitamente para acessar nossa rede doméstica com Wireguard."
+brief: "Criando seu próprio servidor VPN gratuitamente para acessar a rede doméstica com Wireguard."
 image: "/assets/images/wireguard-vpn/stephen-sherbers-wireguard-photo.webp"
-keywords: ["sobre"]
+keywords: ["wireguard","vpn","oracle-cloud","linux","network", "firewall"]
 lang: "pt"
 other-langs: [{"lang":"en","article":"wireguard-vpn"}]
 ---
