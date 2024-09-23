@@ -9,17 +9,18 @@ const { JSDOM } = require('jsdom');
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
+const renderer = new marked.Renderer();
+
+renderer.heading = (h) => {
+  const escapedText = h.text.toLowerCase().replace(/[^\w]+/g, '-');
+  return `<h${h.depth} id="${escapedText}">${h.text}</h${h.depth}>`;
+};
+
 marked.setOptions({
   gfm: true,
   breaks: true,
-  sanitize: true, // Disable raw HTML
+  renderer: renderer
 });
-
-const renderer = new marked.Renderer();
-renderer.heading = function (text, level) {
-  const escapedText = text.toLowerCase().replace(/[^\w]+/g, '-');
-  return `<h${level} id="${escapedText}">${text}</h${level}>`;
-};
 
 marked.use(markedHighlight({
   langPrefix: 'hljs language-',
@@ -28,6 +29,7 @@ marked.use(markedHighlight({
     return hljs.highlight(code, { language }).value;
   }
 }));
+
 
 const articleController = {
   article: async (req, res) => {
