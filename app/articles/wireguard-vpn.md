@@ -11,13 +11,27 @@ lang: "en"
 other-langs: [{"lang":"pt","article":"vpn-com-wireguard"}]
 ---
 
-# Wireguard VPN
-
 ![Stephen Sherber's Wireguard Photo](/assets/images/wireguard-vpn/stephen-sherbers-wireguard-photo.webp)
 
 Wireguard VPN is a great and reliable option for your own VPN server. Wireguard doesn't rely on a centralized server but on a peer-to-peer perspective. It is also an easy-to-use and setup environment. This tutorial is highly based on Stephen Herber's blog which, unfortunately, isn't available anymore, but you can still find using [Waybackmachine's archive](https://web.archive.org/web/20240203171519/https://www.sherbers.de/diy-linux-router-part-6-wireguard-vpn/).
 
 My internet provider does not offer a public valid IP address, but an IP behind a CGNAT network. This means that it is impossible to reach my premises directly from the Internet. To overcome this, I'll use my always-free **Oracle's Cloud VPS** as a middleman between my premises and remote hosts.
+
+## Table of Contents
+
+- [Network Topology](#network-topology)
+- [Installation](#installation)
+- [Authentication](#authentication)
+- [Wireguard configuration](#wireguard-configuration)
+  - [VPS configuration](#vps-configuration)
+- [Firewall and VCN](#firewall-and-vcn)
+  - [VCN](#vcn)
+  - [Firewall](#firewall)
+  - [Enable ipv4 forwarding](#enable-ipv4-forwarding)
+- [Home gateway configuration](#home-gateway-configuration)
+- [Laptop and Android](#laptop-and-android)
+- [Wiring up everything](#wiring-up-everything)
+- [Testing](#testing)
 
 ## Network Topology
 

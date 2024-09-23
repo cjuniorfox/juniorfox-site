@@ -11,8 +11,6 @@ lang: "pt"
 other-langs: [{"lang":"en","article":"wireguard-vpn"}]
 ---
 
-# Wireguard VPN
-
 ![Foto do Wireguard de Stephen Sherber](/assets/images/wireguard-vpn/stephen-sherbers-wireguard-photo.webp)
 
 Wireguard VPN é uma ótima e confiável opção para seu próprio servidor VPN. O Wireguard não depende de um servidor centralizado, mas de uma rede ponto a ponto. Além de ser fácil de usar e configurar.
