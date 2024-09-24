@@ -1,21 +1,21 @@
 ---
 title: "What is Cloudflare?"
 articleId: "what-is-cloudflare"
-date: "2024-09-23"
+date: "2024-09-24"
 author: "Carlos Junior"
 category: "Network"
 brief: "As is broadly known, since August 29, 2024, X (formerly Twitter) has been blocked in Brazil. However, Twitter services briefly came back online. Let's explore why."
 image: "/assets/images/what-is-cloudflare/twitter-cloudflare.webp"
 keywords: ["twitter", "x", "cloudflare", "network", "webhost", "tunnel", "firewall"]
-lang: "pt"
+lang: "en"
 other-langs: [{"lang":"pt","article":"o-que-e-cloudflare"}]
 ---
 
-Since August 29, 2024, X (formerly Twitter) has been blocked in Brazil for violating election disinformation laws. However, on September 18, X briefly became accessible again. The reason? Cloudflare. This raises questions about whether the platform is infringing on Brazilian laws regarding disinformation during elections. The subject is complex, and I will not delve deeper into it in this article.
+Since August 29, 2024, X (formerly Twitter) has been blocked in Brazil for failing to comply with court orders to remove profiles that violated Brazilian laws, particularly during the election period. However, on September 18, X briefly became accessible again. The reason? Cloudflare. The legal debate surrounding the legitimacy of Twitter's is a sensitive and complex issue, which I will not delve into further in this article.
 
 ![Twitter and Cloudflare](/assets/images/what-is-cloudflare/twitter-cloudflare.webp)
 
-To the surprise of Brazilian Twitter users, on [September 18, Twitter suddenly became accessible again in Brazil](https://www.bbc.com/portuguese/articles/c5y3xy47jxzo). Legally, nothing had changed. So why did Twitter suddenly resume operations?
+To the surprise of Brazilian Twitter users, [on September 18, Twitter unexpectedly became accessible again in Brazil](https://www.bbc.com/portuguese/articles/c5y3xy47jxzo). Legally, nothing had changed. So, how did Twitter suddenly resume its operations in the country?
 
 The answer? Cloudflare. Twitter began operating behind Cloudflare, and soon after, every news outlet started explaining what Cloudflare is. Is it a shield? An armor that Elon Musk used to protect Twitter from the Brazilian Supreme Court? Is Cloudflare a fail-proof solution against the Supreme Court's blockade? As you probably know, Twitter went offline again two days later. Let's dive in and see how Cloudflare works in practice.
 
@@ -25,7 +25,7 @@ In short, Cloudflare acts as an intermediary between your online service (like a
 
 There are several reasons. The most obvious is that Cloudflare provides protection by blocking attacks on your infrastructure and handling SSL connections and certificates for you, which is very convenient.
 
-Another reason is that through Cloudflare's Zero Trust network tunnel, it is possible to make services behind a private network (without a valid IP address, such as CGNATed networks) available to the internet. This could include a Jellyfin media server, a file server (NAS) in your home, surveillance cameras, or even your private cloud storage, accessible from anywhere in the world.
+Another reason is that through Cloudflare's Zero Trust network tunnel, it is possible to make services behind a private network (without a public valid IP address, such as CGNATed networks) available to the internet. This could include a Jellyfin media server, a file server (NAS) in your home, surveillance cameras, or even your private cloud storage.
 
 ![Macmini](/assets/images/what-is-cloudflare/macmini.webp)
 
@@ -35,12 +35,12 @@ As a Linux server connected to the internet 24/7, it becomes a valuable target f
 
 ## The Pros and Cons of Cloudflare
 
-Let's take a closer look at Cloudflare to understand the benefits and potential drawbacks of using their service in our solution.
+Let's take a closer look at Cloudflare to understand the benefits and potential drawbacks of using their services.
 
 ### Pros
 
 - It's free!
-- Adds a security layer to your network by acting as an intermediary between you and internet requests.
+- Adds a security layer to your network by acting as an intermediary between your server and the internet.
 - Manages SSL certificates for you.
 - Easy to use and configure.
 
@@ -50,17 +50,17 @@ Let's take a closer look at Cloudflare to understand the benefits and potential 
 - Opens a tunnel connection between your premises and a third party, which, if not properly managed, could allow the third party to gain visibility into your network traffic.
 - While connections between your clients and Cloudflare are protected, the data inside the tunnel isn't encrypted. Even if you set up an HTTPS server, Cloudflare will decrypt the data and re-encrypt it with their certificate. This means Cloudflare can see all your traffic, including sensitive information like personal data or passwords, if your site handles such information.
 
-Let's be honest. Cloudflare is a reputable company with strong partners in the market. While there are no known cases of them spying on their clients, it is technically possible if they chose to. As they call their solution "zero trust," it's important to remain cautious when sending or receiving sensitive information over their network.
+Let's be honest. Cloudflare is a reputable company with strong partners in the market. While there are no known cases of them spying on their clients, it is technically possible if they chose to. Their solution is branded as "zero trust," which, as the name suggests, means you shouldn't trust anyone. Keep this in mind when transmitting sensitive information over their network.
 
 ## A Technical Perspective
 
-To understand how Cloudflare operates, let’s explore its core functionalities, including the [Zero Trust Tunnel](https://www.cloudflare.com/products/tunnel/) and how to easily make a website hosted in your home network broadly available to the internet.
+To understand how Cloudflare operates, let’s explore its core functionalities, including the [Zero Trust Tunnel](https://www.cloudflare.com/products/tunnel/) and how to easily make a website hosted in your home network available to the internet.
 
 Since this blog covers the technical aspects of these subjects, let's take note of the services offered by Cloudflare, and follow a step-by-step guide on how to set up a [Cloudflare Zero Trust Tunnel](https://www.cloudflare.com/products/tunnel/) and publish a website with ease.
 
 ## Cloudflare Zero Trust Network Tunnel
 
-After their DNS management service, one of the most notable services Cloudflare offers is the **Zero Trust Network Tunnel**. This service allows us to easily share local resources with the internet. In this example, I will host a simple webpage and make it accessible online.
+After their DNS management service, one of the most notable services Cloudflare offers is the **Zero Trust Network Tunnel**. This service allows us to easily expose local services with the internet. In this example, I will host a simple webpage and make it accessible online.
 
 This step-by-step guide is heavily based on the YouTube video by Raid Own: [Cloudflare Tunnel Setup Guide - Self-Hosting for EVERYONE](https://www.youtube.com/watch?v=hrwoKO7LMzk&t=649s). I recommend checking it out.
 
@@ -86,7 +86,7 @@ It may take some time (up to 24 hours) for the settings to propagate and become 
 
 ### Installing Cloudflared
 
-With my Virtual Machine up and running, I’ve configured it to allow SSH connections, and I’m now accessing it. This section follows the steps outlined in [Cloudflare's Getting Started Guide](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-local-tunnel/).
+I set up a virtual machine, installed Ubuntu, and configured it to allow SSH connections. I am now accessing the machine. This section follows the steps provided in [Cloudflare's Getting Started Guide](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-local-tunnel/).
 
 #### 1. Install Cloudflared tool
 
@@ -136,9 +136,9 @@ To create a new tunnel, just do as below:
 cloudflared tunnel create neotwitter
 ```
 
-```bash
-Tunnel credentials written to /home/junior/.cloudflared/d90fb39e-37c9-478a-b315-173cb83dd06c.json. cloudflared chose this file based on where your origin certificate was found. Keep this file secret. To revoke these credentials, delete the tunnel.
+You'll get a output informing that your tunnel was created successfully.
 
+```bash
 Created tunnel neotwitter with id d90fb39e-37c9-478a-b315-173cb83dd06c
 ```
 
@@ -151,7 +151,7 @@ cert.pem  d90fb39e-37c9-478a-b315-173cb83dd06c.json
 
 #### 4. Create our config.yml
 
-As we are configuring our tunnel through the Cloudflared utility, we need to create our `config.yml` file inside the `/home/user/.cloudflared/` directory. This file will configure our ingresses to allow access to the website hosted on that machine.
+As we are configuring our tunnel through the `cloudflared` utility, we need to create our `config.yml` file inside the `/home/user/.cloudflared/` directory. This file will configure our ingresses to allow access to the website hosted on that machine.
 
 ```bash
 touch ~/.cloudflared/config.yml 
@@ -164,24 +164,24 @@ ls ~/.cloudflared/
 cert.pem  config.yml  d90fb39e-37c9-478a-b315-173cb83dd06c.json
 ```
 
-Let's do the basic setup for our file by configuring the tunnel ID in the config file.
+Let's do the basic setup by adding the tunnel ID to the config file.
 
 ```bash
 vim ~/.cloudflared/config.yml
 ```
 
-```vi
+```vim
 tunnel: d90fb39e-37c9-478a-b315-173cb83dd06c
 credentials-file: /home/junior/.cloudflared/d90fb39e-37c9-478a-b315-173cb83dd06c.json 
 ```
 
-The `tunnel` is the UUID for the tunnel we copied before. The `credentials-file` is the home folder, followed by the UUID `.json`.
+The `tunnel` is the UUID for the tunnel we copied before. The `credentials-file` is the cloudflared folder, followed by the UUID `.json`.
 
 Save it and close vim if you're using vim with `:wq`.
 
-#### 5. Create the DNS entry
+#### 5. Add a DNS entry
 
-In this step, we will create the DNS entry for your website. This is the URL that users will type in their browser to access your site. You can perform this step from the Cloudflare panel, but since we are using `cloudflared`, we can do it by typing the following command:
+In this step, we will add one DNS entry for your website. This is the URL that users will type in their browser to access your site. You can perform this step from the Cloudflare panel, but since we are using `cloudflared`, we will do it by typing the following command:
 
 ```bash
 cloudflared tunnel route dns neotwitter neotwitter.juniorfox.net
@@ -189,7 +189,7 @@ cloudflared tunnel route dns neotwitter neotwitter.juniorfox.net
 
 #### 6. Ingress
 
-Ingress entries are configurations that make a website or service on your host or network accessible to the internet. This can be any host or service on your network, such as a website, Nextcloud, or Jellyfin media server. It doesn't matter as long as it's an HTTP or HTTPS server on your network, you can make it available. Let's edit the `.cloudflared/config.yml` file to configure this.
+Ingress entries are configurations that make a website or service on your host or network accessible to the internet. This can be any host or service on your network, such as a website, a private cloud service like Nextcloud, or Jellyfin media server. It doesn't matter as long as it's an HTTP or HTTPS server on your network, you can make it available. Let's add our **ingresses** to the `.cloudflared/config.yml` file.
 
 ```bash
 vim ~/.cloudflared/config.yml 
@@ -208,7 +208,7 @@ ingress:
 
 #### 7. Running the tunnel
 
-The last, but not least step is bringing up your tunnel. It's just a matter of running:
+Last, but not is bringing up your tunnel. It's just a matter of running:
 
 ```bash
 cloudflared tunnel run neotwitter
@@ -216,7 +216,7 @@ cloudflared tunnel run neotwitter
 
 #### 8. Something went wrong
 
-While testing the neotwitter.juniorfox.net website, I encountered the following error:
+Testing the **neotwitter.juniorfox.net** website, the following error happened:
 
 ![Bad gateway 502](/assets/images/what-is-cloudflare/bad-gateway-error.webp)
 
@@ -224,7 +224,7 @@ So, what went wrong? Let's take a look at the tunnel's log to see what happened.
 
 ![Execution log](/assets/images/what-is-cloudflare/error-log.webp)
 
-I found the issue. The connection to `https://192.168.122.130:80` failed because the **NGINX server** is serving the site over plain HTTP, not HTTPS. Let's correct this and try again.
+The log indicates that it couldn't estabilish connection with `site`. This occurried because the **NGINX** is serving the site over plain HTTP, not HTTPS. Let's correct this and try again.
 
 ```bash
 vim ~/.cloudflared/config.yml 
@@ -242,10 +242,10 @@ And browse to the neotwitter.juniorfox.net
 
 ![Neotwitter site is alive!](/assets/images/what-is-cloudflare/neotwitter.webp)
 
-Looks like everything is working as intended now. It's also cool to already have the SSL connection done.
+Looks like everything is working as intended. It's also cool to already have the SSL connection done.
 
-It's nice to have build a drop-in-replacement for Twitter since it's no longer working in Brazil.
+Do you believe Neotwitter could serve as a direct replacement for Twitter, given that it's no longer operational in Brazil?
 
 ## Conclusion
 
-This wraps up what is Cloudflare, an easy to use solution for helping anyone to put online a website on easy. I hope this article has helped you to understand what is the nature of Cloudflare, as helped you to put your site ou service available online.
+This concludes our article on Cloudflare, a user-friendly solution for easily getting a website online. We've covered both the benefits and potential risks of using this service. I hope this article has helped you better understand Cloudflare and assisted you in making your site or service accessible online.
