@@ -11,17 +11,17 @@ lang: "pt"
 other-langs: [{"lang":"pt","article":"o-que-e-cloudflare"}]
 ---
 
-As is broadly known, so far I've been writing this article, since August 29, 2024. X, formerly Twitter is blocked in Brazil. The question lies on top of infringing Brazilian laws regarding disinformation during the elections. The subject is complex and I do not want to go deeper in this article.
+Since August 29, 2024, X (formerly Twitter) has been blocked in Brazil for violating election disinformation laws. However, on September 18, X briefly became accessible again. The reason? Cloudflare. The question lies on top of infringing Brazilian laws regarding disinformation during the elections. The subject is complex and I do not want to go deeper in this article.
 
 ![Twitter and Cloudflare](/assets/images/what-is-cloudflare/twitter-cloudflare.webp)
 
-But, to the surprise of all Brazillian Twitter users, on September, 18, Twitter suddenly was accessible for all Brazillian people. In the legal landscape, nothing changed. So why did Twitter suddenly get back to operating from the vail?
+But, to the surprise of Brazilian Twitter users, on [September, 18, Twitter suddenly was accessible for all Brazilian people](https://www.bbc.com/portuguese/articles/c5y3xy47jxzo). Legally, nothing had changed. So why did Twitter suddenly get back to operating from the vail?
 
-The answer? Cloudflare. Twitter just started to operate behind Cloudflare and then, every newspaper started to try to explain what is this Cloudflare thing. Is it a Shield? An armor that Elon Musk dressed Twitter against the Brazillian Supreme Curt? And why, if was so failing proof against the Supreme Court, did Twitter go offline two days later? Let's explain and see how Cloudflare works in practice.
+The answer? Cloudflare. Twitter just started to operate behind Cloudflare and then, every newspaper started to try to explain what is this Cloudflare thing. Is it a Shield? An armor that Elon Musk dressed Twitter against the Brazilian Supreme Curt? And why, if was so fail-proof against the Supreme Court, did Twitter go offline two days later? Let's explain and see how Cloudflare works in practice.
 
 ## What Cloudflare is for?
 
-Long story short, Cloudflare is a middleman between some premises offering online services, like a website, blog, media server, and the internet. Ok. But why? Why add somebody between?
+Long story short, Cloudflare acts as an intermediary between your online service, like a website or media server, and the internet, offering security and performance improvements. Like a website, blog, media server, and the internet. Ok. But why? Why add somebody between?
 
 Various reasons. The first and most obvious is that Cloudflare acts as a protection, blocking attacks on your premises and handling SSL connections and certificates, instead of you, which is very cool.
 
@@ -29,9 +29,9 @@ Another good reason, is, that through Cloudflare zero trust network tunnel, it i
 
 ![Macmini](/assets/images/what-is-cloudflare/macmini.webp)
 
-You could think I have a big infrastructure with many employees or I'm using some big company to host this website, but no. This site is running from this ancient Macmini. Not only that but many of my services are deployed in that little Mac Mini.
+You could think I have a big infrastructure with many employees or I'm using some big company to host this website, but no. This site is hosted on an ancient Mac Mini. Not only that but many of my services are deployed in that little Mac Mini.
 
-As a Linux server connected to the internet 24/7, this is a valuable resource for those who want to commit crimes on the internet. Is just a matter of planting some malicious script and everything could happen. From somebody watching everything I'm doing on the internet, as crypto mining and even using it as a proxy for some illegal activity. So, having something between this server and the open internet is a great security measure.
+As a Linux server connected to the internet 24/7, this is a valuable resource for those who want to commit crimes on the internet. It's just a matter of planting some malicious script and everything could happen. From somebody watching everything I'm doing on the internet, as crypto mining and even using it as a proxy for some illegal activity. So, Placing something between this server and the open internet is a great security measure.
 
 ## Advantages
 
@@ -43,10 +43,16 @@ As a Linux server connected to the internet 24/7, this is a valuable resource fo
 ## Disadvantages
 
 - Relies on a third-party partner and their infrastructure.
-- Opens a tunnel connection between your premises and a third party that if you don't take care, can sneak peek at your network without your knowing about it.
+- Opens a tunnel connection between your premises and a third party that If not properly managed, third-party services could gain visibility into your network traffic.
 - The connections between your clients and Cloudflare are protected, but, despite the tunnel being secure, the data inside that tunnel isn't encrypted. Even if you up an HTTPS server, Cloudflare will decrypt the data and re-encrypt it with their certificate. Cloudflare can see all your traffic which means sensitive information like personal data or even passwords will be open to Cloudflare if your site deals with that kind of information.
 
-Let's be honest here. Cloudflare is a reputable company having great partners on the market. Isn't know if they did spy on some of their clients, but this can happen if they wanted to do so. Like they named their own solution, zero trust. Just be aware when you send or receive sensitive information over their network.
+Let's be honest here. Cloudflare is a reputable company having great partners on the market. It isn't known if they did spy on some of their clients, but this can happen if they wanted to do so. Like they named their own solution, zero trust. Just be aware when you send or receive sensitive information over their network.
+
+## A technical perspective
+
+To understand how Cloudflare operates and how it made Twitter accessible, let’s explore its core functionalities, including the [Zero trust tunnel](https://www.cloudflare.com/products/tunnel/) and publish a website on ease.
+
+Since this blog covers the technical perspective of these subjects, let's take note of the services offered by Cloudflare, as do a step-by-step of how to setup a [Cloudflare zero trust tunnel](https://www.cloudflare.com/products/tunnel/) and publish a website on ease.
 
 ## Cloudflare zero trust network tunnel
 
@@ -58,7 +64,7 @@ This step-by-step is highly based on that Youtube video from Raid Own. [Cloudfla
 
 ### Requirements
 
-We gonna use a tool named **cloudflared**. This can be installed on any operating system. I'll use Ubuntu Linux on this step-by-step. Guide. But first, make sure you have:
+We will use a tool named **cloudflared**. This can be installed on any operating system. I’ll use Ubuntu Linux in this step-by-step guide. But first, make sure you have:
 
 - Created your Cloudflare account.
 - A FQDN (domain name).
@@ -244,3 +250,7 @@ And browse to the neotwitter.juniorfox.net
 Looks like everything is working as intended now. It's also cool to already have the SSL connection done.
 
  It's nice to have build a drop-in-replacement for Twitter since it's no longer working in Brazil. Thank you for reading this topic until this point. I see you next time.
+
+## Conclusion
+
+This wraps up what is Cloudflare, an easy to use solution for helping anyone to put online a website on easy. I hope this article has helped you to understand what is the nature of Cloudflare, as helped you to put your site ou service available online.
