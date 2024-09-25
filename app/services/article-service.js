@@ -21,16 +21,16 @@ const articleFileExists = async (articleName) => {
 const article = async (articleName, locale) => {
     const filePath = __getFilePath(articleName);
     const { data: metadata, content } = matter(await fs.promises.readFile(filePath, 'utf8'));
-
+    let redirect = '';
     if (metadata.lang && metadata.lang != locale && metadata['other-langs']) {
         const otherLangs = metadata['other-langs'];
         const matchingLang = otherLangs.find(langObj => langObj.lang === locale);
         if (matchingLang) {
-            return { redirect: `/article/${matchingLang.article}` }
+            redirect = `/article/${matchingLang.article}`
         }
     }
 
-    return { articleName, content, ...metadata }
+    return { articleName, content, ...metadata, redirect }
 }
 
 const getArticlesList = async (lang, page = 1, limit = 10) => {
