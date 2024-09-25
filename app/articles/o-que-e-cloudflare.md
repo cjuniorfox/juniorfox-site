@@ -1,6 +1,6 @@
 ---
 title: "O que é Cloudflare?"
-articleId: "o-que-e-cloudflare"
+articleId: "what-is-cloudflare"
 date: "2024-09-24"
 author: "Carlos Junior"
 category: "Rede"
