@@ -1,6 +1,6 @@
 ---
 title: "Wireguard VPN"
-articleId: "vpn-com-wireguard"
+articleId: "wireguard-vpn"
 date: "2024-09-23"
 author: "Carlos Junior"
 category: "Rede"
