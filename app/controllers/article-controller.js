@@ -37,11 +37,6 @@ const articleController = {
 
     try {
       const article = await articleService.article(articleName, res.locals.locale);
-
-      if (article.redirect) {
-        return res.redirect(article.redirect);
-      }
-
       const htmlContent = purify.sanitize( marked.parse(article.content) );
       const readingTime = calculateReadingTime(article.content);
 
@@ -56,14 +51,14 @@ const articleController = {
         keywords: article.keywords,
         image: article.image,
         content: htmlContent,
-        readingTime: readingTime
+        readingTime: readingTime,
+        otherLangs: article['other-langs'] 
+          ? JSON.stringify(article['other-langs']) : '[]'
       });
     } catch (err) {
       console.log(err);
       res.redirect('/404')
     }
-
-
   }
 }
 

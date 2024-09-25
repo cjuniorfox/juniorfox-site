@@ -11,6 +11,27 @@ lang: "pt"
 other-langs: [{"lang":"en","article":"what-is-cloudflare"}]
 ---
 
+## Table of Contents
+
+- [Para que serve o Cloudflare?](#para-que-serve-o-cloudflare)
+- [Prós e Contras do Cloudflare](#prós-e-contras-do-cloudflare)
+  - [Prós](#prós)
+  - [Contras](#contras)
+- [Uma Perspectiva Técnica](#uma-perspectiva-técnica)
+- [Túnel de Rede Zero Trust do Cloudflare](#túnel-de-rede-zero-trust-do-cloudflare)
+  - [Requisitos](#requisitos)
+  - [Vinculando Seu Domínio ao Cloudflare](#vinculando-seu-domínio-ao-cloudflare)
+  - [Instalando o Cloudflared](#instalando-o-cloudflared)
+    - [1. Instalar a ferramenta Cloudflared](#1-instalar-a-ferramenta-cloudflared)
+    - [2. Autenticar no Cloudflare](#2-autenticar-no-cloudflare)
+    - [3. Criar um túnel](#3-criar-um-túnel)
+    - [4. Criar nosso config.yml](#4-criar-nosso-configyml)
+    - [5. Adicionar uma entrada DNS](#5-adicionar-uma-entrada-dns)
+    - [6. Ingress](#6-ingress)
+    - [7. Executando o túnel](#7-executando-o-túnel)
+    - [8. Algo deu errado](#8-algo-deu-errado)
+- [Conclusão](#conclusão)
+
 Desde 29 de agosto de 2024, o X (anteriormente Twitter) foi bloqueado no Brasil por não cumprir ordens judiciais para remover perfis que violavam as leis brasileiras, especialmente durante o período eleitoral. No entanto, em 18 de setembro, o X voltou a ficar brevemente acessível. O motivo? Cloudflare. O debate jurídico em torno da legitimidade das ações do Twitter é uma questão sensível e complexa, que não explorarei mais a fundo neste artigo.
 
 ![Twitter e Cloudflare](/assets/images/what-is-cloudflare/twitter-cloudflare.webp)
@@ -221,7 +242,7 @@ O que deu de errado? Vamos dar uma olhada no log do túnel para entender o que a
 
 ![Log de execução](/assets/images/what-is-cloudflare/error-log.webp)
 
-O log aponta que não é possível realizar conexão com `http://192.168.122.130:80`. Isso porque o servidor Web **NGINX** está servindo o site via HTTP simples, não HTTPS. Vamos corrigir isso e tentar novamente.
+O log aponta que não é possível realizar conexão com `https://192.168.122.130:80`. Isso porque o servidor Web **NGINX** está servindo o site via HTTP simples, não HTTPS. Vamos corrigir isso e tentar novamente.
 
 ```bash
 vim ~/.cloudflared/config.yml

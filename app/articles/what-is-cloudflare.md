@@ -11,6 +11,27 @@ lang: "en"
 other-langs: [{"lang":"pt","article":"o-que-e-cloudflare"}]
 ---
 
+## Table of Contents
+
+- [What is Cloudflare for?](#what-is-cloudflare-for)
+- [The Pros and Cons of Cloudflare](#the-pros-and-cons-of-cloudflare)
+  - [Pros](#pros)
+  - [Cons](#cons)
+- [A Technical Perspective](#a-technical-perspective)
+- [Cloudflare Zero Trust Network Tunnel](#cloudflare-zero-trust-network-tunnel)
+  - [Requirements](#requirements)
+  - [Linking Your Domain with Cloudflare](#linking-your-domain-with-cloudflare)
+  - [Installing Cloudflared](#installing-cloudflared)
+    - [1. Install Cloudflared tool](#1-install-cloudflared-tool)
+    - [2. Authenticate on Cloudflare](#2-authenticate-on-cloudflare)
+    - [3. Create a tunnel](#3-create-a-tunnel)
+    - [4. Create our config.yml](#4-create-our-configyml)
+    - [5. Add a DNS entry](#5-add-a-dns-entry)
+    - [6. Ingress](#6-ingress)
+    - [7. Running the tunnel](#7-running-the-tunnel)
+    - [8. Something went wrong](#8-something-went-wrong)
+- [Conclusion](#conclusion)
+
 Since August 29, 2024, X (formerly Twitter) has been blocked in Brazil for failing to comply with court orders to remove profiles that violated Brazilian laws, particularly during the election period. However, on September 18, X briefly became accessible again. The reason? Cloudflare. The legal debate surrounding the legitimacy of Twitter's is a sensitive and complex issue, which I will not delve into further in this article.
 
 ![Twitter and Cloudflare](/assets/images/what-is-cloudflare/twitter-cloudflare.webp)
