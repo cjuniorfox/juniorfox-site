@@ -29,5 +29,21 @@
     <p class="keywords">
         keywords: <%= keywords.join(' • ') %>
     </p>
+
+    <% if (otherLangs && otherLangs.length > 0) { %>
+        <section class="other-languages">
+            <h3><%=__('otherLanguages')%></h3>
+            <ul>
+                <% otherLangs.forEach(function(otherLang) { %>
+                    <li>
+                        <a href="/article/<%= otherLang.article %>">
+                            <%= __(otherLang.lang) %> <!-- Display the language name -->
+                        </a>
+                    </li>
+                <% }); %>
+            </ul>
+        </section>
+        <% } %>
+
 </article>
-<input type="hidden" id="other-langs" value='<%- otherLangs %>' />
+<input type="hidden" id="other-langs" value='<%- JSON.stringify(otherLangs) %>' />

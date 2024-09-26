@@ -12,7 +12,7 @@ const purify = DOMPurify(window);
 const renderer = new marked.Renderer();
 
 renderer.heading = (h) => {
-  const escapedText = h.text.toLowerCase().replace(/[^\w]+/g, '-');
+  const escapedText = h.text.toLowerCase().replace(/[^\p{L}\d]+/gu, '-').replace(/-+$/, '');
   return `<h${h.depth} id="${escapedText}">${h.text}</h${h.depth}>`;
 };
 
@@ -52,8 +52,7 @@ const articleController = {
         image: article.image,
         content: htmlContent,
         readingTime: readingTime,
-        otherLangs: article['other-langs'] 
-          ? JSON.stringify(article['other-langs']) : '[]'
+        otherLangs: article['other-langs'] ? article['other-langs'] : []
       });
     } catch (err) {
       console.log(err);
