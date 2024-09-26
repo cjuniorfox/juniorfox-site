@@ -1,6 +1,7 @@
 {
 	"home": "Home",
 	"aboutMe": "About Me",
+	"aboutMeUrl" : "/article/about-me",
 	"darkMode": "Dark mode",
 	"footer_text": "Carlos Junior &copy; {{year}}",
 	"notFoundText": "This page does not exist.",

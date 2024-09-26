@@ -33,7 +33,7 @@
       </div>
       <ul class="nav-list">
         <li><a href="/"><%= __('home') %></a></li>
-        <li><a href="/article/about-me"><%= __('aboutMe') %></a></li>
+        <li><a href="<%=__('aboutMeUrl')%>"><%= __('aboutMe') %></a></li>
         <% social.forEach(s => { %>
           <li><a href="<%= s.link %>"><%= __(s.name) %></a></li>
         <% }); %>
