@@ -1,4 +1,6 @@
 {
+	"title": "Junior",
+	"description": "Desenvolvimento, Administração Linux, Computação em Nuvem e muito mais.",
 	"home": "Inicio",
 	"aboutMe": "Sobre mim",
 	"aboutMeUrl": "/article/sobre-mim",
@@ -15,4 +17,5 @@
 	"otherLanguages": "Este artigo em outras línguas",
 	"en": "Inglês",
 	"pt": "Português"
+
 }

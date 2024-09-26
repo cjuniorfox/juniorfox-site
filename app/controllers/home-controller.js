@@ -8,7 +8,6 @@ const homeController =  {
         const { articles, totalArticles, currentPage, totalPages } = await articleService.getArticlesList(res.locals.locale, page, limit);
 
         res.render("home", {
-            title: "Home",
             articles,
             currentPage,
             totalPages
