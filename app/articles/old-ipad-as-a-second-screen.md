@@ -11,33 +11,29 @@ lang : "en"
 other-langs : [{"lang":"pt","article":"antigo-ipad-como-segunda-tela"}]
 ---
 
-
-## Introduction
-
 ![iPad as a Monitor](/assets/images/old-ipad-as-a-second-screen/ipad-as-monitor.webp)
 
 I have this older iPad 3rd generation that was kindly given to me as a gift by a friend (thanks [Hamdan](https://www.instagram.com/alhamdan/)). I used it very often until Apple dropped the support for this iPad and begged me to throw it away into a landfill and spend a grand on a brand new iPad. Certainly, in a couple of years, Apple will ask me to throw the new iPad into the same landfill as this one. But I refused to attend to Apple's wishes. As far as this ancient iPad worked well, I still used it. However, it wasn't an easy task. Apps like YouTube, Facebook, and Twitter dropped support for iOS 9.3.6 a long time ago, which is the "most recent" version supported by this iPad. Even surfing the web is not an easy task on it. So, I finally gave up and locked this iPad in my wardrobe, where it had not been used for many years. But now is the time to get it from my wardrobe and give a new life to this iPad, now as a second monitor. With its Retina Display with 2048x1536 resolution, it is a very competent second display. This idea is not new, and there are already some solutions for addressing this task, like Spacedesk for Windows or VNC screencasting a virtual display. These work but offer a low-framerate, laggy experience that isn't up to my expectations. I was very frustrated until I found the solution already in front of me. A great one, to say the least, that works on both Linux and Windows machines. On Linux, with Wayland and their many compositors like Gnome, KDE, Sway, and Hyprland, which is the one I'm using right now, and, obviously, X11. The solution is the couple Sunshine and Moonlight.
 
 ## Table of Contents
 
-1. [Introduction](#introduction)
-2. [Sunshine and Moonlight](#sunshine-and-moonlight)
-3. [Linux](#linux)
-   - [Install Sunshine](#install-sunshine)
-   - [Create a service for "setcap" on Sunshine](#create-a-service-for-setcap-on-sunshine)
-   - [Firewall](#firewall)
-   - [Script for adding the virtual screen](#script-for-adding-the-virtual-screen)
-   - [Sunshine Configuration on Linux](#sunshine-configuration-on-linux)
-4. [Windows](#windows)
-   - [HDMI Headless Dongle](#hdmi-headless-dongle)
-   - [Virtual Display Driver](#virtual-display-driver)
-   - [Sunshine](#sunshine)
-   - [Sunshine Configuration on Windows](#sunshine-configuration-on-windows)
-5. [Install Moonlight on your ancient iPad](#install-moonlight-on-your-ancient-ipad)
-6. [Setup Moonlight](#setup-moonlight)
-   - [Troubleshooting](#troubleshooting)
-   - [Disconnecting](#disconnecting)
-7. [Conclusion](#conclusion)
+- [Sunshine and Moonlight](#sunshine-and-moonlight)
+- [Linux](#linux)
+  - [Install Sunshine](#install-sunshine)
+  - [Create a service for "setcap" on Sunshine](#create-a-service-for-setcap-on-sunshine)
+  - [Firewall](#firewall)
+  - [Script for adding the virtual screen](#script-for-adding-the-virtual-screen)
+  - [Sunshine Configuration on Linux](#sunshine-configuration-on-linux)
+- [Windows](#windows)
+  - [HDMI Headless Dongle](#hdmi-headless-dongle)
+  - [Virtual Display Driver](#virtual-display-driver)
+  - [Sunshine](#sunshine)
+  - [Sunshine Configuration on Windows](#sunshine-configuration-on-windows)
+- [Install Moonlight on your ancient iPad](#install-moonlight-on-your-ancient-ipad)
+- [Setup Moonlight](#setup-moonlight)
+  - [Troubleshooting](#troubleshooting)
+  - [Disconnecting](#disconnecting)
+- [Conclusion](#conclusion)
 
 ## Sunshine and Moonlight
 
