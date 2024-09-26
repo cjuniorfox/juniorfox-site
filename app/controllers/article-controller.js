@@ -39,7 +39,7 @@ const articleController = {
       const article = await articleService.article(articleName, res.locals.locale);
       const htmlContent = purify.sanitize( marked.parse(article.content) );
       const readingTime = calculateReadingTime(article.content);
-
+      
       return res.render('article/article', {
         articleName: articleName,
         articleId: article.articleId,

@@ -1,7 +1,5 @@
 const moment = require('moment');
 
-const title = "Carlos Junior"
-
 const social =  [
     { "name": "Github", "link": "https://github.com/cjuniorfox/" },
     { "name": "LinkedIn", "link": "https://www.linkedin.com/in/carlos-anselmo-mendes-junior-35543031/" },
@@ -10,7 +8,7 @@ const social =  [
 ];
 
 const layout = (req, res, next) => {
-    res.locals.title = title;
+    res.locals.title = res.__('title');
     res.locals.social = social;
     res.locals.darkModeClass = res.locals.darkModeClass || '';
     res.locals.__ = res.__;
