@@ -10,6 +10,13 @@ keywords : ["ipad","segunda tela", "windows", "linux", "hyprland", "moonlight", 
 lang : "pt"
 other-langs : [{"lang":"en","article":"old-ipad-as-a-second-screen"}]
 ---
+
+## Introdução
+
+![iPad como Monitor](/assets/images/old-ipad-as-a-second-screen/ipad-as-monitor.webp)
+
+Eu tenho um iPad 3ª geração que há muito tempo me foi dado de presente por um amigo (obrigado [Hamdan](https://www.instagram.com/alhamdan/)). Usava-o bastante até que a Apple deixou de oferecer o suporte e passou a implorar para que eu o jogasse fora e gastasse uma fortuna em um iPad novo que, certamente, em alguns anos, a Apple pedirá novamente para jogar fora no mesmo lixão que o antigo deveria estar, mas como sou teimoso, recusei a atender os desejos da Apple. Enquanto este antigo iPad funcionasse bem, eu ainda o usaria. No entanto, não era uma tarefa fácil. Aplicativos como YouTube, Facebook e Twitter deixaram de oferecer suporte para o iOS 9.3.6 há muito tempo, que é a versão "mais recente" suportada por este iPad. Até mesmo navegar na web não é uma tarefa fácil. Então, finalmente desisti e acabei por trancá-lo no guarda-roupas, onde ficou guardado e sem uso por muitos anos. Mas agora é hora de tirá-lo de lá e dar-lhe uma nova vida, desta vez como segundo monitor. Com sua Retina Display com resolução de 2048x1536, é um segundo monitor muito competente. Esta ideia não é nova e já existem soluções para essa tarefa, como Spacedesk para Windows ou espelhamento VNC de um display virtual. Essas soluções até funcionam, mas oferecem uma experiência com baixa taxa de quadros e muito delay, que não atende às minhas expectativas. Fiquei muito frustrado até encontrar a solução que já estava na minha frente. Uma ótima solução que funciona tanto no Linux quanto Windows. No Linux, com Wayland e seus muitos compositores como Gnome, KDE, Sway e o Hyprland, que é o que estou usando agora, e, obviamente, X11. A solução é a dupla Sunshine e Moonlight.
+
 ## Índice
 
 1. [Introdução](#introdução)
@@ -30,12 +37,6 @@ other-langs : [{"lang":"en","article":"old-ipad-as-a-second-screen"}]
    - [Solução de Problemas](#solução-de-problemas)
    - [Desconectar](#desconectar)
 7. [Conclusão](#conclusão)
-
-## Introdução
-
-![iPad como Monitor](/assets/images/old-ipad-as-a-second-screen/ipad-as-monitor.webp)
-
-Eu tenho um iPad 3ª geração que há muito tempo me foi dado de presente por um amigo (obrigado [Hamdan](https://www.instagram.com/alhamdan/)). Usava-o bastante até que a Apple deixou de oferecer o suporte e passou a implorar para que eu o jogasse fora e gastasse uma fortuna em um iPad novo que, certamente, em alguns anos, a Apple pedirá novamente para jogar fora no mesmo lixão que o antigo deveria estar, mas como sou teimoso, recusei a atender os desejos da Apple. Enquanto este antigo iPad funcionasse bem, eu ainda o usaria. No entanto, não era uma tarefa fácil. Aplicativos como YouTube, Facebook e Twitter deixaram de oferecer suporte para o iOS 9.3.6 há muito tempo, que é a versão "mais recente" suportada por este iPad. Até mesmo navegar na web não é uma tarefa fácil. Então, finalmente desisti e acabei por trancá-lo no guarda-roupas, onde ficou guardado e sem uso por muitos anos. Mas agora é hora de tirá-lo de lá e dar-lhe uma nova vida, desta vez como segundo monitor. Com sua Retina Display com resolução de 2048x1536, é um segundo monitor muito competente. Esta ideia não é nova e já existem soluções para essa tarefa, como Spacedesk para Windows ou espelhamento VNC de um display virtual. Essas soluções até funcionam, mas oferecem uma experiência com baixa taxa de quadros e muito delay, que não atende às minhas expectativas. Fiquei muito frustrado até encontrar a solução que já estava na minha frente. Uma ótima solução que funciona tanto no Linux quanto Windows. No Linux, com Wayland e seus muitos compositores como Gnome, KDE, Sway e o Hyprland, que é o que estou usando agora, e, obviamente, X11. A solução é a dupla Sunshine e Moonlight.
 
 ## Sunshine e Moonlight
 

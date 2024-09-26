@@ -11,6 +11,10 @@ lang: "en"
 other-langs: [{"lang":"pt","article":"o-que-e-cloudflare"}]
 ---
 
+![Twitter and Cloudflare](/assets/images/what-is-cloudflare/twitter-cloudflare.webp)
+
+Since August 29, 2024, X (formerly Twitter) has been blocked in Brazil for failing to comply with court orders to remove profiles that violated Brazilian laws, particularly during the election period. However, on September 18, X briefly became accessible again. The reason? Cloudflare. The legal debate surrounding the legitimacy of Twitter's is a sensitive and complex issue, which I will not delve into further in this article.
+
 ## Table of Contents
 
 - [What is Cloudflare for?](#what-is-cloudflare-for)
@@ -31,10 +35,6 @@ other-langs: [{"lang":"pt","article":"o-que-e-cloudflare"}]
     - [7. Running the tunnel](#7-running-the-tunnel)
     - [8. Something went wrong](#8-something-went-wrong)
 - [Conclusion](#conclusion)
-
-Since August 29, 2024, X (formerly Twitter) has been blocked in Brazil for failing to comply with court orders to remove profiles that violated Brazilian laws, particularly during the election period. However, on September 18, X briefly became accessible again. The reason? Cloudflare. The legal debate surrounding the legitimacy of Twitter's is a sensitive and complex issue, which I will not delve into further in this article.
-
-![Twitter and Cloudflare](/assets/images/what-is-cloudflare/twitter-cloudflare.webp)
 
 To the surprise of Brazilian Twitter users, [on September 18, Twitter unexpectedly became accessible again in Brazil](https://www.bbc.com/portuguese/articles/c5y3xy47jxzo). Legally, nothing had changed. So, how did Twitter suddenly resume its operations in the country?
 

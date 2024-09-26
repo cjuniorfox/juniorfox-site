@@ -11,7 +11,11 @@ lang: "pt"
 other-langs: [{"lang":"en","article":"what-is-cloudflare"}]
 ---
 
-## Table of Contents
+![Twitter e Cloudflare](/assets/images/what-is-cloudflare/twitter-cloudflare.webp)
+
+Desde 29 de agosto de 2024, o X (anteriormente Twitter) foi bloqueado no Brasil por não cumprir ordens judiciais para remover perfis que violavam as leis brasileiras, especialmente durante o período eleitoral. No entanto, em 18 de setembro, o X voltou a ficar brevemente acessível. O motivo? Cloudflare. O debate jurídico em torno da legitimidade das ações do Twitter é uma questão sensível e complexa, que não explorarei mais a fundo neste artigo.
+
+## Índice
 
 - [Para que serve o Cloudflare?](#para-que-serve-o-cloudflare)
 - [Prós e Contras do Cloudflare](#prós-e-contras-do-cloudflare)
@@ -31,10 +35,6 @@ other-langs: [{"lang":"en","article":"what-is-cloudflare"}]
     - [7. Executando o túnel](#7-executando-o-túnel)
     - [8. Algo deu errado](#8-algo-deu-errado)
 - [Conclusão](#conclusão)
-
-Desde 29 de agosto de 2024, o X (anteriormente Twitter) foi bloqueado no Brasil por não cumprir ordens judiciais para remover perfis que violavam as leis brasileiras, especialmente durante o período eleitoral. No entanto, em 18 de setembro, o X voltou a ficar brevemente acessível. O motivo? Cloudflare. O debate jurídico em torno da legitimidade das ações do Twitter é uma questão sensível e complexa, que não explorarei mais a fundo neste artigo.
-
-![Twitter e Cloudflare](/assets/images/what-is-cloudflare/twitter-cloudflare.webp)
 
 Para a surpresa dos usuários brasileiros do Twitter, em [18 de setembro, o Twitter de repente voltou a ficar acessível no país](https://www.bbc.com/portuguese/articles/c5y3xy47jxzo). Legalmente, nada havia mudado. Então, como o Twitter retomou as operações no país?
 
