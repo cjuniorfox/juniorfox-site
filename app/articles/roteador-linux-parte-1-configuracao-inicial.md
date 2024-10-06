@@ -13,7 +13,7 @@ other-langs : [{"lang":"en","article":"diy-linux-router-part-1-initial-setup"}]
 
 Esta é a primeira parte de uma série de artigos descrevendo como construir seu próprio roteador Linux.
 
-* Parte 2: [Rede e Internet](/articles/roteador-linux-diy-parte-2-rede-e-internet)
+* Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
 
 Tendo este velho Mac Mini sem uso no meu armário, transformá-lo em um servidor Linux daria uma nova vida a ele. É uma máquina capaz, estável e longe de ser feia. Então, vamos fazer isso.
 

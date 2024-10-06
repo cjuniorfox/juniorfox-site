@@ -13,7 +13,7 @@ other-langs : [{"lang":"pt","article":"roteador-linux-parte-1-configuracao-inici
 
 This is the first part of a multipart series describing how to build your own Linux router.
 
-* Part 2: [Network and Internet](/articles/diy-linux-router-part-2-network-and-internet)
+* Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 
 Having this old Mac Mini doing nothing in my wardrobe, making it a Linux server would give it a new life. It is a capable, stable machine and far from being an ugly one. So let's do it.
 

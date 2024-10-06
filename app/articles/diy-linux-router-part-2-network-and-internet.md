@@ -13,7 +13,7 @@ other-langs : [{"lang":"pt","article":"roteador-linux-parte-2-rede-e-internet"}]
 
 This is the second part of a multipart series describing how to build your own Linux router.
 
-* Part 1: [Initial Setup](/articles/diy-linux-router-part-1-initial-setup)
+* Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 
 In the first part, we covered the hardware setup and installed a basic Linux system using NixOS on top of a ZFS filesystem.
 In this part, we will configure VLANs and their networks, set up a PPPoE connection, configure the DHCP server, and implement basic firewall rules.

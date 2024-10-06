@@ -13,9 +13,9 @@ other-langs : [{"lang":"en","article":"diy-linux-router-part-2-network-and-inter
 
 Esta é a segunda parte de uma série de artigos descrevendo como construir seu próprio roteador Linux.
 
-* Parte 1: [Configuração Inicial](/articles/roteador-linux-parte-1-configuracao-inicial)
+* Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
 
-Na primeira parte, abordamos a configuração de hardware e instalamos um sistema Linux básico usando NixOS em cima de um sistema de arquivos ZFS. Nesta parte, vamos configurar VLANs e suas redes, configurar uma conexão PPPoE, configurar o servidor DHCP e implementar regras básicas de firewall.
+Na primeira parte, abordamos a configuração de hardware e instalamos um sistema Linux básico usando NixOS usando o sistema de arquivos ZFS. Nesta parte, vamos configurar VLANs e suas redes, a conexão PPPoE, configurar o servidor DHCP e implementar regras básicas de firewall.
 
 ![Rede](/assets/images/diy-linux-router/network.webp)
 
@@ -50,8 +50,8 @@ Para atribuir corretamente diferentes redes usando uma única NIC, precisamos ut
 
 **VLAN** ou **LAN Virtual**, permite criar redes virtuais, semelhantes a NICs virtuais, para dividir sua rede em dois ou mais segmentos. Em um switch gerenciado, você pode criar VLANs e atribuir portas a cada VLAN como **tagged** (com tag) ou **untagged** (sem tag).
 
-* Você pode atribuir várias *tagged* VLANs a uma única porta.
-* Você só pode atribuir uma *untagged* VLAN a uma porta.
+* Você pode atribuir várias VLANs do tipo *tagged* a uma única porta.
+* Você só pode atribuir uma VLAN *untagged* a uma porta.
 
 ##### VLANs sem Tag
 
@@ -59,7 +59,7 @@ Em um switch gerenciado, é possível criar duas ou mais **VLANs** e dividir a r
 
 ##### VLANs com Tag
 
-Da mesma forma, você pode marcar uma porta usando **tags de VLAN**. Isso permite que uma única porta manipule o tráfego de várias **VLANs**, desde que o tráfego esteja devidamente marcado. Na prática, isso é como ter dois adaptadores de rede distintos conectados a dois switches de rede distintos, mas compartilhando a mesma interface de rede física, cabo e porta do switch.
+Da mesma forma, você pode configurar uma porta usando **tags de VLAN**. Isso permite que uma única porta manipule o tráfego de várias **VLANs**, desde que o o host conectado a porta esteja devidamente configurado. Na prática, isso é como ter dois adaptadores de rede distintos conectados a dois switches de rede distintos, mas compartilhando a mesma interface de rede física, cabo e porta do switch.
 
 Por exemplo:
 
@@ -72,7 +72,7 @@ Qualquer tráfego vindo da **porta 1** *tagged* como `VLAN 1` alcançará dispos
 
 Alguns switches permitem que você misture tráfego *tagged* e *untagged* na mesma porta. Isso é útil quando você deseja compartilhar uma porta entre duas ou mais redes. Embora possa parecer complicado, é bastante simples na prática.
 
-Por exemplo, suponha que você tenha uma rede corporativa para tráfego privado e queira permitir que convidados usem o Wi-Fi da empresa sem acessar a rede privada. No seu gateway, você pode configurar duas LANs virtuais compartilhando a mesma NIC: uma **LAN Privada** (*untagged*) e uma **LAN de Convidados** (*tagged* como `VLAN 2`). Você também pode configurar seus pontos de acesso (APs) com duas LANs virtuais vinculadas a duas redes sem fio: Privada (untagged) e Convidados (tagged como VLAN 2).
+Por exemplo, suponha que você tenha uma rede corporativa para tráfego privado e queira permitir que visitantes usem o Wi-Fi da empresa sem acessar a rede privada. No seu gateway, você pode configurar duas LANs virtuais compartilhando a mesma NIC: uma **LAN Privada** (*untagged*) e uma **LAN de Convidados** (*tagged* como `VLAN 2`). Você também pode configurar seus pontos de acesso (APs) com duas LANs virtuais vinculadas a duas redes sem fio: Privada (untagged) e Convidados (tagged como VLAN 2).
 
 A configuração do switch seria:
 
@@ -84,7 +84,7 @@ Nesta configuração:
 O gateway está conectado à **porta 1**.
 O AP está conectado à **porta 2**.
 
-Qualquer tráfego *untagged* da **porta 1** se comunicará com dispositivos nas **portas 1 a 8** sem problemas. No entanto, o tráfego *tagged* como `VLAN 2` da **porta 1** só alcançará a **porta 2**, e o dispositivo na **porta 2** só verá o tráfego da `VLAN 2` se estiver configurado para lidar com a `VLAN 2`. Se você conectar um dispositivo à **porta 2** sem configurar a `VLAN 2`, ele não receberá nenhum tráfego da `VLAN 2` e o rejeitará.
+Qualquer tráfego *untagged* da **porta 1** se comunicará com dispositivos nas **portas 1 a 8** sem problemas. No entanto, o tráfego *tagged* como `VLAN 2` da **porta 1** só alcançará a **porta 2**, e o dispositivo na **porta 2** só verá o tráfego da `VLAN 2` se estiver configurado para lidar com tráfego etiquetado como `VLAN 2`. Se você conectar um dispositivo à **porta 2** sem configurar a `VLAN 2`, ele não receberá nenhum tráfego etiquetado como `VLAN 2`, rejeitando o mesmo.
 
 ##### Vantagens
 
@@ -93,16 +93,16 @@ Qualquer tráfego *untagged* da **porta 1** se comunicará com dispositivos nas 
 ##### Desvantagens
 
 * **Largura de banda compartilhada**: O tráfego físico e a velocidade são compartilhados entre as VLANs.
-* **Complexidade**: Você precisa acompanhar quais portas estão atribuídas a quais VLANs.
-* **Configuração do host**: Dispositivos conectados a portas *tagged* devem ser configurados para lidar com as VLANs apropriadas.
+* **Complexidade**: Você precisa tomar nota de quais portas estão atribuídas a quais VLANs.
+* **Configuração do host**: Dispositivos conectados a portas *tagged* devem ser configurados trabalhar com tráfego VLAN.
 
-Em nossa configuração, vamos configurar três redes na mesma interface. Isso significa que o tráfego das redes **LAN**, **GUEST** e **PPPoE WAN** compartilhará o mesmo cabo físico, efetivamente compartilhando a largura de banda. Por exemplo, se você estiver transmitindo um filme, o tráfego será duplicado: o Mac Mini lidará tanto com o tráfego de entrada da internet quanto com o tráfego de saída para o dispositivo na sua rede.
+No Mac Mini, vamos configurar três redes na mesma interface. Isso significa que o tráfego das redes **LAN**, **GUEST** e **PPPoE WAN** compartilharão o mesmo cabo físico, efetivamente compartilhando a largura de banda. Por exemplo, se você estiver transmitindo um filme, o tráfego será duplicado, pois o Mac Mini lidará tanto com o tráfego vindo da internet quanto com o tráfego enviado para o dispositivo na sua rede.
 
-Na minha conexão de 600 Mbps de download e 150 Mbps de upload, não notei nenhum impacto de desempenho. Isso ocorre porque, enquanto o Mac Mini está baixando conteúdo da WAN, ele está simultaneamente enviando-o para a LAN, efetivamente se comportando como uma conexão "half-duplex". Como muitas conexões de internet, incluindo fibra, já são half-duplex, essa configuração não introduz problemas de desempenho significativos. No entanto, tenha em mente que, se você saturar a conexão com mais tráfego, poderá começar a experimentar degradação de desempenho.
+A minha conexão de internet tem 600 Mbps de download e 150 Mbps de upload, não notei nenhum impacto no desempenho. Isso porque, enquanto o Mac Mini está baixando conteúdo da WAN, ele está simultaneamente enviando-o para a LAN, efetivamente se comportando como uma conexão "half-duplex". Como muitas conexões de internet, incluindo fibra, já são half-duplex, essa configuração não introduz problemas de desempenho significativos. No entanto, tenha em mente que, se você saturar a conexão com mais tráfego, alguma degradação de desempenho por saturação de rede pode ocorrer.
 
 ## Topologia de Rede
 
-Vamos ter as seguintes redes:
+Teremos as seguintes redes:
 
 | Rede          | Interface | VLAN      |
 |---------------|-----------|----------:|
@@ -110,12 +110,12 @@ Vamos ter as seguintes redes:
 |10.1.222.0/24  | GUEST     | 222       |
 |PPPoE          | PPP0      | 333       |
 
-Vamos focar apenas em IPV4 por enquanto. Mas podemos ter IPV6 mais tarde.
+Vamos focar apenas em IPV4 por enquanto. Teremos IPV6 mais tarde.
 
 * O switch tem 8 portas.
-* **VLAN 144**: Portas 1, 3, 4, 5, 6, 7, 8 são untagged.
-* **VLAN 222**: Portas 1 e 2 são tagged.
-* **VLAN 333**: Portas 1 e 3 são tagged.
+* **VLAN 144**: Portas 1, 3, 4, 5, 6, 7, 8 são "untagged".
+* **VLAN 222**: Portas 1 e 2 são "tagged".
+* **VLAN 333**: Portas 1 e 3 são "tagged".
 
 ```txt
     ┌─────────────► Mac Mini
@@ -136,7 +136,7 @@ Vamos focar apenas em IPV4 por enquanto. Mas podemos ter IPV6 mais tarde.
 
 ### Mac Mini
 
-Como este Mac Mini só tem uma porta Ethernet Gigabit, esta NIC será vinculada às VLANs.
+Como este Mac Mini só tem uma porta Ethernet Gigabit, conectaremos as redes através de VLANs.
 
 #### Redes
 
