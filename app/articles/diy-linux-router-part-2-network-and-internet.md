@@ -4,35 +4,78 @@ articleId: "diy-linux-router-part-2-network-and-internet"
 date: "2024-10-06"
 author: "Carlos Junior"
 category: "Linux"
-brief: "Doing a new life to an old Mac Mini as a capable Linux router and homelab"
-image: "/assets/images/what-is-cloudflare/macmini.webp"
+brief: "In this second part, we will configure VLANs and their networks, set up a PPPoE connection, configure the DHCP server, and implement basic firewall rules."
+image: "/assets/images/diy-linux-router/network.webp"
 keywords : ["macmini","router", "linux", "nixos", "pppoe", "unifi", "ubiquiti", "apple", "vlan", "tl-sg108e"]
 lang : "en"
-other-langs : [{"lang":"pt","article":"roteador-internet-linux-parte-1-configuracao-inicial"}]
+other-langs : [{"lang":"pt","article":"roteador-internet-linux-parte-2-rede"}]
 ---
 
 This is the second part of a multipart series describing how to build your own Linux router.
 
 * Part 1: [Initial Setup](/articles/diy-linux-router-part-1-initial-setup)
 
-In the first part, we approached into the hardware and installed the basic Linux system with NixOS on top of a ZFS filesystem.
-To this step, let's setup VLANs and it's networks.
+In the first part, we covered the hardware setup and installed a basic Linux system using NixOS on top of a ZFS filesystem.
+In this part, we will configure VLANs and their networks, set up a PPPoE connection, configure the DHCP server, and implement basic firewall rules.
+
+![Network](/assets/images/diy-linux-router/network.webp)
+
+### VLANs
+
+TL-SG108E is the Switch I am using on this setup with the following config:
+
+#### What is VLAN
+
+To properly assign the different networks using a single NIC, we need to leverage on VLANs, but what is a VLAN.
+
+**VLAN** or **Virtual LAN**, is the ability for creating virtual networks, as virtual NICs for splitting our network in two or more networks. On switch, it's possible to create VKANs and assign ports from switch to each VLAN as both *tagged* on *untagged*.
+
+* You can assing many *tagged* networks as you want to a single port.
+* You can only assing one network as *untagged* to a port.
+
+##### Untagged VLANs
+
+On a manageable switch, is possible to create two or more VLANs and split the network. At that way, is as if you have two switchs at the same phisical hardware. Per example: lets say we want to create two discrete networks with one not being able to talk with other. We can create a VLAN 1 at ports 1 to 4, and VLAN 2 at ports 2 to 4. Any traffic comming from Port 1 will be able to reach ports 2, 3 and 4. But unable to reach any host phisically connected to ports 5, 6, 7 8.
+
+##### Tagged VLANs
+
+At the same manner, it's possible to tag a port using something named VLAN tags. To this way, you can address one of the ports from the switch to talk with the two VLANs we created, as far as the package comming from the host is properly tagged. In pratice, doing that is like having two distinct network adapter connected to two distinct network switches, but sharing the same physical network interface, the same cable and the same port on switch, Example:
+Port 1 tagged with VLAN 1 and tagged with VLAN 2. Ports 2 to 4 is untagged to VLAN 1, and ports 4 to 8 is untagged to VLAN 2.
+Any traffic comming from port 1 tagged as VLAN 1 will reach any host on ports 2 to 4, but neither one from 5 to 8, while any traffic comming from port 1 tagged as VLAN2 will reach any host on ports 5 to 8, but neither from 2 to 4.
+
+##### Mixing Tagged with Untagged
+
+The third option isn't compatible with all switches, which is mixing **tagged** and **untagged** traffic to some ports. This is useful when you want to share ports from switch with two or more networks. Looks a bit complicated but is simple. Let's see:
+Suppose we have company network for private traffic and we want to allow guests to use the companies Wifi connection, but unable to access our private network. On our gateway, we will have two virtual LANs sharing the same NIC. A Private LAN configured as standard and Guest LAN configured as VLAN 2. We also deployed APs with the same configuration, two virtual LANs tied to two Wireless connections, **Private** as default and **guest** with VLAN2.
+Our switch configuration will be:
+
+* VLAN 1 **untagged** to all ports.
+* Ports 1 and 2 as **tagged** ports on VLAN 2
+
+Our gateway is connected to **port 1**, while the AP is connected to **port 2**. Any traffic comming from any port will communicate with any device connected from port 1 to 8 without any issue. Traffic comming from port 1 tagged as VLAN 2 will only reach port 2 as tagged and the device on the port 2 will only be able to see the traffic from VLAN 2 only if the the VLAN2 is configured at the target device. If you connect any device to port 2 without configuring the VLAN 2 on this device, it will be unable to receive any traffic tagged as VLAN2 and will reject any traffic comming from VLAN2.
+
+##### Vantages
+
+* Cost less to implement, as you share one NIC, one cable and one port from switch.
+
+##### Drawbacks
+
+* Phisical traffic and speed is shared between VLANs.
+* Needs to take note of what ports are tied to what VLAN.
+* Configure VLANs on hosts tied to tagged ports of the switch.
 
 ## Network topology
 
 Let's have the following networks:
 
-| Network     | Interface | VLAN      |
-|-------------|-----------|----------:|
-|10.1.144.0/24| lan       | untagged  |
-|10.1.222.0/24| guest     | 222       |
-|PPPoE        | ppp0      | 333       |
+| Network      | Interface | VLAN      |
+|--------------|-----------|----------:|
+|10.1.144.0/24 | LAN       | untagged  |
+|10.1.222.0/24 | GUEST     | 222       |
+|PPPoE         | PPP0      | 333       |
 
-Let's focus only on IPV4 for now. But we will can have IPV6 later.
+Let's focus only on IPV4 for now. But we can have IPV6 later.
 
-### Switch
-
-TL-SG108E is the Switch I using on this setup with the following config:
 
 * The switch has 8 ports.
 * **VLAN 144**: Ports 1, 3, 4, 5, 6, 7, 8 are untagged.
@@ -58,7 +101,7 @@ TL-SG108E is the Switch I using on this setup with the following config:
 
 ### Mac Mini
 
-As far as this Mac Mini only have one Gigabit Ethernet port, this NIC will be tied to VLANs.
+As far as this Mac Mini only has one Gigabit Ethernet port, this NIC will be tied to VLANs.
 
 #### Networks
 
@@ -70,7 +113,7 @@ As far as this Mac Mini only have one Gigabit Ethernet port, this NIC will be ti
 
 *Some parts I took from [Francis Blog](https://francis.begyn.be/blog/nixos-home-router)*.
 
-Let's configure our server editing the `.nix` files acordingly. To maintain the organization, let's create discrete files for it's sections as:
+Let's configure our server by editing the `.nix` files accordingly. To maintain the organization, let's create discrete files for its sections as:
 
 ```bash
 /etc/nixos
@@ -79,12 +122,12 @@ Let's configure our server editing the `.nix` files acordingly. To maintain the 
       ├── networking.nix # Network settings/ enables NFTables
       └── pppoe.nix      # PPPoE connection setup
       └── services.nix   # Other services
-      └── nftables.nix   # Firewall's NFTables rules
+      └── nftables.nft   # Firewall's NFTables rules
 ```
 
 ### 1. Basic config
 
-Lets split our `configuration.nix` file into parts, as we are already editing the file, let's take advantage and already enable package forwarding, as the most basic thing a router does, and route traffic between networks.
+Let's split our `configuration.nix` file into parts. As we are already editing the file, let's take advantage and enable packet forwarding, as the most basic thing a router does, and route traffic between networks.
 
 `/etc/nixos/configuration.nix`
 
@@ -141,7 +184,7 @@ Lets split our `configuration.nix` file into parts, as we are already editing th
 ### 2. Networking
 
 Let's add our network configuration to `modules/networking.nix`.
-As our Macmini does only have one NIC. This setup relies on VLANs to split the network in the intended parts. As mentioned above, our switch needs to be configured with three VLANs, 144, 222, and 333, configuring ports as shown at the diagram above.
+As mentioned before, our Mac Mini only has one NIC, this setup relies on VLANs to split the network into the intended parts.VLANs, 144, 222, and 333.
 
 `/etc/nixos/modules/networking.nix`
 
@@ -206,7 +249,7 @@ in
 
 ### 5. PPPoE connection
 
-WAN connection will be managed by a PPPoE connection, that will be available on `modules/pppoe.nix`
+WAN connection will be managed by a PPPoE connection, which will be available in `modules/pppoe.nix`
 
 `/etc/nixos/modules/pppoe.nix`
 
@@ -245,13 +288,12 @@ WAN connection will be managed by a PPPoE connection, that will be available on 
 
 ### 6. Firewall
 
-The Firewall configuration is done with `nftables`. We will do a very basic, but secure firewall configuration at the file `nftables.nft`. This setup will prevent any connection incomming from internet, as from the guest network, while will keep everithing open to the private network.
-It's valuable to say there's a problem with the `flow offloading` rule. Validating the rules, When it checks for flow offloading configuration, the routine gives a error because the interface `ppp0` does not exists during the build time of NixOS. But there's a [workaround](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3)
- by adding:
+The Firewall configuration is done with `nftables`. We will do a very basic, but secure firewall configuration in the file `nftables.nft`. This setup will prevent any connection incoming from the internet, as well as from the guest network, while keeping everything open to the private network.
+It's important to note that there's a problem with the `flow offloading` rule. When validating the rules, it checks for flow offloading configuration, but the routine gives an error because the interface `ppp0` does not exist during the build time of NixOS. However, there's a [workaround](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3) by adding:
 
 `/etc/nixos/modules/nftables.nft`
 
-```nft
+```nix
 table inet filter {
   # enable flow offloading for better throughput
   flowtable f {
@@ -271,7 +313,7 @@ table inet filter {
       "lan","enp6s0"
     } counter accept
 
-    # Allow returning traffic from ppp0 and drop everthing else
+    # Allow returning traffic from ppp0 and drop everything else
     iifname "ppp0" ct state { established, related } counter accept
     iifname "ppp0" drop
   }
@@ -315,7 +357,7 @@ table ip nat {
 
 ### 7. DHCP Server
 
-If somebody connects to network. this person needs to have an IP address. Let's configure our DHCP server.
+If somebody connects to the network, they need to have an IP address. Let's configure our DHCP server.
 
 `/etc/nixos/modules/dhcp_server.nix`
 
@@ -340,7 +382,7 @@ If somebody connects to network. this person needs to have an IP address. Let's 
 
 ### 8. Services
 
-Everything seens to be configured as intended, but services. Enabling root password login is a temporary measure, as is risky let at that way. This will be temporary and soom we gonna address that.
+Everything seems to be configured as intended, but services. Enabling root password login is a temporary measure, as it is risky to leave it that way. This will be temporary, and soon we will address that.
 
 `/etc/nixos/modules/services.nix`
 
@@ -357,4 +399,6 @@ Everything seens to be configured as intended, but services. Enabling root passw
 }
 ```
 
-And that it. next part is configuring our Podman services, being Unbound with ad-blocks one of them, as hardering our Firewall with fine grained permission, making our server secure.
+## Conclusion
+
+That's all for now! In the next part, we'll focus on enhancing security by disabling root account login, enabling SSH access via key-based authentication, and further hardening the firewall with more granular rules and permissions.
