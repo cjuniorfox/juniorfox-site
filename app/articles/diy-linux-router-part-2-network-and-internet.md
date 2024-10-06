@@ -20,49 +20,86 @@ In this part, we will configure VLANs and their networks, set up a PPPoE connect
 
 ![Network](/assets/images/diy-linux-router/network.webp)
 
+## Table of Contents
+
+* [VLANs](#vlans)
+  * [What is VLAN](#what-is-vlan)
+    * [Untagged VLANs](#untagged-vlans)
+    * [Tagged VLANs](#tagged-vlans)
+    * [Mixing Tagged with Untagged](#mixing-tagged-with-untagged)
+    * [Vantages](#vantages)
+    * [Drawbacks](#drawbacks)
+* [Network topology](#network-topology)
+* [Mac Mini](#mac-mini)
+  * [Networks](#networks)
+* [NixOS config](#nixos-config)
+  * [1. Basic config](#1-basic-config)
+  * [2. Networking](#2-networking)
+  * [5. PPPoE connection](#5-pppoe-connection)
+  * [6. Firewall](#6-firewall)
+  * [7. DHCP Server](#7-dhcp-server)
+  * [8. Services](#8-services)
+* [Conclusion](#conclusion)
+
 ### VLANs
 
-TL-SG108E is the Switch I am using on this setup with the following config:
+In this setup, I am using the **TP-Link TL-SG108E** switch with the following configuration:
 
 #### What is VLAN
 
-To properly assign the different networks using a single NIC, we need to leverage on VLANs, but what is a VLAN.
+To properly assign different networks using a single NIC, we need to leverage VLANs. But what exactly is a VLAN?
 
-**VLAN** or **Virtual LAN**, is the ability for creating virtual networks, as virtual NICs for splitting our network in two or more networks. On switch, it's possible to create VKANs and assign ports from switch to each VLAN as both *tagged* on *untagged*.
+**VLAN** or **Virtual LAN**, allows you to create virtual networks, similar to virtual NICs, to split your network into two or more segments. On a managed switch, you can create VLANs and assign ports to each VLAN as either **tagged** or **untagged**.
 
-* You can assing many *tagged* networks as you want to a single port.
-* You can only assing one network as *untagged* to a port.
+* You can assign many *tagged* VLANs to a single port.
+* You can only assign one *untagged* VLAN to a port.
 
 ##### Untagged VLANs
 
-On a manageable switch, is possible to create two or more VLANs and split the network. At that way, is as if you have two switchs at the same phisical hardware. Per example: lets say we want to create two discrete networks with one not being able to talk with other. We can create a VLAN 1 at ports 1 to 4, and VLAN 2 at ports 2 to 4. Any traffic comming from Port 1 will be able to reach ports 2, 3 and 4. But unable to reach any host phisically connected to ports 5, 6, 7 8.
+On a managed switch, it is possible to create two or more **VLANs** and split the network. This is like having two separate switches within the same physical hardware. For example, let's say we want to create two isolated networks that cannot communicate with each other. We can assign `VLAN 1` to **ports 1 to 4** and `VLAN 2` to **ports 5 to 8**. Any traffic coming from **port 1** will be able to reach **ports 2, 3, and 4**, but it will not be able to reach any device connected to **ports 5, 6, 7, or 8**.
 
 ##### Tagged VLANs
 
-At the same manner, it's possible to tag a port using something named VLAN tags. To this way, you can address one of the ports from the switch to talk with the two VLANs we created, as far as the package comming from the host is properly tagged. In pratice, doing that is like having two distinct network adapter connected to two distinct network switches, but sharing the same physical network interface, the same cable and the same port on switch, Example:
-Port 1 tagged with VLAN 1 and tagged with VLAN 2. Ports 2 to 4 is untagged to VLAN 1, and ports 4 to 8 is untagged to VLAN 2.
-Any traffic comming from port 1 tagged as VLAN 1 will reach any host on ports 2 to 4, but neither one from 5 to 8, while any traffic comming from port 1 tagged as VLAN2 will reach any host on ports 5 to 8, but neither from 2 to 4.
+Similarly, you can tag a port using **VLAN tags**. This allows a single port to handle traffic from multiple **VLANs**, as long as the traffic is properly tagged. In practice, this is like having two distinct network adapters connected to two distinct network switches, but sharing the same physical network interface, cable, and switch port.
+
+For example:
+
+* **Port 1** is *tagged* with `VLAN 1` and `VLAN 2`.
+* **Ports 2 to 4** are *untagged* for `VLAN 1`, and **ports 5 to 8** are *untagged* for **VLAN 2**.
+
+Any traffic coming from **port 1** *tagged* as `VLAN 1` will reach devices on **ports 2 to 4**, but not those on **ports 5 to 8**. Similarly, traffic *tagged* as `VLAN 2` will reach devices on **ports 5 to 8**, but not those on **ports 2 to 4**.
 
 ##### Mixing Tagged with Untagged
 
-The third option isn't compatible with all switches, which is mixing **tagged** and **untagged** traffic to some ports. This is useful when you want to share ports from switch with two or more networks. Looks a bit complicated but is simple. Let's see:
-Suppose we have company network for private traffic and we want to allow guests to use the companies Wifi connection, but unable to access our private network. On our gateway, we will have two virtual LANs sharing the same NIC. A Private LAN configured as standard and Guest LAN configured as VLAN 2. We also deployed APs with the same configuration, two virtual LANs tied to two Wireless connections, **Private** as default and **guest** with VLAN2.
-Our switch configuration will be:
+Some switches allow you to mix *tagged* and *untagged* traffic on the same port. This is useful when you want to share a port between two or more networks. Although it may sound complicated, it's quite simple in practice.
 
-* VLAN 1 **untagged** to all ports.
-* Ports 1 and 2 as **tagged** ports on VLAN 2
+For example, suppose you have a company network for private traffic and want to allow guests to use the company's Wi-Fi without accessing the private network. On your gateway, you can configure two virtual LANs sharing the same NIC: a **Private LAN** (*untagged*) and a **Guest LAN** (*tagged* as `VLAN 2`). You can also configure your access points (APs) with two virtual LANs tied to two wireless networks: Private (untagged) and Guest (tagged as VLAN 2).
 
-Our gateway is connected to **port 1**, while the AP is connected to **port 2**. Any traffic comming from any port will communicate with any device connected from port 1 to 8 without any issue. Traffic comming from port 1 tagged as VLAN 2 will only reach port 2 as tagged and the device on the port 2 will only be able to see the traffic from VLAN 2 only if the the VLAN2 is configured at the target device. If you connect any device to port 2 without configuring the VLAN 2 on this device, it will be unable to receive any traffic tagged as VLAN2 and will reject any traffic comming from VLAN2.
+The switch configuration would be:
+
+* **VLAN 1** (untagged) on all ports.
+* **VLAN 2** (tagged) on ports 1 and 2.
+
+In this setup:
+
+The gateway is connected to **port 1**.
+The AP is connected to **port 2**.
+
+Any untagged traffic from **port 1** will communicate with devices on **ports 1 to 8** without any issues. However, traffic tagged as `VLAN 2` from **port 1** will only reach **port 2**, and the device on **port 2** will only see `VLAN 2` traffic if it is configured to handle `VLAN 2`. If you connect a device to **port 2** without configuring `VLAN 2`, it will not receive any `VLAN 2` traffic and will reject it.
 
 ##### Vantages
 
-* Cost less to implement, as you share one NIC, one cable and one port from switch.
+* **Cost-effective**: You can share one NIC, one cable, and one switch port across multiple networks.
 
 ##### Drawbacks
 
-* Phisical traffic and speed is shared between VLANs.
-* Needs to take note of what ports are tied to what VLAN.
-* Configure VLANs on hosts tied to tagged ports of the switch.
+* **Shared bandwidth**: Physical traffic and speed are shared between VLANs.
+* **Complexity**: You need to keep track of which ports are assigned to which VLANs.
+* **Host configuration**: Devices connected to tagged ports must be configured to handle the appropriate VLANs.
+
+In our setup, we will configure three networks on the same interface. This means that traffic from the **LAN**, **GUEST**, and **PPPoE WAN** networks will share the same physical cable, effectively sharing bandwidth. For example, if you're streaming a movie, the traffic will be doubled: the Mac Mini will handle both the incoming traffic from the internet and the outgoing traffic to the device on your network.
+
+On my 600 Mbps download and 150 Mbps upload connection, I haven't noticed any performance impact. This is because, while the Mac Mini is downloading content from the WAN, it is simultaneously uploading it to the LAN, effectively behaving like a "half-duplex" connection. Since many internet connections, including fiber, are already half-duplex, this setup doesn't introduce any significant performance issues. However, keep in mind that as if you saturate connection with more traffic, you may start to experience performance degradation.
 
 ## Network topology
 
@@ -75,7 +112,6 @@ Let's have the following networks:
 |PPPoE         | PPP0      | 333       |
 
 Let's focus only on IPV4 for now. But we can have IPV6 later.
-
 
 * The switch has 8 ports.
 * **VLAN 144**: Ports 1, 3, 4, 5, 6, 7, 8 are untagged.
