@@ -8,7 +8,7 @@ brief: "In this second part, we will configure VLANs and their networks, set up 
 image: "/assets/images/diy-linux-router/network.webp"
 keywords : ["macmini","router", "linux", "nixos", "pppoe", "unifi", "ubiquiti", "apple", "vlan", "tl-sg108e"]
 lang : "en"
-other-langs : [{"lang":"pt","article":"roteador-internet-linux-parte-2-rede"}]
+other-langs : [{"lang":"pt","article":"roteador-linux-parte-2-rede-e-internet"}]
 ---
 
 This is the second part of a multipart series describing how to build your own Linux router.

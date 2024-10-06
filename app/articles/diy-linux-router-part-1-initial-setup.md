@@ -8,7 +8,7 @@ brief: "Doing a new life to an old Mac Mini as a capable Linux router and homela
 image: "/assets/images/what-is-cloudflare/macmini.webp"
 keywords : ["macmini","router", "linux", "nixos", "pppoe", "unifi", "ubiquiti", "apple", "vlan", "tl-sg108e"]
 lang : "en"
-other-langs : [{"lang":"pt","article":"roteador-internet-linux-parte-1-configuracao-inicial"}]
+other-langs : [{"lang":"pt","article":"roteador-linux-parte-1-configuracao-inicial"}]
 ---
 
 This is the first part of a multipart series describing how to build your own Linux router.

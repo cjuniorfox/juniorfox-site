@@ -1,5 +1,5 @@
 ---
-title: "Roteador Linux DIY - Parte 1 - Configuração Inicial"
+title: "Roteador Linux - Parte 1 - Configuração Inicial"
 articleId: "roteador-linux-diy-parte-1-configuracao-inicial"
 date: "2024-10-05"
 author: "Carlos Junior"
