@@ -38,6 +38,7 @@ Na primeira parte, abordamos a configuração de hardware e instalamos um sistem
   * [6. Firewall](#6-firewall)
   * [7. Servidor DHCP](#7-servidor-dhcp)
   * [8. Serviços](#8-serviços)
+  * [9. Aplicar Mudanças](#9-aplicar-mudanças)
 * [Conclusão](#conclusão)
 
 ### VLANs
@@ -431,6 +432,14 @@ Tudo parece estar configurado conforme o esperado, mas os serviços. Habilitar o
     };
   };
 }
+```
+
+### 9. Aplicar mudanças
+
+Para as mudanças surtirem efeito, é necessário aplica-las com o comando:
+
+```bash
+nixos-rebuild switch
 ```
 
 ## Conclusão

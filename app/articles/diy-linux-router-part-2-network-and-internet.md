@@ -39,6 +39,7 @@ In this part, we will configure VLANs and their networks, set up a PPPoE connect
   * [6. Firewall](#6-firewall)
   * [7. DHCP Server](#7-dhcp-server)
   * [8. Services](#8-services)
+  * [9. Apply Changes](#9-apply-changes)
 * [Conclusion](#conclusion)
 
 ### VLANs
@@ -433,6 +434,14 @@ Everything seems to be configured as intended, but services. Enabling root passw
     };
   };
 }
+```
+
+### 9. Apply changes
+
+To changes take effect, is needed to apply the changes made so far executing the following command:
+
+```bash
+nixos-rebuild switch
 ```
 
 ## Conclusion
