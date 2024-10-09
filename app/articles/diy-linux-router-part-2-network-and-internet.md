@@ -157,8 +157,8 @@ Let's configure our server by editing the `.nix` files accordingly. To maintain 
 ├── configuration.nix 
 └── modules/ 
       ├── networking.nix # Network settings/ enables NFTables
-      └── pppoe.nix      # PPPoE connection setup
-      └── services.nix   # Other services
+      ├── pppoe.nix      # PPPoE connection setup
+      ├── services.nix   # Other services
       └── nftables.nft   # Firewall's NFTables rules
 ```
 
@@ -198,7 +198,6 @@ Let's split our `configuration.nix` file into parts. As we are already editing t
   # Importing the other modules
   imports = [
     ./modules/networking.nix
-    ./modules/firewall.nix
     ./modules/services.nix
     ./modules/pppoe.nix
     ./modules/dhcp_server.nix
@@ -275,7 +274,7 @@ in
     firewall.enable = false;
     nftables = {
       #Workaround mentioned at the firewall section
-      preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
+      #preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
       enable = true;
       rulesetFile = ./nftables.nft;
       flattenRulesetFile = true;
@@ -333,47 +332,37 @@ It's important to note that there's a problem with the `flow offloading` rule. W
 ```nix
 table inet filter {
   # enable flow offloading for better throughput
-  flowtable f {
-    hook ingress priority 0;
-    devices = { ppp0, lan };
-  }
-
-  chain output {
-    type filter hook output priority 100; policy accept;
-  }
+  #flowtable f {
+  #  hook ingress priority 0;
+  #  devices = { ppp0, lan };
+  #}
 
   chain input {
     type filter hook input priority filter; policy drop;
 
     # Allow trusted networks to access the router
-    iifname {
-      "lan","enp6s0"
-    } counter accept
+    iifname {"lan","enp6s0"} counter accept
 
     # Allow returning traffic from ppp0 and drop everything else
     iifname "ppp0" ct state { established, related } counter accept
     iifname "ppp0" drop
   }
 
+  chain output {
+    type filter hook output priority 100; policy accept;
+  }
+
   chain forward {
     type filter hook forward priority filter; policy drop;
 
     # enable flow offloading for better throughput
-    ip protocol { tcp, udp } flow offload @f
+    # ip protocol { tcp, udp } flow offload @f
 
     # Allow trusted network WAN access
-    iifname {
-            "lan",
-    } oifname {
-            "ppp0",
-    } counter accept comment "Allow trusted LAN to WAN"
+    iifname { "lan",} oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
 
     # Allow established WAN to return
-    iifname {
-            "ppp0",
-    } oifname {
-            "lan",
-    } ct state established,related counter accept comment "Allow established back to LANs"
+    iifname "ppp0" oifname {"lan",} ct state established,related counter accept comment "Allow established back to LANs"
     # https://samuel.kadolph.com/2015/02/mtu-and-tcp-mss-when-using-pppoe-2/
     # Clamp MSS to PMTU for TCP SYN packets
     oifname "ppp0" tcp flags syn tcp option maxseg size set rt mtu
@@ -410,7 +399,7 @@ If somebody connects to the network, they need to have an IP address. Let's conf
         "guest,10.1.222.100,10.1.222.150,12h"  # Guest range
       ];
       dhcp-option = [
-        "6,10.1.1.62,8.8.8.8,8.8.4.4,208.67.222.22,208.67.220.220"  
+        "6,8.8.8.8,8.8.4.4,208.67.222.22,208.67.220.220"  
       ];
     };
   };

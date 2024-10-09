@@ -156,8 +156,8 @@ Vamos configurar nosso servidor editando os arquivos `.nix` conforme necessário
 ├── configuration.nix
 └── modules/
       ├── networking.nix # Configurações de rede/ habilita NFTables
-      └── pppoe.nix      # Configuração da conexão PPPoE
-      └── services.nix   # Outros serviços
+      ├── pppoe.nix      # Configuração da conexão PPPoE
+      ├── services.nix   # Outros serviços
       └── nftables.nft   # Regras do firewall NFTables
 ```
 
@@ -273,7 +273,7 @@ in
     firewall.enable = false;
     nftables = {
       # Solução mencionada na seção de firewall
-      preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
+      # preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
       enable = true;
       rulesetFile = ./nftables.nft;
       flattenRulesetFile = true;
@@ -330,50 +330,40 @@ A configuração do Firewall é feita com `nftables`. Vamos fazer uma configura�
 
 ```nix
 table inet filter {
-  # habilitar offloading de fluxo para melhor throughput
-  flowtable f {
-    hook ingress priority 0;
-    devices = { ppp0, lan };
+  # enable flow offloading for better throughput
+  #flowtable f {
+  #  hook ingress priority 0;
+  #  devices = { ppp0, lan };
+  #}
+
+  chain input {
+    type filter hook input priority filter; policy drop;
+
+    # Allow trusted networks to access the router
+    iifname {"lan","enp6s0"} counter accept
+
+    # Allow returning traffic from ppp0 and drop everything else
+    iifname "ppp0" ct state { established, related } counter accept
+    iifname "ppp0" drop
   }
 
   chain output {
     type filter hook output priority 100; policy accept;
   }
 
-  chain input {
-    type filter hook input priority filter; policy drop;
-
-    # Permitir que redes confiáveis acessem o roteador
-    iifname {
-      "lan","enp6s0"
-    } counter accept
-
-    # Permitir tráfego de retorno de ppp0 e descartar todo o resto
-    iifname "ppp0" ct state { established, related } counter accept
-    iifname "ppp0" drop
-  }
-
   chain forward {
     type filter hook forward priority filter; policy drop;
 
-    # habilitar offloading de fluxo para melhor throughput
-    ip protocol { tcp, udp } flow offload @f
+    # enable flow offloading for better throughput
+    # ip protocol { tcp, udp } flow offload @f
 
-    # Permitir que a rede confiável acesse a WAN
-    iifname {
-            "lan",
-    } oifname {
-            "ppp0",
-    } counter accept comment "Permitir LAN confiável para WAN"
+    # Allow trusted network WAN access
+    iifname { "lan",} oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
 
-    # Permitir que a WAN estabelecida retorne
-    iifname {
-            "ppp0",
-    } oifname {
-            "lan",
-    } ct state established,related counter accept comment "Permitir retorno estabelecido para LANs"
+    # Allow established WAN to return
+    iifname "ppp0" oifname {"lan",} ct state established,related counter accept comment "Allow established back to LANs"
     # https://samuel.kadolph.com/2015/02/mtu-and-tcp-mss-when-using-pppoe-2/
-    # Ajustar MSS para PMTU para pacotes SYN TCP
+    # Clamp MSS to PMTU for TCP SYN packets
     oifname "ppp0" tcp flags syn tcp option maxseg size set rt mtu
   }
 }
@@ -382,7 +372,7 @@ table ip nat {
   chain prerouting {
     type nat hook prerouting priority filter; policy accept;
   }
-  # Configurar mascaramento NAT na interface ppp0
+  # Setup NAT masquerading on the ppp0 interface
   chain postrouting {
     type nat hook postrouting priority filter; policy accept;
     oifname "ppp0" masquerade
