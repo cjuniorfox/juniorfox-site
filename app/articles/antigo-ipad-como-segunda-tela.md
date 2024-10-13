@@ -20,6 +20,7 @@ Eu tenho um iPad 3ª geração que há muito tempo me foi dado de presente por u
 - [Sunshine e Moonlight](#sunshine-e-moonlight)
 - [Linux](#linux)
   - [Instalando Sunshine](#instalando-sunshine)
+    -[Fedora Copr](#fedora-copr)
   - [Criar um serviço para "setcap" no Sunshine](#criar-um-serviço-para-setcap-no-sunshine)
   - [Firewall](#firewall)
   - [Script para criar a tela virtual](#script-para-criar-a-tela-virtual)
@@ -47,7 +48,25 @@ O passo a passo desse tutorial é baseado no Fedora Linux com Hyprland usando a 
 
 O Sunshine não é está disponível nos gerenciadores de pacotes das distribuições. Em vez disso, você precisa baixar o pacote manualmente de acordo com a distribuição que está usando. A opção mais genérica, na minha opinião, é usar o Flatpak. Então, vamos baixar a versão mais recente do software em Flatpak do Sunshine a partir [deste link](https://github.com/LizardByte/Sunshine/releases) e dar vários comandos de Linux para fazê-lo funcionar.
 
+#### Fedora Copr
+
+É possível instalar usando o Fedora COPR, que são repositórios públicos criados por colaboradores. Um que uso é o [matte-schwartz/sunshine](https://copr.fedorainfracloud.org/coprs/matte-schwartz/sunshine/) que pode ser adicionado a sua distribuição de duas formas:
+
+- `dnf copr enable matte-schwartz/sunshine`
+- `curl --output "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:matte-schwartz/sunshine.repo" --remote-name "https://copr.fedorainfracloud.org/coprs/matte-schwartz/sunshine/repo/fedora-40/matte-schwartz-sunshine-fedora-40.repo"`
+
+Após, basta instalar:
+
+```bash
+# Fedora
+dnf install sunshine -y
+# Silverblue
+rpm-ostree install sunshine
+```
+
 ### Criar um serviço para "setcap" no Sunshine
+
+**Atenção, apenas se tiver instalado a versão do Flatpak.**
 
 O Sunshine compartilha a tela usando uma solução que exige permissões especiais para o arquivo executável, e essa permissão precisa ser aplicada a cada inicialização. Então, vamos criar um serviço systemd para isso. Crie o arquivo `/etc/systemd/system/sunshine-setcap.service` com o seguinte conteúdo:
 
@@ -63,6 +82,8 @@ ExecStart=/usr/bin/bash -c '/usr/sbin/setcap cap_sys_admin+p $(readlink -f $(/us
 [Install]
 WantedBy=multi-user.target
 ```
+
+**Apenas se tiver instalado a versão Flatpak do Sunshine.**
 
 Agora, vamos criar um serviço a nível de usuário para inicializar o Sunhine assim que fizer login. Crie o arquivo `~/.config/systemd/user/sunshine.service` com o seguinte conteúdo:
 
@@ -174,12 +195,14 @@ Com tudo funcionando, siga os seguintes passos:
    - Adicione em `Do Command`
 
 ```sh
+   # Flatpak-spawn --host apenas se tiver instalado a versão Flatpak do Sunshine
    flatpak-spawn --host /home/username/.local/bin/virtual-screen.sh create
 ```
 
    - Em `Undo Command` (desfazer), configure como: 
 
 ```sh
+   # Flatpak-spawn --host apenas se tiver instalado a versão Flatpak do Sunshine
    flatpak-spawn --host /home/username/.local/bin/virtual-screen.sh remove
 ```
 
