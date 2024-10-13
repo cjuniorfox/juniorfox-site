@@ -20,7 +20,7 @@ I have this older iPad 3rd generation that was kindly given to me as a gift by a
 - [Sunshine and Moonlight](#sunshine-and-moonlight)
 - [Linux](#linux)
   - [Install Sunshine](#install-sunshine)
-    -[Fedora Copr](#fedora-copr)
+    - [Fedora Copr](#fedora-copr)
   - [Create a service for "setcap" on Sunshine](#create-a-service-for-setcap-on-sunshine)
   - [Firewall](#firewall)
   - [Script for adding the virtual screen](#script-for-adding-the-virtual-screen)
