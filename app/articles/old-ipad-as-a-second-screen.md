@@ -20,6 +20,7 @@ I have this older iPad 3rd generation that was kindly given to me as a gift by a
 - [Sunshine and Moonlight](#sunshine-and-moonlight)
 - [Linux](#linux)
   - [Install Sunshine](#install-sunshine)
+    -[Fedora Copr](#fedora-copr)
   - [Create a service for "setcap" on Sunshine](#create-a-service-for-setcap-on-sunshine)
   - [Firewall](#firewall)
   - [Script for adding the virtual screen](#script-for-adding-the-virtual-screen)
@@ -49,7 +50,25 @@ During this tutorial, I will provide the steps based on Fedora Linux with Hyprla
 
 Sunshine does not provide its packages to the distro's package managers. Instead, you need to download the package manually according to the distribution you're currently using. The most general option, in my opinion, is using the Flatpak version of it. So, let's download the latest Flatpak release of Sunshine from [this link](https://github.com/LizardByte/Sunshine/releases) and do some Linux shenanigans to make it work.
 
+#### Fedora Copr
+
+It is possible to install Sunshine using Fedora Copr, which are public repositories created by collaborators. One that I use is the [matte-schwartz/sunshine](https://copr.fedorainfracloud.org/coprs/matte-schwartz/sunshine/) repository, which can be added in two ways:
+
+- `dnf copr enable matte-schwartz/sunshine`
+- `curl --output "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:matte-schwartz/sunshine.repo" --remote-name "https://copr.fedorainfracloud.org/coprs/matte-schwartz/sunshine/repo/fedora-40/matte-schwartz-sunshine-fedora-40.repo"`
+
+After that, it's just a matter of installing:
+
+```bash
+# Fedora
+dnf install sunshine -y
+# Silverblue
+rpm-ostree install sunshine
+```
+
 ### Create a service for "setcap" on Sunshine
+
+**Only applicable if you're using the Flatpak version of Sunshine.**
 
 Sunshine shares the screen using a solution that demands special permissions to the executable file, and this permission needs to be applied on every boot. So let's create a systemd unit for it. Create the file `/etc/systemd/system/sunshine-setcap.service` with the following content:
 
@@ -176,12 +195,14 @@ With everthing up and working, do as followws:
    - Add on `Do Command` as
 
 ```sh
+   #Use "flatpak-spawn --host" only if you're using the Flatpak version of Sunshine.
    flatpak-spawn --host /home/username/.local/bin/virtual-screen.sh create
 ```
 
    - To the `Undo Command`, set it as 
 
 ```sh
+   #Use "flatpak-spawn --host" only if you're using the Flatpak version of Sunshine.
    flatpak-spawn --host /home/username/.local/bin/virtual-screen.sh remove
 ```
 
