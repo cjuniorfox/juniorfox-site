@@ -13,7 +13,8 @@ other-langs : [{"lang":"pt","article":"roteador-linux-parte-2-rede-e-internet"}]
 
 This is the second part of a multipart series describing how to build your own Linux router.
 
-* Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
+- Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
+- Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 
 In the first part, we covered the hardware setup and installed a basic Linux system using NixOS on top of a ZFS filesystem.
 In this part, we will configure VLANs and their networks, set up a PPPoE connection, configure the DHCP server, and implement basic firewall rules.
@@ -22,29 +23,29 @@ In this part, we will configure VLANs and their networks, set up a PPPoE connect
 
 ## Table of Contents
 
-* [VLANs](#vlans)
-  * [What is VLAN](#what-is-vlan)
-    * [Untagged VLANs](#untagged-vlans)
-    * [Tagged VLANs](#tagged-vlans)
-    * [Mixing Tagged with Untagged](#mixing-tagged-with-untagged)
-    * [Vantages](#vantages)
-    * [Drawbacks](#drawbacks)
-* [Network topology](#network-topology)
-* [Mac Mini](#mac-mini)
-  * [Networks](#networks)
-* [NixOS config](#nixos-config)
-  * [1. Basic config](#1-basic-config)
-  * [2. Networking](#2-networking)
-  * [5. PPPoE connection](#5-pppoe-connection)
-  * [6. Firewall](#6-firewall)
-  * [7. DHCP Server](#7-dhcp-server)
-  * [8. Services](#8-services)
-  * [9. Apply Changes](#9-apply-changes)
-* [Conclusion](#conclusion)
+- [VLANs](#vlans)
+  - [What is VLAN](#what-is-vlan)
+    - [Untagged VLANs](#untagged-vlans)
+    - [Tagged VLANs](#tagged-vlans)
+    - [Mixing Tagged with Untagged](#mixing-tagged-with-untagged)
+    - [Vantages](#vantages)
+    - [Drawbacks](#drawbacks)
+- [Network topology](#network-topology)
+- [Mac Mini](#mac-mini)
+  - [Networks](#networks)
+- [NixOS config](#nixos-config)
+  - [1. Basic config](#1-basic-config)
+  - [2. Networking](#2-networking)
+  - [5. PPPoE connection](#5-pppoe-connection)
+  - [6. Firewall](#6-firewall)
+  - [7. DHCP Server](#7-dhcp-server)
+  - [8. Services](#8-services)
+  - [9. Apply Changes](#9-apply-changes)
+- [Conclusion](#conclusion)
 
 ### VLANs
 
-In this setup, I am using the **TP-Link TL-SG108E** switch with the following configuration:
+In this setup, I am using the **TP-Link TL-SG108E** and will make use of VLANs.
 
 #### What is VLAN
 
@@ -52,8 +53,8 @@ To properly assign different networks using a single NIC, we need to leverage VL
 
 **VLAN** or **Virtual LAN**, allows you to create virtual networks, similar to virtual NICs, to split your network into two or more segments. On a managed switch, you can create VLANs and assign ports to each VLAN as either **tagged** or **untagged**.
 
-* You can assign many *tagged* VLANs to a single port.
-* You can only assign one *untagged* VLAN to a port.
+- You can assign many *tagged* VLANs to a single port.
+- You can only assign one *untagged* VLAN to a port.
 
 ##### Untagged VLANs
 
@@ -65,8 +66,8 @@ Similarly, you can tag a port using **VLAN tags**. This allows a single port to 
 
 For example:
 
-* **Port 1** is *tagged* with `VLAN 1` and `VLAN 2`.
-* **Ports 2 to 4** are *untagged* for `VLAN 1`, and **ports 5 to 8** are *untagged* for **VLAN 2**.
+- **Port 1** is *tagged* with `VLAN 1` and `VLAN 2`.
+- **Ports 2 to 4** are *untagged* for `VLAN 1`, and **ports 5 to 8** are *untagged* for **VLAN 2**.
 
 Any traffic coming from **port 1** *tagged* as `VLAN 1` will reach devices on **ports 2 to 4**, but not those on **ports 5 to 8**. Similarly, traffic *tagged* as `VLAN 2` will reach devices on **ports 5 to 8**, but not those on **ports 2 to 4**.
 
@@ -78,8 +79,8 @@ For example, suppose you have a company network for private traffic and want to 
 
 The switch configuration would be:
 
-* **VLAN 1** (untagged) on all ports.
-* **VLAN 2** (tagged) on ports 1 and 2.
+- **VLAN 1** (untagged) on all ports.
+- **VLAN 2** (tagged) on ports 1 and 2.
 
 In this setup:
 
@@ -90,13 +91,13 @@ Any untagged traffic from **port 1** will communicate with devices on **ports 1 
 
 ##### Vantages
 
-* **Cost-effective**: You can share one NIC, one cable, and one switch port across multiple networks.
+- **Cost-effective**: You can share one NIC, one cable, and one switch port across multiple networks.
 
 ##### Drawbacks
 
-* **Shared bandwidth**: Physical traffic and speed are shared between VLANs.
-* **Complexity**: You need to keep track of which ports are assigned to which VLANs.
-* **Host configuration**: Devices connected to tagged ports must be configured to handle the appropriate VLANs.
+- **Shared bandwidth**: Physical traffic and speed are shared between VLANs.
+- **Complexity**: You need to keep track of which ports are assigned to which VLANs.
+- **Host configuration**: Devices connected to tagged ports must be configured to handle the appropriate VLANs.
 
 In our setup, we will configure three networks on the same interface. This means that traffic from the **LAN**, **GUEST**, and **PPPoE WAN** networks will share the same physical cable, effectively sharing bandwidth. For example, if you're streaming a movie, the traffic will be doubled: the Mac Mini will handle both the incoming traffic from the internet and the outgoing traffic to the device on your network.
 
@@ -114,10 +115,10 @@ Let's have the following networks:
 
 Let's focus only on IPV4 for now. But we can have IPV6 later.
 
-* The switch has 8 ports.
-* **VLAN 144**: Ports 1, 3, 4, 5, 6, 7, 8 are untagged.
-* **VLAN 222**: Ports 1 and 2 are tagged.
-* **VLAN 333**: Port 1 and 3 are tagged.
+- The switch has 8 ports.
+- **VLAN 144**: Ports 1, 3, 4, 5, 6, 7, 8 are untagged.
+- **VLAN 222**: Ports 1 and 2 are tagged.
+- **VLAN 333**: Port 1 and 3 are tagged.
 
 ```txt
     ┌─────────────► Mac Mini
@@ -142,9 +143,9 @@ As far as this Mac Mini only has one Gigabit Ethernet port, this NIC will be tie
 
 #### Networks
 
-* `10.1.144.0/24` is a bridge bound to the NIC. In my case `enp4s0f0`. I leave it as untagged to be easy to reach the computer over the network, if I have some issue with my switch.
-* `10.1.222.0/24` is `enp4s0f0.222` (VLAN 222) as `guest` network.
-* `PPPoE` is `enp4s0f0.333` as `wan` network.
+- `10.1.144.0/24` is a bridge bound to the NIC. In my case `enp4s0f0`. I leave it as untagged to be easy to reach the computer over the network, if I have some ssue with my switch.
+- `10.1.222.0/24` is `enp4s0f0.222` (VLAN 222) as `guest` network.
+- `PPPoE` is `enp4s0f0.333` as `wan` network.
 
 ## NixOS config
 

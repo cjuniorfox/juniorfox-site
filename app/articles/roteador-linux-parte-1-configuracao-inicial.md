@@ -13,43 +13,44 @@ other-langs : [{"lang":"en","article":"diy-linux-router-part-1-initial-setup"}]
 
 Esta é a primeira parte de uma série de artigos descrevendo como construir seu próprio roteador Linux.
 
-* Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
+- Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
+- Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-users-security-firewall)
 
-Tendo este velho Mac Mini sem uso no meu armário, transformá-lo em um servidor Linux daria uma nova vida a ele. É uma máquina capaz, estável e longe de ser feia. Então, vamos fazer isso.
+Tendo este velho Mac Mini sem uso e transformá-lo em um servidor Linux daria uma nova vida a ele. É uma máquina capaz, estável e longe de ser feia. Então, vamos fazer isso.
 
 ![Macmini como Roteador](/assets/images/what-is-cloudflare/macmini.webp)
 
 ## Índice
 
-* [A Ideia](#a-ideia)
-* [O Hardware](#o-hardware)
-  * [MacMini Core 2 Duo de 2010](#macmini-core-2-duo-de-2010)
-  * [Switch Gerenciável TP-Link TL-SG108E](#switch-gerenciável-tp-link-tl-sg108e)
-  * [Ubiquiti Unifi C6 Lite](#ubiquiti-unifi-c6-lite)
-* [Configuração do Linux](#configuração-do-linux)
-  * [1. Baixar o NixOS](#1-baixar-o-nixos)
-  * [2. Habilitar o Serviço SSH](#2-habilitar-o-serviço-ssh)
-  * [3. Acessar o Mac Mini via SSH](#3-acessar-o-mac-mini-via-ssh)
-  * [4. Particionar o Disco](#4-particionar-o-disco)
-  * [5. Criar Datasets ZFS](#5-criar-datasets-zfs)
-  * [6. Montar os Sistemas de Arquivos](#6-montar-os-sistemas-de-arquivos)
-  * [7. Gerar a Configuração do NixOS](#7-gerar-a-configuração-do-nixos)
-  * [8. Editar a Configuração](#8-editar-a-configuração)
-  * [9. Instalar o NixOS](#9-instalar-o-nixos)
-  * [10. Configuração Pós-Instalação](#10-configuração-pós-instalação)
-* [Conclusão](#conclusão)
+- [A Ideia](#a-ideia)
+- [O Hardware](#o-hardware)
+  - [MacMini Core 2 Duo de 2010](#macmini-core-2-duo-de-2010)
+  - [Switch Gerenciável TP-Link TL-SG108E](#switch-gerenciável-tp-link-tl-sg108e)
+  - [Ubiquiti Unifi C6 Lite](#ubiquiti-unifi-c6-lite)
+- [Configuração do Linux](#configuração-do-linux)
+  - [1. Baixar o NixOS](#1-baixar-o-nixos)
+  - [2. Habilitar o Serviço SSH](#2-habilitar-o-serviço-ssh)
+  - [3. Acessar o Mac Mini via SSH](#3-acessar-o-mac-mini-via-ssh)
+  - [4. Particionar o Disco](#4-particionar-o-disco)
+  - [5. Criar Datasets ZFS](#5-criar-datasets-zfs)
+  - [6. Montar os Sistemas de Arquivos](#6-montar-os-sistemas-de-arquivos)
+  - [7. Gerar a Configuração do NixOS](#7-gerar-a-configuração-do-nixos)
+  - [8. Editar a Configuração](#8-editar-a-configuração)
+  - [9. Instalar o NixOS](#9-instalar-o-nixos)
+  - [10. Configuração Pós-Instalação](#10-configuração-pós-instalação)
+- [Conclusão](#conclusão)
 
 ## A Ideia
 
 Vamos definir algumas premissas para o nosso projeto. Esse servidor será:
 
-* **Gateway de Internet**: O Mac Mini atuará como o roteador principal, gerenciando o tráfego entre a rede interna e a internet.
-* **Servidor de Arquivos**: Configuraremos um servidor de arquivos para armazenar e compartilhar arquivos pela rede.
-* **Armazenamento em Nuvem Privado com Nextcloud**: O Nextcloud fornecerá uma solução de armazenamento em nuvem auto-hospedada, permitindo que você acesse seus arquivos de qualquer lugar.
-* **Acesso Sem Fio**: O Unifi C6 Lite fornecerá acesso sem fio à rede.
-* **DNS Unbound com Bloqueio de Anúncios**: O DNS Unbound será configurado para bloquear anúncios em toda a rede, melhorando a privacidade e reduzindo o uso de largura de banda.
-* **Servidor de Mídia**: Um servidor de mídia permitirá você montar seu "Netflix" caseiro.
-* **VPN Privada**: Uma VPN será configurada para permitir acesso remoto seguro à rede.
+- **Gateway de Internet**: O Mac Mini atuará como o roteador principal, gerenciando o tráfego entre a rede interna e a internet.
+- **Servidor de Arquivos**: Configuraremos um servidor de arquivos para armazenar e compartilhar arquivos pela rede.
+- **Armazenamento em Nuvem Privado com Nextcloud**: O Nextcloud fornecerá uma solução de armazenamento em nuvem auto-hospedada, permitindo que você acesse seus arquivos de qualquer lugar.
+- **Acesso Sem Fio**: O Unifi C6 Lite fornecerá acesso sem fio à rede.
+- **DNS Unbound com Bloqueio de Anúncios**: O DNS Unbound será configurado para bloquear anúncios em toda a rede, melhorando a privacidade e reduzindo o uso de largura de banda.
+- **Servidor de Mídia**: Um servidor de mídia permitirá você montar seu "Netflix" caseiro.
+- **VPN Privada**: Uma VPN será configurada para permitir acesso remoto seguro à rede.
 
 ## O Hardware
 
@@ -62,9 +63,9 @@ Para este projeto, vamos usar:
 
 Este Mac Mini é antigo e como computador de mesa não tem muita utilidade, mas como servidor, é uma excelente máquina com as seguintes especificações:
 
-* Intel Core 2 Duo 8600 com 2.6GHz.
-* 6GB de RAM.
-* SSD de 2TB.
+- Intel Core 2 Duo 8600 com 2.6GHz.
+- 6GB de RAM.
+- SSD de 2TB.
 
 ### Switch Gerenciável TP-Link TL-SG108E
 
@@ -87,9 +88,9 @@ O NixOS é uma ótima escolha por causa de seu modelo de configuração declarat
 
 ### 1. Baixar o NixOS
 
-* Baixe o ISO do NixOS no [site oficial](https://nixos.org/download/).
-* Crie um pendrive bootável usando uma ferramenta como `dd` ou `Etcher`.
-* Inicialize o Mac Mini a partir do pendrive segurando a tecla `Option` durante a inicialização e selecionando o pendrive.
+- Baixe o ISO do NixOS no [site oficial](https://nixos.org/download/).
+- Crie um pendrive bootável usando uma ferramenta como `dd` ou `Etcher`.
+- Inicialize o Mac Mini a partir do pendrive segurando a tecla `Option` durante a inicialização e selecionando o pendrive.
 
 ### 2. Habilitar o Serviço SSH
 
@@ -128,11 +129,11 @@ mkfs.msdos -F 32 -n EFI /dev/sda1
 No ZFS, não se usa muito o termo "partição" porque realmente não é. O equivalente é "Datasets", que tem uma abordagem semelhante aos **Volumes BTRFS** no sistema de arquivos BTRFS.
 Há uma série de comandos que usaremos para criar nosso zpool e datasets.
 
-* **`ashift=12`**: melhora o desempenho ao trabalhar com SSDs
-* **`atime=off`**: Como mencionado neste [artigo](https://www.unixtutorial.org/atime-ctime-mtime-in-unix-filesystems/), sistemas operacionais Unix modernos têm opções de montagem especiais para otimizar o uso de atime.
-* **compression=lz4**: Otimiza o espaço de armazenamento comprimindo dados com o algoritmo `lz4` sem sacrificar o desempenho.
-* **zattr=sa**: Configurações avançadas de atributos. Necessário para instalar sistemas operacionais baseados em Linux.
-* **acltype=posixacl**: Requisito para instalar Linux em um sistema formatado com ZFS.
+- **`ashift=12`**: melhora o desempenho ao trabalhar com SSDs
+- **`atime=off`**: Como mencionado neste [artigo](https://www.unixtutorial.org/atime-ctime-mtime-in-unix-filesystems/), sistemas operacionais Unix modernos têm opções de montagem especiais para otimizar o uso de atime.
+- **compression=lz4**: Otimiza o espaço de armazenamento comprimindo dados com o algoritmo `lz4` sem sacrificar o desempenho.
+- **zattr=sa**: Configurações avançadas de atributos. Necessário para instalar sistemas operacionais baseados em Linux.
+- **acltype=posixacl**: Requisito para instalar Linux em um sistema formatado com ZFS.
 
 ```bash
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool /dev/sda2
@@ -196,9 +197,9 @@ nixos-install
 
 Uma vez que o NixOS esteja instalado, você pode começar a configurar os serviços que rodarão no seu roteador. Aqui estão alguns dos principais serviços que você vai querer configurar:
 
-* **Nextcloud**: Para armazenamento em nuvem privado.
-* **DNS Unbound com Bloqueio de Anúncios**: Para bloquear anúncios em toda a rede.
-* **VPN**: Para permitir acesso remoto seguro à sua rede.
+- **Nextcloud**: Para armazenamento em nuvem privado.
+- **DNS Unbound com Bloqueio de Anúncios**: Para bloquear anúncios em toda a rede.
+- **VPN**: Para permitir acesso remoto seguro à sua rede.
 
 Cada um desses serviços pode ser configurado no arquivo de configuração do NixOS (`/etc/nixos/configuration.nix`), facilitando o gerenciamento e a reprodução da sua configuração.
 
