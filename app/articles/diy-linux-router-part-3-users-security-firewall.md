@@ -5,7 +5,7 @@ date: "2024-10-08"
 author: "Carlos Junior"
 category: "Linux"
 brief: "In this third part of our series, let's increase security by creating users, changing SSH auth and hardening firewall configuration"
-image: "/assets/images/fire-of-wall.webp"
+image: "/assets/images/diy-linux-router/fire-of-wall.webp"
 keywords : ["macmini","router", "linux", "nixos", "pppoe", "unifi", "ubiquiti", "apple", "vlan", "tl-sg108e"]
 lang : "en"
 other-langs : [{"lang":"pt","article":"roteador-linux-parte-3-usuarios-seguranca-firewall"}]
@@ -19,7 +19,7 @@ This is the third part of a multipart series describing how to build your own Li
 In the first and second parts, we installed the operating system, configured the network, and set up the Mac Mini to work as a router.
 In this part, we will increase security by creating users, changing SSH authentication, and hardening the firewall configuration.
 
-![Fire of wall](/assets/images/fire-of-wall.webp)
+![Fire of wall](/assets/images/diy-linux-router/fire-of-wall.webp)
 *[EAA AirVenture Oshkosh 2013 Wall of fire](http://www.vg-photo.com/airshow/2013/Oshkosh/pyro.html)*
 
 ## Table of Contents
