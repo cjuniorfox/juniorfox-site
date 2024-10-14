@@ -14,7 +14,7 @@ other-langs : [{"lang":"en","article":"diy-linux-router-part-2-network-and-inter
 Esta é a segunda parte de uma série de artigos descrevendo como construir seu próprio roteador Linux.
 
 - Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
-- Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-users-security-firewall)
+- Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
 
 Na primeira parte, abordamos a configuração de hardware e instalamos um sistema Linux básico usando NixOS usando o sistema de arquivos ZFS. Nesta parte, vamos configurar VLANs e suas redes, a conexão PPPoE, configurar o servidor DHCP e implementar regras básicas de firewall.
 
