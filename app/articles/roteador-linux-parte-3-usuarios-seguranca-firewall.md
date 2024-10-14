@@ -5,7 +5,7 @@ date: "2024-10-08"
 author: "Carlos Junior"
 category: "Linux"
 brief: "Nesta terceira parte da nossa série, vamos aumentar a segurança criando usuários, alterando a autenticação SSH e reforçando a configuração do firewall"
-image: "/assets/images/fire-of-wall.webp"
+image: "/assets/images/diy-linux-router/fire-of-wall.webp"
 keywords : ["macmini","roteador", "linux", "nixos", "pppoe", "unifi", "ubiquiti", "apple", "vlan", "tl-sg108e"]
 lang : "pt"
 other-langs : [{"lang":"en","article":"diy-linux-router-part-3-users-security-firewall"}]
@@ -19,7 +19,7 @@ Esta é a terceira parte de uma série de artigos descrevendo como construir seu
 Nas primeiras e segundas partes, instalamos o sistema operacional, configuramos a rede e configuramos o Mac Mini para funcionar como um roteador.
 Nesta parte, vamos aumentar a segurança criando usuários, alterando a autenticação SSH e reforçando a configuração do firewall.
 
-![Parede de fogo](/assets/images/fire-of-wall.webp)
+![Parede de fogo](/assets/images/diy-linux-router/fire-of-wall.webp)
 *[EAA AirVenture Oshkosh 2013 Parede de fogo](http://www.vg-photo.com/airshow/2013/Oshkosh/pyro.html)*
 
 ## Índice
