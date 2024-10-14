@@ -13,7 +13,8 @@ other-langs : [{"lang":"en","article":"diy-linux-router-part-2-network-and-inter
 
 Esta é a segunda parte de uma série de artigos descrevendo como construir seu próprio roteador Linux.
 
-* Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
+- Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
+- Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-users-security-firewall)
 
 Na primeira parte, abordamos a configuração de hardware e instalamos um sistema Linux básico usando NixOS usando o sistema de arquivos ZFS. Nesta parte, vamos configurar VLANs e suas redes, a conexão PPPoE, configurar o servidor DHCP e implementar regras básicas de firewall.
 
@@ -21,29 +22,29 @@ Na primeira parte, abordamos a configuração de hardware e instalamos um sistem
 
 ## Índice
 
-* [VLANs](#vlans)
-  * [O que é VLAN](#o-que-é-vlan)
-    * [VLANs sem Tag](#vlans-sem-tag)
-    * [VLANs com Tag](#vlans-com-tag)
-    * [Misturando VLANs com e sem Tag](#misturando-vlans-com-e-sem-tag)
-    * [Vantagens](#vantagens)
-    * [Desvantagens](#desvantagens)
-* [Topologia de Rede](#topologia-de-rede)
-* [Mac Mini](#mac-mini)
-  * [Redes](#redes)
-* [Configuração do NixOS](#configuração-do-nixos)
-  * [1. Configuração Básica](#1-configuração-básica)
-  * [2. Rede](#2-rede)
-  * [5. Conexão PPPoE](#5-conexão-pppoe)
-  * [6. Firewall](#6-firewall)
-  * [7. Servidor DHCP](#7-servidor-dhcp)
-  * [8. Serviços](#8-serviços)
-  * [9. Aplicar Mudanças](#9-aplicar-mudanças)
-* [Conclusão](#conclusão)
+- [VLANs](#vlans)
+  - [O que é VLAN](#o-que-é-vlan)
+    - [VLANs sem Tag](#vlans-sem-tag)
+    - [VLANs com Tag](#vlans-com-tag)
+    - [Misturando VLANs com e sem Tag](#misturando-vlans-com-e-sem-tag)
+    - [Vantagens](#vantagens)
+    - [Desvantagens](#desvantagens)
+- [Topologia de Rede](#topologia-de-rede)
+- [Mac Mini](#mac-mini)
+  - [Redes](#redes)
+- [Configuração do NixOS](#configuração-do-nixos)
+  - [1. Configuração Básica](#1-configuração-básica)
+  - [2. Rede](#2-rede)
+  - [5. Conexão PPPoE](#5-conexão-pppoe)
+  - [6. Firewall](#6-firewall)
+  - [7. Servidor DHCP](#7-servidor-dhcp)
+  - [8. Serviços](#8-serviços)
+  - [9. Aplicar Mudanças](#9-aplicar-mudanças)
+- [Conclusão](#conclusão)
 
 ### VLANs
 
-Nesta configuração, estou usando o switch **TP-Link TL-SG108E** com a seguinte configuração:
+Nesta configuração, estou usando o switch **TP-Link TL-SG108E** e farei uso de VLANs.
 
 #### O que é VLAN
 
@@ -51,8 +52,8 @@ Para atribuir corretamente diferentes redes usando uma única NIC, precisamos ut
 
 **VLAN** ou **LAN Virtual**, permite criar redes virtuais, semelhantes a NICs virtuais, para dividir sua rede em dois ou mais segmentos. Em um switch gerenciado, você pode criar VLANs e atribuir portas a cada VLAN como **tagged** (com tag) ou **untagged** (sem tag).
 
-* Você pode atribuir várias VLANs do tipo *tagged* a uma única porta.
-* Você só pode atribuir uma VLAN *untagged* a uma porta.
+- Você pode atribuir várias VLANs do tipo *tagged* a uma única porta.
+- Você só pode atribuir uma VLAN *untagged* a uma porta.
 
 ##### VLANs sem Tag
 
@@ -64,8 +65,8 @@ Da mesma forma, você pode configurar uma porta usando **tags de VLAN**. Isso pe
 
 Por exemplo:
 
-* **Porta 1** está *tagged* com `VLAN 1` e `VLAN 2`.
-* **Portas 2 a 4** estão *untagged* para `VLAN 1`, e **portas 5 a 8** estão *untagged* para **VLAN 2**.
+- **Porta 1** está *tagged* com `VLAN 1` e `VLAN 2`.
+- **Portas 2 a 4** estão *untagged* para `VLAN 1`, e **portas 5 a 8** estão *untagged* para **VLAN 2**.
 
 Qualquer tráfego vindo da **porta 1** *tagged* como `VLAN 1` alcançará dispositivos nas **portas 2 a 4**, mas não aqueles nas **portas 5 a 8**. Da mesma forma, o tráfego *tagged* como `VLAN 2` alcançará dispositivos nas **portas 5 a 8**, mas não aqueles nas **portas 2 a 4**.
 
@@ -77,8 +78,8 @@ Por exemplo, suponha que você tenha uma rede corporativa para tráfego privado 
 
 A configuração do switch seria:
 
-* **VLAN 1** (untagged) em todas as portas.
-* **VLAN 2** (tagged) nas portas 1 e 2.
+- **VLAN 1** (untagged) em todas as portas.
+- **VLAN 2** (tagged) nas portas 1 e 2.
 
 Nesta configuração:
 
@@ -89,13 +90,13 @@ Qualquer tráfego *untagged* da **porta 1** se comunicará com dispositivos nas 
 
 ##### Vantagens
 
-* **Custo-benefício**: Você pode compartilhar uma NIC, um cabo e uma porta de switch entre várias redes.
+- **Custo-benefício**: Você pode compartilhar uma NIC, um cabo e uma porta de switch entre várias redes.
 
 ##### Desvantagens
 
-* **Largura de banda compartilhada**: O tráfego físico e a velocidade são compartilhados entre as VLANs.
-* **Complexidade**: Você precisa tomar nota de quais portas estão atribuídas a quais VLANs.
-* **Configuração do host**: Dispositivos conectados a portas *tagged* devem ser configurados trabalhar com tráfego VLAN.
+- **Largura de banda compartilhada**: O tráfego físico e a velocidade são compartilhados entre as VLANs.
+- **Complexidade**: Você precisa tomar nota de quais portas estão atribuídas a quais VLANs.
+- **Configuração do host**: Dispositivos conectados a portas *tagged* devem ser configurados trabalhar com tráfego VLAN.
 
 No Mac Mini, vamos configurar três redes na mesma interface. Isso significa que o tráfego das redes **LAN**, **GUEST** e **PPPoE WAN** compartilharão o mesmo cabo físico, efetivamente compartilhando a largura de banda. Por exemplo, se você estiver transmitindo um filme, o tráfego será duplicado, pois o Mac Mini lidará tanto com o tráfego vindo da internet quanto com o tráfego enviado para o dispositivo na sua rede.
 
@@ -113,10 +114,10 @@ Teremos as seguintes redes:
 
 Vamos focar apenas em IPV4 por enquanto. Teremos IPV6 mais tarde.
 
-* O switch tem 8 portas.
-* **VLAN 144**: Portas 1, 3, 4, 5, 6, 7, 8 são "untagged".
-* **VLAN 222**: Portas 1 e 2 são "tagged".
-* **VLAN 333**: Portas 1 e 3 são "tagged".
+- O switch tem 8 portas.
+- **VLAN 144**: Portas 1, 3, 4, 5, 6, 7, 8 são "untagged".
+- **VLAN 222**: Portas 1 e 2 são "tagged".
+- **VLAN 333**: Portas 1 e 3 são "tagged".
 
 ```txt
     ┌─────────────► Mac Mini
@@ -141,9 +142,9 @@ Como este Mac Mini só tem uma porta Ethernet Gigabit, conectaremos as redes atr
 
 #### Redes
 
-* `10.1.144.0/24` é uma bridge vinculada à NIC. No meu caso, `enp4s0f0`. Eu a deixo como untagged para ser fácil acessar o computador pela rede, caso eu tenha algum problema com o switch.
-* `10.1.222.0/24` é `enp4s0f0.222` (VLAN 222) como rede de `convidados`.
-* `PPPoE` é `enp4s0f0.333` como rede `wan`.
+- `10.1.144.0/24` é uma bridge vinculada à NIC. No meu caso, `enp4s0f0`. Eu a deixo como untagged para ser fácil acessar o computador pela rede, caso eu tenha algum problema com o switch.
+- `10.1.222.0/24` é `enp4s0f0.222` (VLAN 222) como rede de `convidados`.
+- `PPPoE` é `enp4s0f0.333` como rede `wan`.
 
 ## Configuração do NixOS
 

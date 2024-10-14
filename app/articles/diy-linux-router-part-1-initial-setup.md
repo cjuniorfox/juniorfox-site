@@ -13,43 +13,44 @@ other-langs : [{"lang":"pt","article":"roteador-linux-parte-1-configuracao-inici
 
 This is the first part of a multipart series describing how to build your own Linux router.
 
-* Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
+- Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
+- Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 
-Having this old Mac Mini doing nothing in my wardrobe, making it a Linux server would give it a new life. It is a capable, stable machine and far from being an ugly one. So let's do it.
+Having this old Mac Mini doing nothing, and making it a Linux server would give it a new life. It is a capable, stable machine and far from being an ugly one. So let's do it.
 
 ![Macmini as Router](/assets/images/what-is-cloudflare/macmini.webp)
 
 ## Table of Contents
 
-* [The Idea](#the-idea)
-* [The Hardware](#the-hardware)
-  * [MacMini Core 2 Duo from 2010](#macmini-core-2-duo-from-2010)
-  * [Manageable Switch TP-Link TL-SG108E](#manageable-switch-tp-link-tl-sg108e)
-  * [Ubiquiti Unifi C6 Lite](#ubiquiti-unifi-c6-lite)
-* [Linux Setup](#linux-setup)
-  * [1. Download NixOS](#1-download-nixos)
-  * [2. Enable SSH Service](#2-enable-ssh-service)
-  * [3. SSH into the Mac Mini](#3-ssh-into-the-mac-mini)
-  * [4. Partition the Disk](#4-partition-the-disk)
-  * [5. Create ZFS Datasets](#5-create-zfs-datasets)
-  * [6. Mount the Filesystems](#6-mount-the-filesystems)
-  * [7. Generate NixOS Configuration](#7-generate-nixos-configuration)
-  * [8. Edit the Configuration](#8-edit-the-configuration)
-  * [9. Install NixOS](#9-install-nixos)
-  * [10. Post-Installation Configuration](#10-post-installation-configuration)
-* [Conclusion](#conclusion)
+- [The Idea](#the-idea)
+- [The Hardware](#the-hardware)
+  - [MacMini Core 2 Duo from 2010](#macmini-core-2-duo-from-2010)
+  - [Manageable Switch TP-Link TL-SG108E](#manageable-switch-tp-link-tl-sg108e)
+  - [Ubiquiti Unifi C6 Lite](#ubiquiti-unifi-c6-lite)
+- [Linux Setup](#linux-setup)
+  - [1. Download NixOS](#1-download-nixos)
+  - [2. Enable SSH Service](#2-enable-ssh-service)
+  - [3. SSH into the Mac Mini](#3-ssh-into-the-mac-mini)
+  - [4. Partition the Disk](#4-partition-the-disk)
+  - [5. Create ZFS Datasets](#5-create-zfs-datasets)
+  - [6. Mount the Filesystems](#6-mount-the-filesystems)
+  - [7. Generate NixOS Configuration](#7-generate-nixos-configuration)
+  - [8. Edit the Configuration](#8-edit-the-configuration)
+  - [9. Install NixOS](#9-install-nixos)
+  - [10. Post-Installation Configuration](#10-post-installation-configuration)
+- [Conclusion](#conclusion)
 
 ## The Idea
 
 Let's state some building blocks. This project relies on having:
 
-* **Gateway Internet**: The Mac Mini will act as the main router, managing traffic between the internal network and the internet.
-* **File Server**: We'll set up a file server to store and share files across the network.
-* **Private Cloud Storage with Nextcloud**: Nextcloud will provide a self-hosted cloud storage solution, allowing you to access your files from anywhere.
-* **Wireless Access**: The Unifi C6 Lite will provide wireless access to the network.
-* **Unbound DNS with Adblocks**: Unbound DNS will be configured to block ads across the network, improving privacy and reducing bandwidth usage.
-* **Media Server**: A media server will allow you to stream content to devices on the network.
-* **Private VPN**: A VPN will be set up to allow secure remote access to the network.
+- **Gateway Internet**: The Mac Mini will act as the main router, managing traffic between the internal network and the internet.
+- **File Server**: We'll set up a file server to store and share files across the network.
+- **Private Cloud Storage with Nextcloud**: Nextcloud will provide a self-hosted cloud storage solution, allowing you to access your files from anywhere.
+- **Wireless Access**: The Unifi C6 Lite will provide wireless access to the network.
+- **Unbound DNS with Adblocks**: Unbound DNS will be configured to block ads across the network, improving privacy and reducing bandwidth usage.
+- **Media Server**: A media server will allow you to stream content to devices on the network.
+- **Private VPN**: A VPN will be set up to allow secure remote access to the network.
 
 ## The Hardware
 
@@ -62,9 +63,9 @@ For this project, we are going to use:
 
 This Mac Mini is old and has been retired from its duty many years ago. As a desktop computer, it doesn't do much, but as a server, it will serve as a great machine with the following specs:
 
-* Intel Core 2 Duo 8600 with 2.6GHz.
-* 6GB of RAM.
-* 2TB SSD.
+- Intel Core 2 Duo 8600 with 2.6GHz.
+- 6GB of RAM.
+- 2TB SSD.
 
 ### Manageable Switch TP-Link TL-SG108E
 
@@ -87,9 +88,9 @@ NixOS is a great choice because of its declarative configuration model. By defin
 
 ### 1. Download NixOS
 
-* Download the NixOS ISO from the [official website](https://nixos.org/download/).
-* Create a bootable USB drive using a tool like `dd` or `Etcher`.
-* Boot the Mac Mini from the USB drive by holding the `Option` key during startup and selecting the USB drive.
+- Download the NixOS ISO from the [official website](https://nixos.org/download/).
+- Create a bootable USB drive using a tool like `dd` or `Etcher`.
+- Boot the Mac Mini from the USB drive by holding the `Option` key during startup and selecting the USB drive.
 
 ### 2. Enable SSH Service
 
@@ -128,11 +129,11 @@ mkfs.msdos -F 32 -n EFI /dev/sda1
 On ZFS, there's no much use of the term "partition" because really doesn't is. The equivalent is "Datasets" which has a similar approach as a **BTRFS Volumes** on BTRFS Filesystem.
 There's a bunch of commands we will use for creating our zpool and datasets.
 
-* **`ashift=12`**: improves performance when working with SSDs
-* **`atime=off`**: As mentioned at [this article](https://www.unixtutorial.org/atime-ctime-mtime-in-unix-filesystems/), modern unix operating systems have special mount options to optimise atime usage.
-* **compression=lz4**: Optimize storage space by compressing data with `lz4` algorithm without sacrificing performance.
-* **zattr=sa**: Advanced attribute settings. Need for installing Linux based operating systems
-* **acltype=posixacl**: Requirement for installing Linux on a ZFS formatted system.
+- **`ashift=12`**: improves performance when working with SSDs
+- **`atime=off`**: As mentioned at [this article](https://www.unixtutorial.org/atime-ctime-mtime-in-unix-filesystems/), modern unix operating systems have special mount options to optimise atime usage.
+- **compression=lz4**: Optimize storage space by compressing data with `lz4` algorithm without sacrificing performance.
+- **zattr=sa**: Advanced attribute settings. Need for installing Linux based operating systems
+- **acltype=posixacl**: Requirement for installing Linux on a ZFS formatted system.
 
 ```bash
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool /dev/sda2
@@ -196,9 +197,9 @@ nixos-install
 
 Once NixOS is installed, you can begin configuring the services that will run on your router. Here are some of the key services you'll want to set up:
 
-* **Nextcloud**: For private cloud storage.
-* **Unbound DNS with Adblock**: To block ads across the network.
-* **VPN**: To allow secure remote access to your network.
+- **Nextcloud**: For private cloud storage.
+- **Unbound DNS with Adblock**: To block ads across the network.
+- **VPN**: To allow secure remote access to your network.
 
 Each of these services can be configured in your NixOS configuration file (`/etc/nixos/configuration.nix`), making it easy to manage and reproduce your setup.
 
