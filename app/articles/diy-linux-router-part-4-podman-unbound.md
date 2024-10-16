@@ -17,7 +17,7 @@ This is the fourth part of a multipart series describing how to build your own L
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 
-In the previous parts, we installed the operating system, configured the gateway internet functionality with PPPoE, and made some security adjustments by defining the authentication method and configuring the firewall.
+In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, and made security adjustments by setting up authentication methods and configuring the firewall.
 
 Now, it's time to install **Podman**, a drop-in replacement for Docker with some interesting features, and configure **Unbound** to run on it.
 
@@ -46,11 +46,11 @@ Now, it's time to install **Podman**, a drop-in replacement for Docker with some
 
 ## About Podman
 
-Given that **NixOS** is configured using `.nix` files, it might seem straightforward to simply install the necessary services without worrying about containerization. In many cases, this approach makes sense, as the overhead and complexity of containerization may not always be justified. However, considering the vast number of pre-configured **Docker** images available that meet our needs, I see no reason not to take advantage of them by using **Podman**.
+Since **NixOS** is configured using `.nix` files, it might seem straightforward to install the necessary services directly, without containerization. In many cases, this approach makes sense, as the overhead and complexity of containerization may not always be justified. However, considering the vast number of pre-configured **Docker** images available that meet our needs, I see no reason not to take advantage of them by using **Podman**.
 
 ### Why Podman Instead of Docker?
 
-There are several advantages to using **Podman** over **Docker**. While this topic could easily warrant its own article, here are a few key points:
+There are several advantages to using **Podman** over **Docker**. While this topic could warrant its own article, here are a few key points:
 
 1. **Daemonless Architecture**: Podman does not require a central daemon to run containers. Each container runs as a child process of the Podman command, improving security and reducing the risk of a single point of failure.
 2. **Rootless Containers**: Podman allows containers to be run without requiring root privileges, enhancing security by reducing the attack surface.
@@ -188,11 +188,11 @@ nixos-rebuild switch
 
 ## Unbound Setup
 
-With **Podman** installed, it's time to set up **Unbound**. I'll be using the **Docker** image [docker.io/cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). Since **Podman** supports **Kubernetes-like** `yaml` deployment files, we'll create our own based on the example provided in the [GitHub repository](https://github.com/cjuniorfox/unbound/) for this image, specifically in the [kubernetes](https://github.com/cjuniorfox/unbound/tree/main/kubernetes) folder.
+Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using the **Docker** image [docker.io/cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). Since **Podman** supports **Kubernetes-like** `yaml` deployment files, we'll create our own based on the example provided in the [GitHub repository](https://github.com/cjuniorfox/unbound/) for this image, specifically in the [kubernetes](https://github.com/cjuniorfox/unbound/tree/main/kubernetes) folder.
 
 ### 1. Create Directories and Volumes for Unbound
 
-First, create a directory to store Podman's deployment `yaml` file and volumes. In this example, I'll create the directory under `/opt/podman` and place an `unbound` folder inside it. Additionally, the `volumes/unbound-conf/` directory will be created to store extra configuration files.
+First, create a directory to store Podman's deployment `yaml` file and volumes. In this example, I'll create the directory under `/opt/podman` and place an `unbound` folder inside it. Additionally, create the `volumes/unbound-conf/` directory to store extra configuration files.
 
 ```sh
 mkdir -p /opt/podman/unbound/volumes/unbound-conf/
@@ -294,7 +294,7 @@ podman network create \
 
 ### 5. Add the Newly Created Network to the Firewall
 
-As previously mentioned, it is mandatory to add the new network to the `nftables.nft` file.
+As mentioned earlier, it is mandatory to add the new network to the `nftables.nft` file.
 
 `/etc/nixos/modules/nftables.nft`
 
@@ -329,7 +329,7 @@ nixos-rebuild switch
 
 ### 6. Start the Unbound Container
 
-Start the **Unbound** container on the `unbound-net` network with the fixed IP address `10.89.10.100`. This IP address will be useful for configuring firewall rules later.
+Start the **Unbound** pod on the `unbound-net` network with the fixed IP address `10.89.1.250`. This IP address will be useful for configuring firewall rules later.
 
 ```bash
 podman kube play --replace \
@@ -340,7 +340,7 @@ podman kube play --replace \
 
 ## Firewall Rules
 
-**Podman** configures most of the **firewall rules** for us, and at this point, **Unbound** is already resolving nameservers. Any host on your network can now use the gateway as a DNS server. You can test this by running the following command and checking for a response:
+**Podman** has set up the ports specified in the `pod.yaml` file, and **Unbound** is now successfully resolving DNS queries for your gateway. Any device on your network can now use the gateway as its DNS server. You can verify this by running the following command and checking the response:
 
 ```bash
 dig @10.1.144.1 google.com
@@ -355,10 +355,10 @@ dig @10.1.144.1 google.com
 ;; OPT PSEUDOSECTION:
 ; EDNS: version: 0, flags:; udp: 1232
 ;; QUESTION SECTION:
-;google.com.			IN	A
+;google.com.  IN  A
 
 ;; ANSWER SECTION:
-; google.com.		170	IN	A	142.251.129.78
+; google.com.  170  IN  A 142.251.129.78
 
 ;; Query time: 286 msec
 ;; SERVER: 10.1.144.1#53(10.1.144.1) (UDP)
@@ -366,7 +366,7 @@ dig @10.1.144.1 google.com
 ;; MSG SIZE  rcvd: 55
 ```
 
-However, there are still a few more things to configure. One important task is to prevent hosts on the `lan` network from using any **DNS server** other than ours. This is necessary because some devices are hardcoded to use Google's `8.8.8.8` DNS server, regardless of the network configuration. To address this, we'll configure the firewall to redirect any DNS requests (port `53`) made through our gateway to **Unbound**.
+However, there are still a few more things to configure. One important task is to prevent hosts on the `lan` network from using any **DNS server** other than ours. This is necessary because some devices are hardcoded to use other **DNS Servers** like the Google's `8.8.8.8` DNS server. To address this, we'll configure the firewall to redirect any DNS requests (port `53`) to any host made through our gateway to **Unbound**.
 
 ### 1. Update Firewall Configuration
 
@@ -396,7 +396,7 @@ nixos-rebuild switch
 
 ### 3. Reload Unbound Pod
 
-Everytime **Firewall rules** are reloaded, is good to reload Pods, so they can reconfigure forward ports defined on `pod.yaml`.
+Everytime **Firewall rules** are reloaded, is good to reload Pods, so they can reconfigure the expected forward ports.
 
 ```bash
 podman pod restart unbound
@@ -404,8 +404,6 @@ podman pod restart unbound
 
 ## Conclusion
 
-In this part of the series, we successfully installed **Podman** as a container engine and configured **Unbound** to run within it, providing DNS resolution and ad-blocking capabilities for our network. By leveraging **Podman**, we benefit from a more secure, rootless container environment while still utilizing the vast ecosystem of pre-configured Docker images. Additionally, we set up firewall rules to ensure that all DNS traffic is routed through our **Unbound** server, further enhancing the security of our network.
-
-With **Podman** and **Unbound** now in place, our DIY Linux router has become a robust and flexible solution for managing network traffic, blocking ads, and improving DNS resolution. In the next part, we will explore additional services and optimizations to further enhance the functionality of our router.
+In this part of the series, we successfully installed Podman as a container engine and configured **Unbound** to run within it, providing DNS resolution and ad-blocking capabilities for our network. By leveraging **Podman**, we benefit from a more secure, rootless container environment while still utilizing the vast ecosystem of pre-configured Docker images. Additionally, we set up firewall rules to ensure that all DNS traffic is routed through our **Unbound** server, further enhancing the security of our network.
 
 Next, we will configure our wireless network using a **Ubiquiti UniFi AP**.
