@@ -15,6 +15,7 @@ This is the second part of a multipart series describing how to build your own L
 
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
+- Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 
 In the first part, we covered the hardware setup and installed a basic Linux system using NixOS on top of a ZFS filesystem.
 In this part, we will configure VLANs and their networks, set up a PPPoE connection, configure the DHCP server, and implement basic firewall rules.
@@ -160,7 +161,8 @@ Let's configure our server by editing the `.nix` files accordingly. To maintain 
       ├── networking.nix # Network settings/ enables NFTables
       ├── pppoe.nix      # PPPoE connection setup
       ├── services.nix   # Other services
-      └── nftables.nft   # Firewall's NFTables rules
+      ├── firewall.nix   # Firewall Configuration
+      └── nftables.nft   # NFT Rules
 ```
 
 ### 1. Basic config
@@ -173,13 +175,16 @@ Let's split our `configuration.nix` file into parts. As we are already editing t
 { config, pkgs, ... }:
 {
   system.stateVersion = "24.05";
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-  boot.supportedFilesystems = [ "zfs" ];
-
-    boot.kernel.sysctl = {
-    "net.ipv4.conf.all.forwarding" = true;
-    "net.ipv6.conf.all.forwarding" = false;
+  boot = {
+    loader = {
+      systemd-boot.enable = true;
+      efi.canTouchEfiVariables = true;
+    };
+    supportedFilesystems = [ "zfs" ];
+    kernel.sysctl = {
+      "net.ipv4.conf.all.forwarding" = true;
+      "net.ipv6.conf.all.forwarding" = false;
+    };
   };
 
   fileSystems = {
@@ -202,15 +207,17 @@ Let's split our `configuration.nix` file into parts. As we are already editing t
     ./modules/services.nix
     ./modules/pppoe.nix
     ./modules/dhcp_server.nix
+    ./modules/firewall.nix
   ];
 
   environment.systemPackages = with pkgs; [
-    vim
+    bind
+    conntrack-tools
+    ethtool
     htop
     ppp
-    ethtool
     tcpdump
-    conntrack-tools
+    vim
   ];
 
   # Set the hostId for ZFS
@@ -236,42 +243,34 @@ in
    
     # Define VLANS
     vlans = {
-      wan = {
-        id = 333;
-        interface = nic;
-      };
-      guest = {
-        id = 222;
-        interface = nic;
-      };
+      wan = { id = 333; interface = ${nic}; };
+      guest = { id = 222; interface = ${nic}; };
     };
     #Lan will be a bridge to the main adapter. Easier to maintain
     bridges = {
-      "lan" = { 
-        interfaces = [ nic];
-      };
+      "lan" = { interfaces = [ ${nic} ]; };
     };
     interfaces = {
       # Don't request DHCP on the physical interfaces
       "${nic}".useDHCP = false;
       # Handle VLANs
-      wan = {
-        useDHCP = false;
-      };
+      wan = { useDHCP = false };
       guest = {
-        ipv4.addresses = [{
-          address = "10.1.222.1";
-          prefixLength = 24;
-        }];
+        ipv4.addresses = [{ address = "10.1.222.1"; prefixLength = 24; }];
       };
       lan = {
-        ipv4.addresses = [{ 
-          address = "10.1.144.1"; 
-          prefixLength = 24; } 
-        ];
+        ipv4.addresses = [{ address = "10.1.144.1";  prefixLength = 24; } ];
       };
     };
-    #Firewall
+  };
+}
+```
+
+`/etc/nixos/modules/firewall.nix`
+
+```nix
+{ config, pkgs, ... }:
+{
     firewall.enable = false;
     nftables = {
       #Workaround mentioned at the firewall section
@@ -280,7 +279,6 @@ in
       rulesetFile = ./nftables.nft;
       flattenRulesetFile = true;
     };
-  };
 }
 ```
 
@@ -330,7 +328,7 @@ It's important to note that there's a problem with the `flow offloading` rule. W
 
 `/etc/nixos/modules/nftables.nft`
 
-```nix
+```conf
 table inet filter {
   # enable flow offloading for better throughput
   #flowtable f {
@@ -400,8 +398,11 @@ If somebody connects to the network, they need to have an IP address. Let's conf
         "guest,10.1.222.100,10.1.222.150,12h"  # Guest range
       ];
       dhcp-option = [
-        "6,8.8.8.8,8.8.4.4,208.67.222.22,208.67.220.220"  
+        "6,8.8.8.8,8.8.4.4,208.67.222.22,208.67.220.220"
+        "15,localdomain"
+        "15,guest.localdomain,guest"
       ];
+      port = 0; #Disable DNS Server
     };
   };
 }
