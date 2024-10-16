@@ -5,7 +5,6 @@ article {
     margin: 30px auto;
     display: flex;
     align-items: center;
-
     .vote-buttons {
       display: flex;
       flex-direction: column;
@@ -50,6 +49,11 @@ article {
       }
     }
   }
+
+  details {
+    summary { cursor:pointer; }
+  }
+
 
   .keywords {
     font-size: 0.7em;
