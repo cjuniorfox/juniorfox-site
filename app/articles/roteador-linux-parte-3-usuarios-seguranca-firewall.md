@@ -15,6 +15,7 @@ Esta é a terceira parte de uma série de artigos descrevendo como construir seu
 
 - Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
 - Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
+- Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
 
 Nas primeiras e segundas partes, instalamos o sistema operacional, configuramos a rede e configuramos o Mac Mini para funcionar como um roteador.
 Nesta parte, vamos aumentar a segurança criando usuários, alterando a autenticação SSH e reforçando a configuração do firewall.
@@ -165,7 +166,7 @@ Está razoavelmente seguro dessa forma, mas ter um controle mais granular sobre 
 
 `/etc/nixos/modules/nftables.nft`
 
-```nix
+```conf
 table inet filter {
   chain ssh_input {
       iifname "lan" tcp dport 22 ct state { new, established } counter accept 

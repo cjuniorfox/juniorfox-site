@@ -15,6 +15,7 @@ Esta é a segunda parte de uma série de artigos descrevendo como construir seu 
 
 - Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
 - Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
+- Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
 
 Na primeira parte, abordamos a configuração de hardware e instalamos um sistema Linux básico usando NixOS usando o sistema de arquivos ZFS. Nesta parte, vamos configurar VLANs e suas redes, a conexão PPPoE, configurar o servidor DHCP e implementar regras básicas de firewall.
 
@@ -159,6 +160,7 @@ Vamos configurar nosso servidor editando os arquivos `.nix` conforme necessário
       ├── networking.nix # Configurações de rede/ habilita NFTables
       ├── pppoe.nix      # Configuração da conexão PPPoE
       ├── services.nix   # Outros serviços
+      ├── firewall.nix   # Configuração de Firewall
       └── nftables.nft   # Regras do firewall NFTables
 ```
 
@@ -172,14 +174,18 @@ Vamos dividir nosso arquivo `configuration.nix` em partes. Como já estamos edit
 { config, pkgs, ... }:
 {
   system.stateVersion = "24.05";
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-  boot.supportedFilesystems = [ "zfs" ];
-
-    boot.kernel.sysctl = {
-    "net.ipv4.conf.all.forwarding" = true;
-    "net.ipv6.conf.all.forwarding" = false;
+  boot = {
+    loader = {
+      systemd-boot.enable = true;
+      efi.canTouchEfiVariables = true;
+    };
+    supportedFilesystems = [ "zfs" ];
+    kernel.sysctl = {
+      "net.ipv4.conf.all.forwarding" = true;
+      "net.ipv6.conf.all.forwarding" = false;
+    };
   };
+
 
   fileSystems = {
     "/" = {
@@ -201,15 +207,17 @@ Vamos dividir nosso arquivo `configuration.nix` em partes. Como já estamos edit
     ./modules/services.nix
     ./modules/pppoe.nix
     ./modules/dhcp_server.nix
+    ./modules/firewall.nix
   ];
 
   environment.systemPackages = with pkgs; [
-    vim
+    bind
+    conntrack-tools
+    ethtool
     htop
     ppp
-    ethtool
     tcpdump
-    conntrack-tools
+    vim
   ];
 
   # Definir o hostId para ZFS
@@ -226,60 +234,51 @@ Como mencionado antes, nosso Mac Mini só tem uma NIC, esta configuração depen
 
 ```nix
 { config, pkgs, ... }:
-let nic = "enp1s0"; # Seu adaptador de rede principal
+let nic = "enp1s0"; # Your main network adapter
 in
 {
   networking = {
     useDHCP = false;
     hostName = "macmini";
    
-    # Definir VLANs
+    # Define VLANS
     vlans = {
-      wan = {
-        id = 333;
-        interface = nic;
-      };
-      guest = {
-        id = 222;
-        interface = nic;
-      };
+      wan = { id = 333; interface = ${nic}; };
+      guest = { id = 222; interface = ${nic}; };
     };
-    # A LAN será uma bridge para o adaptador principal. Mais fácil de manter
+    #Lan will be a bridge to the main adapter. Easier to maintain
     bridges = {
-      "lan" = { 
-        interfaces = [ nic];
-      };
+      "lan" = { interfaces = [ ${nic} ]; };
     };
     interfaces = {
-      # Não solicitar DHCP nas interfaces físicas
+      # Don't request DHCP on the physical interfaces
       "${nic}".useDHCP = false;
-      # Lidar com VLANs
-      wan = {
-        useDHCP = false;
-      };
+      # Handle VLANs
+      wan = { useDHCP = false };
       guest = {
-        ipv4.addresses = [{
-          address = "10.1.222.1";
-          prefixLength = 24;
-        }];
+        ipv4.addresses = [{ address = "10.1.222.1"; prefixLength = 24; }];
       };
       lan = {
-        ipv4.addresses = [{ 
-          address = "10.1.144.1"; 
-          prefixLength = 24; } 
-        ];
+        ipv4.addresses = [{ address = "10.1.144.1";  prefixLength = 24; } ];
       };
     };
-    #Firewall
+  };
+}
+```
+
+`/etc/nixos/modules/firewall.nix`
+
+```nix
+{ config, pkgs, ... }:
+{
     firewall.enable = false;
     nftables = {
-      # Solução mencionada na seção de firewall
-      # preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
+      #Workaround mentioned at the firewall section
+      #preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
       enable = true;
       rulesetFile = ./nftables.nft;
       flattenRulesetFile = true;
     };
-  };
 }
 ```
 
@@ -329,7 +328,7 @@ A configuração do Firewall é feita com `nftables`. Vamos fazer uma configura�
 
 `/etc/nixos/modules/nftables.nft`
 
-```nix
+```conf
 table inet filter {
   # enable flow offloading for better throughput
   #flowtable f {
@@ -399,8 +398,11 @@ Se alguém se conectar à rede, precisará de um endereço IP. Vamos configurar 
         "guest,10.1.222.100,10.1.222.150,12h"  # Faixa de Convidados
       ];
       dhcp-option = [
-        "6,10.1.1.62,8.8.8.8,8.8.4.4,208.67.222.22,208.67.220.220"  
+        "6,10.1.1.62,8.8.8.8,8.8.4.4,208.67.222.22,208.67.220.220"
+        "15,mydomain.local"
+        "15,guest.localdomain,guest" 
       ];
+      port = 0; #Desabilita servidor DNS
     };
   };
 }

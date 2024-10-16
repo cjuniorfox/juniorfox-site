@@ -15,6 +15,7 @@ This is the third part of a multipart series describing how to build your own Li
 
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
+- Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 
 In the first and second parts, we installed the operating system, configured the network, and set up the Mac Mini to work as a router.
 In this part, we will increase security by creating users, changing SSH authentication, and hardening the firewall configuration.
@@ -165,7 +166,7 @@ It is fairly secure this way, but having more granular control over the incoming
 
 `/etc/nixos/modules/nftables.nft`
 
-```nix
+```conf
 table inet filter {
   chain ssh_input {
       iifname "lan" tcp dport 22 ct state { new, established } counter accept 

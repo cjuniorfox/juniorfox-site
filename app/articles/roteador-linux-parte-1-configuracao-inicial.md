@@ -15,6 +15,7 @@ Esta é a primeira parte de uma série de artigos descrevendo como construir seu
 
 - Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
 - Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
+- Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
 
 Tendo este velho Mac Mini sem uso e transformá-lo em um servidor Linux daria uma nova vida a ele. É uma máquina capaz, estável e longe de ser feia. Então, vamos fazer isso.
 
@@ -165,9 +166,14 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 { config, pkgs, ... }:
 
 {
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-  boot.supportedFilesystems = [ "zfs" ];
+  system.stateVersion = "24.05";
+  boot = {
+    loader = {
+      systemd-boot.enable = true;
+      efi.canTouchEfiVariables = true;
+    };
+    supportedFilesystems = [ "zfs" ];
+  };
 
   fileSystems."/" = {
     device = "rpool/root/nixos";
