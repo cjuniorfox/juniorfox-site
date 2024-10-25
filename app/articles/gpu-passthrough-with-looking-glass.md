@@ -584,7 +584,6 @@ $$
 \frac{22118400}{1024 \times 1024} \approx 21.09 \, \text{MB}
 $$
 
-
 Now, let's see how much MB to the power of two is more than the needed space.
 
 I need `21.09MB`. Something between `16MB` and `32MB`, being `16MB` less than I need. So, `32MB` it is.
