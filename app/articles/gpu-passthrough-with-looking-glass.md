@@ -434,7 +434,7 @@ By default, x86 CPUs usually address memory in 4kB pages. But can also have the 
 
 ### Calculating the hugepages
 
-To determine the recommended size of hugepages for a VM with 24 GB of RAM, you need to calculate the number of hugepages required based on the size of each hugepage on your architecture.
+To determine the recommended size of hugepages for a VM with 16 GB of RAM, you need to calculate the number of hugepages required based on the size of each hugepage on your architecture.
 
 - For x64 architecture, each **hugepage** is **2 MB** in size.
 

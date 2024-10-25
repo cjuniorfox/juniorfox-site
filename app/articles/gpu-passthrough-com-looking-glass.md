@@ -438,7 +438,7 @@ Por padrão, as CPUs x86 geralmente endereçam a memória em páginas de 4KB. Ma
 
 ### Calculando os hugepages
 
-Para determinar o tamanho recomendado de hugepages para uma VM com 24 GB de RAM, você precisa calcular o número de hugepages necessários com base no tamanho de cada hugepage na sua arquitetura.
+Para determinar o tamanho recomendado de hugepages para uma VM com 16 GB de RAM, você precisa calcular o número de hugepages necessários com base no tamanho de cada hugepage na sua arquitetura.
 
 - Para arquiteturas x64, cada **hugepage** tem um tamanho de **2 MB**.
 
