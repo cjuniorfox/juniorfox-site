@@ -168,8 +168,6 @@ No meu exemplo, eu tenho duas GPUs que preciso anexar a **VM**. O **Controlador 
 
 Isso não é sempre necessário, mas em meu caso, foi. Faça o seguinte:
 
-It's not always necessary, but in my case, it was. Do as follows:
-
 ```sh
 # 1. Descarregue o driver de vídeo da GPU
 echo 0000:03:00.0 | sudo tee /sys/bus/pci/devices/0000\:03\:00.0/driver/unbind 
@@ -307,7 +305,7 @@ MISC="${@:4}"
 BASEDIR="$(dirname $0)"
 
 HOOKPATH="$BASEDIR/qemu.d/$GUEST_NAME/$HOOK_NAME/$STATE_NAME"
-set -e # If a script exits with an error, we should as well.
+set -e
 
 if [ -f "$HOOKPATH" ]; then
 eval \""$HOOKPATH"\" "$@"
@@ -376,9 +374,9 @@ virsh nodedev-detach --device pci_0000_${GPU/:/_}_1
 echo "GPU Device attached to VFIO successfully"
 ```
 
-Logs file with the result of execution will be saved at `var/log/detach_gpu.log`
+Logs com o resultado da execução serão armazenados em `var/log/detach_gpu.log`
 
-Make it executable:
+Torne o script executável:
 
 ```sh
 chmod +x /etc/libvirt/hooks/qemu.d/vfio-pci/prepare/begin/detach_gpu.sh
