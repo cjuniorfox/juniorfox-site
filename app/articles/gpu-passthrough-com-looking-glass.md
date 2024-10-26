@@ -28,7 +28,7 @@ other-langs : [{"lang":"en","article":"gpu-passthrough-with-looking-glass"}]
 - [Dispositivos de Entrada](#dispositivos-de-entrada)
 - [Looking Glass](#looking-glass)
   - [Criando uma Tela Virtual para Compartilhar](#criando-uma-tela-virtual-para-compartilhar)
-- [Conclusão](#conclusion)
+- [Conclusão](#conclusão)
 
 ## Introdução
 
@@ -137,7 +137,7 @@ Se você pretende usar **resizable bar (REBAR)**, que é a habilidade da **GPU**
 
 ## VFIO
 
-Por padrão, a **Placa de víðeo** é disponibilizada apenas na **maquina host**. Evite utilizar as saídas de vídeo da placa de vídeo. Use as saídas de vídeo da placa de vídeo integrada. Não há perdas de desempenho ao fazer isso, pois o computador renderizará os gráficos com a melhor GPU.
+Por padrão, a **Placa de vídeo** é disponibilizada apenas na **maquina host**. Evite utilizar as saídas de vídeo da placa de vídeo. Use as saídas de vídeo da placa de vídeo integrada. Não há perdas de desempenho ao fazer isso, pois o computador renderizará os gráficos com a melhor GPU.
 
 Inicializando a VM, a **Placa de vídeo** será **desanexada** da máquina host e **anexada** à **VM**, tornando-a indisponível para a **Máquina Host** até que o **Windows** desligar.
 
@@ -432,7 +432,7 @@ ln -s /etc/libvirt/hooks/qemu.d/{vfio-pci,win11}
 
 ## Hugepages
 
-Por padrão, as CPUs x86 geralmente endereçam a memória em páginas de 4KB. Mas também podem ter a capacidade de usar páginas grandes até 2MB, o que melhora o desempenho.
+Por padrão, as CPUs x86 endereçam a memória em páginas de 4KB. Mas também podem ter a capacidade de usar páginas grandes até 2MB, o que melhora o desempenho.
 
 ### Calculando os hugepages
 
