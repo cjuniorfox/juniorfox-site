@@ -488,7 +488,7 @@ echo "Unmounting hugetlbfs..."
 umount /dev/hugepages || { echo "Unable to umount hugetlbfs"; exit 1; }
 
 echo "Releasing hugepages..."
-sysctl vm.nr_hugepages=0 || { echo "Unable to release hugepages"; exit 1 } 
+sysctl vm.nr_hugepages=0 || { echo "Unable to release hugepages"; exit 1; } 
 echo "Hugepages releases sucessfully"
 ```
 
