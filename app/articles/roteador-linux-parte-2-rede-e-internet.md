@@ -107,34 +107,36 @@ A minha conexão de internet tem 600 Mbps de download e 150 Mbps de upload, não
 
 Teremos as seguintes redes:
 
-| Rede          | Interface | VLAN      |
-|---------------|-----------|----------:|
-|10.1.144.0/24  | LAN       | untagged  |
-|10.1.222.0/24  | GUEST     | 222       |
-|PPPoE          | PPP0      | 333       |
+| Network      | Interface | VLAN      |
+|--------------|-----------|----------:|
+|10.1.1.0/24   | Lan       | untagged  |
+|10.1.30.0/24  | GUEST     | 30        |
+|10.1.90.0/24  | IoT       | 90        |
+|PPPoE         | PPP0      | 2         |
 
-Vamos focar apenas em IPV4 por enquanto. Teremos IPV6 mais tarde.
+Por hora vamos configurar apenas IPv4. Posteriormente endereçamos IPv6.
 
-- O switch tem 8 portas.
-- **VLAN 144**: Portas 1, 3, 4, 5, 6, 7, 8 são "untagged".
-- **VLAN 222**: Portas 1 e 2 são "tagged".
-- **VLAN 333**: Portas 1 e 3 são "tagged".
+- O Switch tem 8 portas.
+- **VLAN 1**: Ports 1, 3, 4, 5, 6, 7, 8 são untagged.
+- **VLAN 2**: Ports 1 e 2 são tagged.
+- **VLAN 30**: Port 1 e 3 são tagged.
+- **VLAN 90**: Port 1 e 3 são tagged.
 
 ```txt
     ┌─────────────► Mac Mini
-    │   ┌─────────► AP Unifi U6 Lite
-    │   │   ┌─────► WAN PPPoE
-    │   │   │   ┌─► Rede Privada
+    │   ┌─────────► WAN PPPoE 
+    │   │   ┌─────► AP Unifi U6 Lite
+    │   │   │   ┌─► Private Network
     │   │   │   │   ▲   ▲   ▲   ▲
-┌───┴───┴───┴───┴───┴───┴───┴───┴───┐
+┌───┴───┴───┴───┴───┴───┴───┴───┴───┐    
 | ┌───┬───┬───┬───┬───┬───┬───┬───┐ |
 | │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ |
 | └───┴───┴───┴───┴───┴───┴───┴───┘ |
 └───┬───┬───┬───┬───────────────────┘
     │   │   │   └─► 4-8 Untagged VLAN 144
-    │   │   └─────► Untagged VLAN 333
-    │   └─────────► Untagged VLAN 144, Tagged VLAN 222
-    └─────────────► Untagged VLAN 144, Tagged VLAN 333, 222
+    │   │   └─────► Untagged VLAN 1, Tagged VLAN 30, 90
+    │   └─────────► Untagged VLAN 2
+    └─────────────► Untagged VLAN 1, Tagged VLAN 2, 30, 90
 ```
 
 ### Mac Mini
@@ -143,9 +145,10 @@ Como este Mac Mini só tem uma porta Ethernet Gigabit, conectaremos as redes atr
 
 #### Redes
 
-- `10.1.144.0/24` é uma bridge vinculada à NIC. No meu caso, `enp4s0f0`. Eu a deixo como untagged para ser fácil acessar o computador pela rede, caso eu tenha algum problema com o switch.
-- `10.1.222.0/24` é `enp4s0f0.222` (VLAN 222) como rede de `convidados`.
-- `PPPoE` é `enp4s0f0.333` como rede `wan`.
+- `10.1.1.0/24` é uma bridge vinculada à NIC. No meu caso, `enp4s0f0`. Eu a deixo como untagged para ser fácil acessar o computador pela rede, caso eu tenha algum problema com o switch.
+- `10.1.30.0/24` é `enp4s0f0.30` (VLAN 30) como rede `guest`.
+- `10.1.90.0/24` é `enp4s0f0.90` (VLAN 90) como rede `iot`.
+- `PPPoE` é `enp4s0f0.2` como rede `wan`.
 
 ## Configuração do NixOS
 
@@ -243,8 +246,9 @@ in
    
     # Define VLANS
     vlans = {
-      wan = { id = 333; interface = ${nic}; };
-      guest = { id = 222; interface = ${nic}; };
+      wan = { id = 2; interface = ${nic}; };
+      guest = { id = 30; interface = ${nic}; };
+      iot = { id = 90; interface = ${nic}; };
     };
     #Lan will be a bridge to the main adapter. Easier to maintain
     bridges = {
@@ -255,11 +259,14 @@ in
       "${nic}".useDHCP = false;
       # Handle VLANs
       wan = { useDHCP = false };
-      guest = {
-        ipv4.addresses = [{ address = "10.1.222.1"; prefixLength = 24; }];
-      };
       lan = {
-        ipv4.addresses = [{ address = "10.1.144.1";  prefixLength = 24; } ];
+        ipv4.addresses = [{ address = "10.1.1.1";  prefixLength = 24; } ];
+      };
+      guest = {
+        ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }];
+      };
+      iot = {
+        ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; }];
       };
     };
   };
@@ -394,8 +401,9 @@ Se alguém se conectar à rede, precisará de um endereço IP. Vamos configurar 
     settings = {
       interface = [ "lan" "guest" ];
       dhcp-range = [
-        "lan,10.1.144.100,10.1.144.150,12h"  # Faixa da LAN
-        "guest,10.1.222.100,10.1.222.150,12h"  # Faixa de Convidados
+        "lan,10.1.1.100,10.1.1.200,12h"  # LAN range
+        "guest,10.1.30.100,10.1.30.200,12h"  # Guest range
+        "iot,10.1.90.100,10.1.90.200,12h"  # IoT range
       ];
       dhcp-option = [
         "6,10.1.1.62,8.8.8.8,8.8.4.4,208.67.222.22,208.67.220.220"
