@@ -9,7 +9,6 @@ data:
     do
       sleep 5
     done
-
     mongo <<EOF
     use ${MONGO_DBNAME}
     db.createUser({
@@ -18,7 +17,6 @@ data:
       "roles" : [{ "role" : "readWrite", "db" : "${MONGO_DBNAME}" }]
     })
     EOF
-    
 ---
 apiVersion: v1
 kind: Pod
@@ -86,8 +84,6 @@ spec:
     volumeMounts:
     - name: mongo-init-script
       mountPath: /docker-entrypoint-initdb.d/
-      subPath: init-mongo.sh
-      readOnly: true
     - name: juniorfox-site-db-pvc
       mountPath: /data/db
     - name: juniorfox-site-configdb-pvc
