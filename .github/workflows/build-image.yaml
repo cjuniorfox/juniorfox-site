@@ -68,7 +68,7 @@ jobs:
             allowed-ips ${{ secrets.WG_ALLOWED_IPS }} \
             endpoint ${{ secrets.WG_ENDPOINT }}
           sudo ip link set mtu 1412 up dev wg0
-          ping -c 1 ${{ secrets.ARTIFACT_HOST }}
+          #ping -c 1 ${{ secrets.ARTIFACT_HOST }}
 
       - name: Setup SSH key
         # PRIVATE_SSH_KEY :: ssh-keygen -b 4096 -C "git@github.com" -f ./id_rsa.git
