@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: mongo-init-script
+  name: juniorfox-site-db-init-script
 data:
   init-mongo.sh: |
     #!/bin/bash
@@ -9,7 +9,6 @@ data:
     do
       sleep 5
     done
-
     mongo <<EOF
     use ${MONGO_DBNAME}
     db.createUser({
@@ -18,14 +17,13 @@ data:
       "roles" : [{ "role" : "readWrite", "db" : "${MONGO_DBNAME}" }]
     })
     EOF
-    
 ---
 apiVersion: v1
 kind: Pod
 metadata:
   name: juniorfox-site
   labels:
-    app: juniorofox-site
+    app: juniorfox-site
 
 spec:
   automountServiceAccountToken: false
@@ -86,20 +84,18 @@ spec:
     volumeMounts:
     - name: mongo-init-script
       mountPath: /docker-entrypoint-initdb.d/
-      subPath: init-mongo.sh
-      readOnly: true
-    - name: juniorfox-site-db-pvc
+    - name: db-pvc
       mountPath: /data/db
-    - name: juniorfox-site-configdb-pvc
+    - name: configdb-pvc
       mountPath: /data/configdb
 
   volumes:
   - name: mongo-init-script
     configMap:
-      name: mongo-init-script
-  - name: juniorfox-site-db-pvc
+      name: juniorfox-site-db-init-script
+  - name: db-pvc
     persistentVolumeClaim:
       claimName: juniorfox-site-db
-  - name: juniorfox-site-configdb-pvc
+  - name: configdb-pvc
     persistentVolumeClaim:
       claimName: juniorfox-site-configdb

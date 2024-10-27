@@ -1,8 +1,8 @@
 #!/bin/bash
 
-export MONGO_INITDB_PASSWORD="$(< /dev/urandom tr -dc _A-Z-a-z-0-9!@#$%& | head -c${1:-32})"
+export MONGO_INITDB_PASSWORD="$(< /dev/urandom tr -dc '_A-Z-a-z-0-9' | head -c${1:-32})"
 export MONGO_USER='juniorfox'
-export MONGO_PASS="$(< /dev/urandom tr -dc _A-Z-a-z-0-9!@#$%& | head -c${1:-32})"
+export MONGO_PASS="$(< /dev/urandom tr -dc '_A-Z-a-z-0-9' | head -c${1:-32})"
 export MONGO_DBNAME='juniorfoxsite'
 
 cat <<EOF > secrets.json
