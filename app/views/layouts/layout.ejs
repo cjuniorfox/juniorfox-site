@@ -22,6 +22,7 @@
   </script>
 
   <title><%= title %></title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body class="<%= darkModeClass %>">
   <header>
@@ -32,7 +33,7 @@
         <span class="bar"></span>
       </div>
       <ul class="nav-list">
-        <li><a href="/"><%= __('home') %></a></li>
+        <li><a class="home" href="/"><%= __('home') %></a></li>
         <li><a href="<%=__('aboutMeUrl')%>"><%= __('aboutMe') %></a></li>
         <% social.forEach(s => { %>
           <li><a href="<%= s.link %>"><%= __(s.name) %></a></li>

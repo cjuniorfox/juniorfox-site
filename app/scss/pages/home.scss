@@ -1,4 +1,30 @@
 @use '../variables' as *;
+
+#title {
+    display: flex; // Use Flexbox for layout
+    align-items: center; // Center items vertically
+    padding: 20px; // Add some padding around the container
+    max-width: 600px;
+
+    img {
+        max-width: 75px; // Set max width for the image
+        height: auto; // Maintain aspect ratio
+        margin-right: 20px; // Space between the image and text
+    }
+
+    div {
+        h1 {
+            margin: 0; // Remove default margin
+            font-size: 2em; // Adjust font size as needed
+        }
+
+        p {
+            margin: 5px 0 0; // Space above the paragraph
+            font-size: 1em; // Adjust font size as needed
+        }
+    }
+}
+
 .article-list {
     list-style-type: none;
     padding: 0;
