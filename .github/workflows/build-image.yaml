@@ -108,7 +108,7 @@ jobs:
   
       - name: Build SCSS
         working-directory: './app'
-        run: npm run scss
+        run: npm run build_scss
       
       - uses: 'google-github-actions/auth@v2'
         with:
