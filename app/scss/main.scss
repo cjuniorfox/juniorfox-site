@@ -1,27 +1,31 @@
 /* Variables for colors */
-@import '_variables';
-
-@import 'pieces/toggle';
-@import 'pieces/header';
-@import 'pieces/pagination';
-@import 'pages/home';
-@import 'pages/article';
+@use 'variables' as *;
+@use 'pieces/toggle' as toggle;
+@use 'pieces/header' as header;
+@use 'pieces/pagination' as pagination;
+@use 'pages/home' as home;
+@use 'pages/article' as article;
+@use 'dark-theme/layout' as dark-layout;
+@use 'dark-theme/article' as dark-article;
+@use 'dark-theme/home' as dark-home;
+@use 'dark-theme/pagination' as dark-pagination;
+@use 'sass:color';
 
 body.dark-mode {
   background-color: $dark-background-color;
   color: $text-color-dark;
-  @import 'dark-theme/layout';
-  @import 'dark-theme/article';
-  @import 'dark-theme/home';
-  @import 'dark-theme/pagination.scss';
+  @include dark-layout.styles;
+  @include dark-article.styles;
+  @include dark-home.styles;
+  @include dark-pagination.styles;
 }
 
 a.dark-mode {
-  color: lighten($link-color, 30%);
+  color: color.scale($link-color, $lightness: 30%);
 
   &:hover {
       text-decoration: none;
-      color: lighten($link-color, 20%);
+      color: color.scale($link-color, $lightness: 20%);
   }
 }
 
@@ -35,7 +39,6 @@ main {
   margin: 20px auto;
   max-width: 1200px;
   padding: 0 20px;
-
 
   @media (min-width: $breakpoint-md) {
     flex-direction: row;

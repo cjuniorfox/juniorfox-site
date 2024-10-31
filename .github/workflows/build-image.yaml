@@ -96,15 +96,25 @@ jobs:
       permissions:
         contents: 'read'
         id-token: 'write'
-      name: Deploy Application using gcloud actions
+      name: Deploy to GCP App Engine
       runs-on: ubuntu-latest
       steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        working-directory: './app'
+        run: npm install
+  
+      - name: Build SCSS
+        working-directory: './app'
+        run: npm run scss
+      
       - uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: 'projects/711506181362/locations/global/workloadIdentityPools/my-pool/providers/github-juniorfox-site'
           service_account: 'github-deployer@juniorfox-net.iam.gserviceaccount.com'
+      
       - name: Deploy application to App Engine
         uses: google-github-actions/deploy-appengine@v2
         with:
