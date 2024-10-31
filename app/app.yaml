@@ -1,0 +1,8 @@
+runtime: nodejs20
+
+handlers:
+- url: /.*
+  script: auto
+
+env_variables:
+  GCP_PROJECT: juniorfox-net
