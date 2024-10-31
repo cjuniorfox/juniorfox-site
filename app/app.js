@@ -9,6 +9,7 @@ const expressLayouts = require("express-ejs-layouts");
 const path = require("path");
 const bodyParser = require("body-parser");
 const i18n = require('i18n');
+const favicon = require('serve-favicon');
 
 const app = express();
 
@@ -39,6 +40,7 @@ const main = async () => {
   });
   
   // Middleware
+  app.use(favicon(__dirname + '/assets/favicon.ico'));
   app.set("port", process.env.PORT || 3000);
   app.set("views", path.join(__dirname, "views"));
   app.set("view engine", "ejs");
