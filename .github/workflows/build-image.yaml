@@ -99,7 +99,6 @@ jobs:
         id-token: 'write'
       name: Deploy Application using gcloud actions
       runs-on: ubuntu-latest
-      defaults:
       steps:
       - name: Checkout repository
         uses: actions/checkout@v4
