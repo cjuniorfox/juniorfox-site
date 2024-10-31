@@ -162,9 +162,11 @@ gcloud iam service-accounts create "github-deployer" \
 ##### 5. Grant the Service Account Permissions
 
 ```bash
-gcloud projects add-iam-policy-binding [YOUR_PROJECT_ID] \
+for roles in 'owner' 'storage.objectViewer' 'roles/storage.objectCreator'; do
+  gcloud projects add-iam-policy-binding [YOUR_PROJECT_ID] \
     --member="serviceAccount:github-deployer@[YOUR_PROJECT_ID].iam.gserviceaccount.com" \
-    --role="roles/owner"
+    --role="roles/${roles}"
+done;
 ```
 
 ##### 6. Allow the Workload Identity Provider to Impersonate the Service Account
