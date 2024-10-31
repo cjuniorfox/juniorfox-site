@@ -116,7 +116,8 @@ jobs:
     sync:
         name: Sync articles database
         runs-on: ubuntu-latest
-        needs: deploy
+        needs: [ deploy, deploy_gcp_app_engine]
+        if: needs.deploy.result == 'success' || needs.deploy_gcp_app_engine.result == 'success'
         steps:
         - name: Sync articles database via API
           run: |
