@@ -1,4 +1,4 @@
-name: Build and Push Image to GHCR
+name: Build and Deploy
 
 on:
   push:
@@ -96,7 +96,6 @@ jobs:
     deploy_gcp_app_engine:
       name: Deploy Application using gcloud actions
       runs-on: ubuntu-latest
-      needs: build_push
       defaults:
         run:
           working-directory: './app'
