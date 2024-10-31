@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "jest --coverage",
-    "start": "sass --style=compressed scss/main.scss:assets/_build/css/main.css && node app.js",
+    "start": "node app.js",
     "dev": "sass --watch scss/main.scss:assets/_build/css/main.css && livereload -e js,ejs,scss -w 300 & nodemon app.js",
     "scss": "sass --watch scss/main.scss:assets/_build/css/main.css"
   },

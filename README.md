@@ -10,6 +10,7 @@ This project is a Node.js-based website that uses Markdown files as articles. It
 - [MongoDB Container](#mongodb-container)
 - [MongoDB Schema, User, and Password](#mongodb-schema-user-and-password)
 - [Usage](#usage)
+- [GCP App Engine](#gcp-app-engine)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -108,6 +109,139 @@ npm run dev
 ```
 
 ### 5. Open your browser and navigate to `http://localhost:3000` to view the website
+
+## GCP App Engine
+
+### Instructions for Deploying Your Node.js Application to GCP
+
+#### 1. Create a Google Cloud Project
+
+1. Open the Google **Cloud Console**.
+2. Click on the project dropdown and select **New Project**.
+3. Enter a name for your project (e.g., `juniorfox-net`) and click **Create**.
+4. Make a note of your `project ID`, as you will need it later.
+
+#### 2. Set Up Workload Identity Federation
+
+##### 1. Enable the IAM API
+
+```bash
+
+gcloud services enable iam.googleapis.com --project=[YOUR_PROJECT_ID]
+```
+
+##### 2. Create a Workload Identity Pool
+
+```bash
+gcloud iam workload-identity-pools create "my-pool" \
+    --project="[YOUR_PROJECT_ID]" \
+    --location="global" \
+    --display-name="GitHub Workload Identity Pool"
+```
+
+##### 3. Create a Workload Identity Provider
+
+```bash
+gcloud iam workload-identity-pools providers create-oidc "my-provider" \
+    --project="[YOUR_PROJECT_ID]" \
+    --location="global" \
+    --workload-identity-pool="my-pool" \
+    --display-name="GitHub Provider" \
+    --attribute-mapping="google.subject=assertion.sub" \
+    --issuer-uri="https://token.actions.githubusercontent.com"
+```
+
+##### 4. Create a Service Account
+
+```bash
+gcloud iam service-accounts create "github-deployer" \
+    --project="[YOUR_PROJECT_ID]" \
+    --display-name="GitHub Deployer Service Account"
+```
+
+##### 5. Grant the Service Account Permissions
+
+```bash
+gcloud projects add-iam-policy-binding [YOUR_PROJECT_ID] \
+    --member="serviceAccount:github-deployer@[YOUR_PROJECT_ID].iam.gserviceaccount.com" \
+    --role="roles/owner"
+```
+
+##### 6. Allow the Workload Identity Provider to Impersonate the Service Account
+
+```bash
+    gcloud iam service-accounts add-iam-policy-binding "github-deployer@[YOUR_PROJECT_ID].iam.gserviceaccount.com" \
+        --role="roles/iam.workloadIdentityUser" \
+        --member="principalSet://iam.googleapis.com/projects/[YOUR_PROJECT_ID]/locations/global/workloadIdentityPools/my-pool/attribute.repository/[YOUR_GITHUB_REPO]"
+```
+
+#### 3. Create Secrets in Secret Manager
+
+##### 1. Enable the Secret Manager API
+
+```bash
+gcloud services enable secretmanager.googleapis.com --project=[YOUR_PROJECT_ID]
+```
+
+##### 2 Store your sensitive credentials in Secret Manager
+
+```bash
+gcloud secrets create MONGO_USER --data-file=<(echo -n "juniorfox-site")
+gcloud secrets create MONGO_PASS --data-file=<(echo -n "[password]")
+gcloud secrets create MONGO_DBNAME --data-file=<(echo -n "[dbname]")
+gcloud secrets create MONGO_HOST --data-file=<(echo -n "[host]")
+```
+
+##### 3. Grant the Service Account access to these secrets
+
+```bash
+    gcloud secrets add-iam-policy-binding MONGO_USER \
+        --member="serviceAccount:github-deployer@[YOUR_PROJECT_ID].iam.gserviceaccount.com" \
+        --role="roles/secretmanager.secretAccessor"
+```
+
+- Repeat for each secret (MONGO_PASS, MONGO_DBNAME, MONGO_HOST).
+
+#### 4. Configure GitHub Actions for Deployment
+
+Add the following GitHub Actions workflow to your repository as .github/workflows/deploy.yml:
+
+```yaml
+name: Deploy Application to App Engine
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/[YOUR_PROJECT_ID]/locations/global/workloadIdentityPools/my-pool/providers/my-provider'
+          service_account: 'github-deployer@[YOUR_PROJECT_ID].iam.gserviceaccount.com'
+          project_id: '[YOUR_PROJECT_ID]'
+
+      - name: Deploy to App Engine
+        uses: google-github-actions/deploy-appengine@v2
+        with:
+          promote: true
+          project_id: '[YOUR_PROJECT_ID]'
+          source: './app'
+```
+
+Important Notes:
+
+- Replace [YOUR_PROJECT_ID] with your actual Google Cloud project ID.
+- Replace [YOUR_GITHUB_REPO] with the repository path in the format owner/repo.
+- Make sure to manage your secrets securely and avoid exposing them in your repository.
 
 ## Contributing
 
