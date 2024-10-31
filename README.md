@@ -162,7 +162,7 @@ gcloud iam service-accounts create "github-deployer" \
 ##### 5. Grant the Service Account Permissions
 
 ```bash
-for roles in 'owner' 'storage.objectViewer' 'roles/storage.objectCreator'; do
+for roles in 'owner' 'storage.objectViewer' 'storage.objectCreator' 'secretmanager.secretAccessor'; do
   gcloud projects add-iam-policy-binding [YOUR_PROJECT_ID] \
     --member="serviceAccount:github-deployer@[YOUR_PROJECT_ID].iam.gserviceaccount.com" \
     --role="roles/${roles}"
