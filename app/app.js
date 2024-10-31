@@ -50,8 +50,10 @@ const main = async () => {
   app.use(expressLayouts);
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
+
+  const protocol = process.env.PROTOCOL === "mongodb+srv" ? "mongodb+srv" : "mongodb";
   
-  const mongoURI = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@${process.env.MONGO_HOST}/${process.env.MONGO_DBNAME}`;
+  const mongoURI = `${protocol}://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@${process.env.MONGO_HOST}/${process.env.MONGO_DBNAME}`;
   mongoose.connect(mongoURI, {
     serverSelectionTimeoutMS: 5000
   })

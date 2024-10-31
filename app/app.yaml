@@ -6,3 +6,5 @@ handlers:
 
 env_variables:
   GCP_PROJECT: juniorfox-net
+  NODE_ENV: production
+  PROTOCOL: mongodb+srv
