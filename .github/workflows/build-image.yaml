@@ -1,4 +1,4 @@
-name: Build and Push Image to GHCR
+name: Build and Deploy
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
           password: ${{ env.REGISTRY_PASSWORD }}
     
     deploy:
-      
+      if: false
       name: Deploy Application
       runs-on: ubuntu-latest
       needs: build_push
@@ -91,11 +91,31 @@ jobs:
           ssh -v ${{ secrets.SSH_USER }}@${{ secrets.ARTIFACT_HOST }} << 'ENDSSH'
             podman kube play --replace ~/${{ github.event.repository.name}}/juniorfox-site.yaml
           ENDSSH
-    
+
+    deploy_gcp_app_engine:
+      permissions:
+        contents: 'read'
+        id-token: 'write'
+      name: Deploy Application using gcloud actions
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/711506181362/locations/global/workloadIdentityPools/my-pool/providers/github-juniorfox-site'
+          service_account: 'github-deployer@juniorfox-net.iam.gserviceaccount.com'
+      - name: Deploy application to App Engine
+        uses: google-github-actions/deploy-appengine@v2
+        with:
+          working_directory: './app'
+          project_id: 'juniorfox-net'
+          promote: true
+
     sync:
         name: Sync articles database
         runs-on: ubuntu-latest
-        needs: deploy
+        needs: deploy_gcp_app_engine
         steps:
         - name: Sync articles database via API
           run: |

@@ -118,11 +118,16 @@ Although ZFS is resource-intensive, it offers several advantages that make it wo
 
 ```bash
 sudo -i
+```
+
+```bash
 parted /dev/sda mklabel gpt
-parted /dev/sda mkpart EFI 1MiB 4GiB
-parted /dev/sda set 1 esp on
-parted /dev/sda mkpart ZFS 4GiB 100%
-mkfs.msdos -F 32 -n EFI /dev/sda1
+parted /dev/sda mkpart primary 1MiB 2MiB
+parted /dev/sda set 1 bios_grub on
+parted /dev/sda mkpart EFI 2MiB 514MiB
+parted /dev/sda set 2 esp on
+parted /dev/sda mkpart ZFS 514MiB 100%
+mkfs.msdos -F 32 -n EFI /dev/sda2
 ```
 
 ### 5. Create ZFS Datasets
@@ -137,7 +142,7 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 - **acltype=posixacl**: Requirement for installing Linux on a ZFS formatted system.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool /dev/sda2
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool /dev/sda3
 zfs create -o mountpoint=none rpool/root
 zfs create -o mountpoint=legacy rpool/root/nixos
 zfs create -o mountpoint=legacy rpool/home
@@ -148,7 +153,7 @@ zfs create -o mountpoint=legacy rpool/home
 ```bash
 mount -t zfs rpool/root/nixos /mnt
 mkdir /mnt/boot
-mount /dev/sda1 /mnt/boot
+mount /dev/sda2 /mnt/boot
 ```
 
 ### 7. Generate NixOS Configuration
@@ -169,8 +174,10 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   system.stateVersion = "24.05";
   boot = {
     loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
+      grub = {
+        enable = true;
+        device = "/dev/sda";
+      };
     };
     supportedFilesystems = [ "zfs" ];
   };
@@ -180,10 +187,15 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     fsType = "zfs";
   };
 
-  fileSystems."/boot" = {
-    device = "/dev/sda1";
-    fsType = "vfat";
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "yes";
+      PasswordAuthentication = true;
+    };
   };
+
+  environment.systemPackages = with pkgs; [ vim ];
 
   # Set the hostId for ZFS
   networking.hostId = "$(head -c 8 /etc/machine-id)";
