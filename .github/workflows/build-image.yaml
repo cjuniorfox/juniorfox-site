@@ -94,6 +94,9 @@ jobs:
           ENDSSH
 
     deploy_gcp_app_engine:
+      permissions:
+        contents: 'read'
+        id-token: 'write'
       name: Deploy Application using gcloud actions
       runs-on: ubuntu-latest
       defaults:
