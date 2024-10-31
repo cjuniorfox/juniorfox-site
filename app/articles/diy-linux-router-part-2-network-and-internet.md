@@ -35,13 +35,6 @@ In this part, we will configure VLANs and their networks, set up a PPPoE connect
 - [Mac Mini](#mac-mini)
   - [Networks](#networks)
 - [NixOS config](#nixos-config)
-  - [1. Basic config](#1-basic-config)
-  - [2. Networking](#2-networking)
-  - [5. PPPoE connection](#5-pppoe-connection)
-  - [6. Firewall](#6-firewall)
-  - [7. DHCP Server](#7-dhcp-server)
-  - [8. Services](#8-services)
-  - [9. Apply Changes](#9-apply-changes)
 - [Conclusion](#conclusion)
 
 ### VLANs
@@ -168,7 +161,16 @@ Let's configure our server by editing the `.nix` files accordingly. To maintain 
       └── nftables.nft   # NFT Rules
 ```
 
-### 1. Basic config
+### 1. Configuration files and folders
+
+First, let's create the necessary folders and files:
+
+```bash
+mkdir -p /etc/nixos/modules
+touch /etc/nixos/modules/{{dhcp_server,firewall,networking,pppoe,services}.nix,nftables.nft}
+```
+
+### 2. Basic config
 
 Let's split our `configuration.nix` file into parts. As we are already editing the file, let's take advantage and enable packet forwarding, as the most basic thing a router does, and route traffic between networks.
 
@@ -180,8 +182,10 @@ Let's split our `configuration.nix` file into parts. As we are already editing t
   system.stateVersion = "24.05";
   boot = {
     loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
+      grub = {
+        enable = true;
+        device = "/dev/sda";
+      };
     };
     supportedFilesystems = [ "zfs" ];
     kernel.sysctl = {
@@ -197,7 +201,7 @@ Let's split our `configuration.nix` file into parts. As we are already editing t
     };
 
     "/boot" = {
-      device = "/dev/sda1"; 
+      device = "/dev/sda2"; 
       fsType = "vfat";
       options = [ "noatime" "discard" ];
     };
@@ -210,7 +214,6 @@ Let's split our `configuration.nix` file into parts. As we are already editing t
     ./modules/services.nix
     ./modules/pppoe.nix
     ./modules/dhcp_server.nix
-    ./modules/firewall.nix
   ];
 
   environment.systemPackages = with pkgs; [
@@ -224,11 +227,11 @@ Let's split our `configuration.nix` file into parts. As we are already editing t
   ];
 
   # Set the hostId for ZFS
-  networking.hostId = "38e3ee20";
+  networking.hostId = "38e3ee20"; #Data extracted during the installation.;
 }
 ```
 
-### 2. Networking
+### 3. Networking
 
 Let's add our network configuration to `modules/networking.nix`.
 As mentioned before, our Mac Mini only has one NIC, this setup relies on VLANs to split the network into the intended parts.VLANs, 144, 222, and 333.
@@ -237,59 +240,55 @@ As mentioned before, our Mac Mini only has one NIC, this setup relies on VLANs t
 
 ```nix
 { config, pkgs, ... }:
-let nic = "enp1s0"; # Your main network adapter
+let
+  nic = "enp1s0"; # Your main network adapter
 in
 {
   networking = {
     useDHCP = false;
     hostName = "macmini";
    
-    # Define VLANS
+    # Define VLANs with proper interpolation
     vlans = {
-      wan = { id = 2; interface = ${nic}; };
-      guest = { id = 30; interface = ${nic}; };
-      iot = { id = 90; interface = ${nic}; };
+      wan = { id = 2; interface = "${nic}"; };
+      guest = { id = 30; interface = "${nic}"; };
+      iot = { id = 90; interface = "${nic}"; };
     };
-    #Lan will be a bridge to the main adapter. Easier to maintain
+
+    # Define the bridge with proper interpolation
     bridges = {
-      "lan" = { interfaces = [ ${nic} ]; };
+      "lan" = { interfaces = [ "${nic}" ]; };
     };
+
     interfaces = {
-      # Don't request DHCP on the physical interfaces
-      "${nic}".useDHCP = false;
-      # Handle VLANs
-      wan = { useDHCP = false };
+      # Handle IP addressing for bridge and VLAN interfaces
       lan = {
-        ipv4.addresses = [{ address = "10.1.1.1";  prefixLength = 24; } ];
+        ipv4.addresses = [{ address = "10.1.1.1"; prefixLength = 24; }];
       };
-      guest = {
+      wan = { # WAN VLAN
+        useDHCP = false;
+      };
+      guest = { # Guest VLAN
         ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }];
       };
-      iot = {
+      iot = { # IoT VLAN
         ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; }];
       };
+    };
+
+    firewall.enable = false;
+    nameservers = [ "1.1.1.1" "8.8.8.8" ];
+    
+    nftables = {
+      enable = true;
+      rulesetFile = ./nftables.nft;
+      flattenRulesetFile = true;
     };
   };
 }
 ```
 
-`/etc/nixos/modules/firewall.nix`
-
-```nix
-{ config, pkgs, ... }:
-{
-    firewall.enable = false;
-    nftables = {
-      #Workaround mentioned at the firewall section
-      #preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
-      enable = true;
-      rulesetFile = ./nftables.nft;
-      flattenRulesetFile = true;
-    };
-}
-```
-
-### 5. PPPoE connection
+### 4. PPPoE connection
 
 WAN connection will be managed by a PPPoE connection, which will be available in `modules/pppoe.nix`
 
@@ -328,7 +327,7 @@ WAN connection will be managed by a PPPoE connection, which will be available in
 }
 ```
 
-### 6. Firewall
+### 5. Firewall
 
 The Firewall configuration is done with `nftables`. We will do a very basic, but secure firewall configuration in the file `nftables.nft`. This setup will prevent any connection incoming from the internet, as well as from the guest network, while keeping everything open to the private network.
 It's important to note that there's a problem with the `flow offloading` rule. When validating the rules, it checks for flow offloading configuration, but the routine gives an error because the interface `ppp0` does not exist during the build time of NixOS. However, there's a [workaround](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3) by adding:
@@ -387,7 +386,7 @@ table ip nat {
 }
 ```
 
-### 7. DHCP Server
+### 6. DHCP Server
 
 If somebody connects to the network, they need to have an IP address. Let's configure our DHCP server.
 
@@ -399,7 +398,7 @@ If somebody connects to the network, they need to have an IP address. Let's conf
   services.dnsmasq = {
     enable = true;
     settings = {
-      interface = [ "lan" "guest" ];
+      interface = [ "lan" "guest" "iot" ];
       dhcp-range = [
         "lan,10.1.1.100,10.1.1.200,12h"  # LAN range
         "guest,10.1.30.100,10.1.30.200,12h"  # Guest range
@@ -416,7 +415,7 @@ If somebody connects to the network, they need to have an IP address. Let's conf
 }
 ```
 
-### 8. Services
+### 7. Services
 
 Everything seems to be configured as intended, but services. Enabling root password login is a temporary measure, as it is risky to leave it that way. This will be temporary, and soon we will address that.
 
@@ -435,7 +434,13 @@ Everything seems to be configured as intended, but services. Enabling root passw
 }
 ```
 
-### 9. Apply changes
+### 8. Apply changes
+
+As initially we not have configured the boot partition, we need to mount the partitions first.
+
+```bash
+mount /dev/sda2 /boot
+```
 
 To changes take effect, is needed to apply the changes made so far executing the following command:
 
