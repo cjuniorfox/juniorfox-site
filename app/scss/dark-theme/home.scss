@@ -1,10 +1,14 @@
-.article-list {
-    article {
-        background-color: $dark-background-card;
-        border-color: $text-color;
-    }
+@use '../variables' as *;
 
-    a {
-        color: $text-color-dark;
+@mixin styles {
+    .article-list {
+        article {
+            background-color: $dark-background-card;
+            border-color: $text-color;
+        }
+
+        a {
+            color: $text-color-dark;
+        }
     }
 }

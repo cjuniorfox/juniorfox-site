@@ -1,38 +1,42 @@
-.article-content {
-    color: $text-color-dark;
+@use '../variables' as *;
+@use 'sass:color';
+@mixin styles {
+    .article-content {
+        color: $text-color-dark;
 
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-        color: $link-color-dark;
-    }
-
-    a {
-        color: $link-color-dark;
-    }
-
-    .vote-buttons {
-        button {
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
             color: $link-color-dark;
+        }
 
-            &:disabled {
-                color: $link-color-disabled-dark;
-            }
+        a {
+            color: $link-color-dark;
+        }
 
-             &:not(:disabled):hover {
-                color: darken($link-color-dark, 10%);
+        .vote-buttons {
+            button {
+                color: $link-color-dark;
+
+                &:disabled {
+                    color: $link-color-disabled-dark;
+                }
+
+                &:not(:disabled):hover {
+                    color: color.adjust($link-color-dark, $lightness: -10%)
+                }
             }
         }
-    }
 
-    pre {
-        background-color: $code-background-color-dark;
-    }
+        pre {
+            background-color: $code-background-color-dark;
+        }
 
-    code {
-        background-color: $code-background-color-dark;
+        code {
+            background-color: $code-background-color-dark;
+        }
     }
 }

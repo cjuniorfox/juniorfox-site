@@ -162,14 +162,24 @@ gcloud iam service-accounts create "github-deployer" \
 ##### 5. Grant the Service Account Permissions
 
 ```bash
-for roles in 'owner' 'storage.objectViewer' 'storage.objectCreator' 'secretmanager.secretAccessor'; do
+for roles in 'owner' 'storage.objectViewer' 'storage.objectCreator'; do
   gcloud projects add-iam-policy-binding [YOUR_PROJECT_ID] \
     --member="serviceAccount:github-deployer@[YOUR_PROJECT_ID].iam.gserviceaccount.com" \
     --role="roles/${roles}"
 done;
 ```
 
-##### 6. Allow the Workload Identity Provider to Impersonate the Service Account
+##### 6. Grant permissions as secret accessor to the service account
+
+```bash
+for secret in 'MONGO_USER' 'MONGO_PASS' 'MONGO_DBNAME' 'MONGO_HOST'; do
+  gcloud secrets add-iam-policy-binding ${secret} \
+    --member="serviceAccount:[YOUR_PROJECT_ID]@appspot.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+done
+```
+
+##### 7. Allow the Workload Identity Provider to Impersonate the Service Account
 
 ```bash
     gcloud iam service-accounts add-iam-policy-binding "github-deployer@[YOUR_PROJECT_ID].iam.gserviceaccount.com" \

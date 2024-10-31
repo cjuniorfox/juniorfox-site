@@ -1,3 +1,5 @@
+@use '../variables' as *;
+@use 'sass:color';
 /* General styles for the article */
 article {
   .article-header {
@@ -24,7 +26,7 @@ article {
         }
 
         &:not(:disabled):hover {
-          color: darken($link-color, 10%);
+          color: color.adjust($link-color, $lightness: -10%)
         }
       }
 

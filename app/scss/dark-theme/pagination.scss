@@ -1,19 +1,23 @@
-.pagination {
+@use '../variables' as *;
+
+@mixin styles {
+  .pagination {
 
 
     .page-item {
-        
-        &.active {
-            .page-link {
-              background-color: $link-color; 
-              color: $background-color; 
-              border-color: $link-color;
-            }
-          }
 
+      &.active {
         .page-link {
-            background-color: $dark-background-card;
-            border-color: $text-color;
+          background-color: $link-color;
+          color: $background-color;
+          border-color: $link-color;
         }
+      }
+
+      .page-link {
+        background-color: $dark-background-card;
+        border-color: $text-color;
+      }
     }
+  }
 }
