@@ -4,4 +4,5 @@ podman run -d \
   -p 27017:27017 \
   -e MONGO_INITDB_ROOT_USERNAME=admin \
   -e MONGO_INITDB_ROOT_PASSWORD=secret \
-  docker.io/mongo:3.6
+  -v ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:Z \
+  docker.io/mongo:3.7
