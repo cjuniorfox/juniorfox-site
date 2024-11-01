@@ -34,13 +34,6 @@ Na primeira parte, abordamos a configuração de hardware e instalamos um sistem
 - [Mac Mini](#mac-mini)
   - [Redes](#redes)
 - [Configuração do NixOS](#configuração-do-nixos)
-  - [1. Configuração Básica](#1-configuração-básica)
-  - [2. Rede](#2-rede)
-  - [5. Conexão PPPoE](#5-conexão-pppoe)
-  - [6. Firewall](#6-firewall)
-  - [7. Servidor DHCP](#7-servidor-dhcp)
-  - [8. Serviços](#8-serviços)
-  - [9. Aplicar Mudanças](#9-aplicar-mudanças)
 - [Conclusão](#conclusão)
 
 ### VLANs
@@ -117,7 +110,7 @@ Teremos as seguintes redes:
 Por hora vamos configurar apenas IPv4. Posteriormente endereçamos IPv6.
 
 - O Switch tem 8 portas.
-- **VLAN 1**: Ports 1, 3, 4, 5, 6, 7, 8 são untagged.
+- **VLAN 1**: Ports 1, 3 à 8 são untagged.
 - **VLAN 2**: Ports 1 e 2 são tagged.
 - **VLAN 30**: Port 1 e 3 são tagged.
 - **VLAN 90**: Port 1 e 3 são tagged.
@@ -126,7 +119,7 @@ Por hora vamos configurar apenas IPv4. Posteriormente endereçamos IPv6.
     ┌─────────────► Mac Mini
     │   ┌─────────► WAN PPPoE 
     │   │   ┌─────► AP Unifi U6 Lite
-    │   │   │   ┌─► Private Network
+    │   │   │   ┌─► Rede Local
     │   │   │   │   ▲   ▲   ▲   ▲
 ┌───┴───┴───┴───┴───┴───┴───┴───┴───┐    
 | ┌───┬───┬───┬───┬───┬───┬───┬───┐ |
@@ -141,14 +134,14 @@ Por hora vamos configurar apenas IPv4. Posteriormente endereçamos IPv6.
 
 ### Mac Mini
 
-Como este Mac Mini só tem uma porta Ethernet Gigabit, conectaremos as redes através de VLANs.
+Como este Mac Mini só tem uma porta Ethernet, as demais redes serão configuradas via **VLAN**.
 
 #### Redes
 
-- `10.1.1.0/24` é uma bridge vinculada à NIC. No meu caso, `enp4s0f0`. Eu a deixo como untagged para ser fácil acessar o computador pela rede, caso eu tenha algum problema com o switch.
+- `10.1.1.0/24` é uma bridge vinculada à placa de rede. No meu caso, `enp4s0f0`. Essa será untagged para facilitar o acesso do computador pela rede sem a necessidade de configurar uma VLAN em outro host.
 - `10.1.30.0/24` é `enp4s0f0.30` (VLAN 30) como rede `guest`.
 - `10.1.90.0/24` é `enp4s0f0.90` (VLAN 90) como rede `iot`.
-- `PPPoE` é `enp4s0f0.2` como rede `wan`.
+- `PPPoE` é `enp4s0f0.2` como rede `wan` para conexões PPPoE.
 
 ## Configuração do NixOS
 
@@ -160,16 +153,25 @@ Vamos configurar nosso servidor editando os arquivos `.nix` conforme necessário
 /etc/nixos
 ├── configuration.nix
 └── modules/
-      ├── networking.nix # Configurações de rede/ habilita NFTables
-      ├── pppoe.nix      # Configuração da conexão PPPoE
-      ├── services.nix   # Outros serviços
-      ├── firewall.nix   # Configuração de Firewall
-      └── nftables.nft   # Regras do firewall NFTables
+      ├── networking.nix  # Configurações de rede/ habilita NFTables
+      ├── pppoe.nix       # Configuração da conexão PPPoE
+      ├── services.nix    # Outros serviços
+      ├── nftables.nft    # Configuração de Firewall com NFTables
+      └── dhcp_server.kea # Configuração do servidor DHCP 
 ```
 
-### 1. Configuração Básica
+### 1. Arquivos e pastas de configuração
 
-Vamos dividir nosso arquivo `configuration.nix` em partes. Como já estamos editando o arquivo, vamos aproveitar e habilitar o encaminhamento de pacotes, que é a coisa mais básica que um roteador faz, e rotear o tráfego entre as redes.
+Crie todos as pastas e arquivos necessários:
+
+```bash
+mkdir -p /etc/nixos/modules
+touch /etc/nixos/modules/{{networking,pppoe,services}.nix,nftables.nft,dhcp_server.kea}
+```
+
+### 2. Configuração básica
+
+Dividiremos nosso `configuration.nix` em módulos separados para manter a organização e facilitar a manutenção.
 
 `/etc/nixos/configuration.nix`
 
@@ -206,11 +208,8 @@ Vamos dividir nosso arquivo `configuration.nix` em partes. Como já estamos edit
   # Importando os outros módulos
   imports = [
     ./modules/networking.nix
-    ./modules/firewall.nix
     ./modules/services.nix
     ./modules/pppoe.nix
-    ./modules/dhcp_server.nix
-    ./modules/firewall.nix
   ];
 
   environment.systemPackages = with pkgs; [
@@ -224,14 +223,14 @@ Vamos dividir nosso arquivo `configuration.nix` em partes. Como já estamos edit
   ];
 
   # Definir o hostId para ZFS
-  networking.hostId = "38e3ee20";
+  networking.hostId = "38e3ee20"; #Informação extraída durante a instalação para ZFS
 }
 ```
 
-### 2. Rede
+### 3. Rede
 
-Vamos adicionar nossa configuração de rede ao arquivo `modules/networking.nix`.
-Como mencionado antes, nosso Mac Mini só tem uma NIC, esta configuração depende de VLANs para dividir a rede nas partes pretendidas: VLANs 144, 222 e 333.
+Nossa configuração de rede será no `modules/networking.nix`.
+Como mencionado antes, como esse *Mac Mini* só tem uma placa de rede, esta configuração se baseará em **VLANs** para que que essa interface sirva as redes pretendidas: VLANs 1, 30 e 90.
 
 `/etc/nixos/modules/networking.nix`
 
@@ -273,25 +272,9 @@ in
 }
 ```
 
-`/etc/nixos/modules/firewall.nix`
-
-```nix
-{ config, pkgs, ... }:
-{
-    firewall.enable = false;
-    nftables = {
-      #Workaround mentioned at the firewall section
-      #preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
-      enable = true;
-      rulesetFile = ./nftables.nft;
-      flattenRulesetFile = true;
-    };
-}
-```
-
 ### 5. Conexão PPPoE
 
-A conexão WAN será gerenciada por uma conexão PPPoE, que estará disponível no arquivo `modules/pppoe.nix`
+Configuraremos a conexão PPPoE (protocolo de conexão ponto a ponto pela Ethernet) para acecsso à internet. Essa configuração está no arquivo `modules/pppoe.nix`.
 
 `/etc/nixos/modules/pppoe.nix`
 
@@ -328,10 +311,10 @@ A conexão WAN será gerenciada por uma conexão PPPoE, que estará disponível 
 }
 ```
 
-### 6. Firewall
+### 5. Firewall
 
-A configuração do Firewall é feita com `nftables`. Vamos fazer uma configuração de firewall muito básica, mas segura, no arquivo `nftables.nft`. Esta configuração impedirá qualquer conexão vinda da internet, bem como da rede de convidados, enquanto mantém tudo aberto para a rede privada.
-É importante notar que há um problema com a regra de `flow offloading`. Ao validar as regras, ele verifica a configuração de offloading de fluxo, mas a rotina gera um erro porque a interface `ppp0` não existe durante o tempo de compilação do NixOS. No entanto, há uma [solução](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3) adicionando:
+A configuração do Firewall é feita com `nftables`. Inicialmente será uma configuração básica, mas segura, no arquivo `nftables.nft`. Esta configuração não permitirá novas conexões vindas da internet, bem como das redes `guest` e `iot`, enquanto permitirá a entrada de conexões na rede `lan`.
+A regra `flow offloading`, que tem o objetivo de melhorar o desempenho da ligação entre as redes e a internet não funcionou a contento no meu caso. Deixei comentado para caso você queira experimentar. [Maiores detalhes aqui](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).:
 
 `/etc/nixos/modules/nftables.nft`
 
@@ -346,28 +329,30 @@ table inet filter {
   chain input {
     type filter hook input priority filter; policy drop;
 
-    # Allow trusted networks to access the router
-    iifname {"lan","enp6s0"} counter accept
+    # Permite todo o tráfego na rede local
+    iifname {"lan", } counter accept
 
-    # Allow returning traffic from ppp0 and drop everything else
+    # Permite conexões de retorno e bloqueia todo o resto
     iifname "ppp0" ct state { established, related } counter accept
     iifname "ppp0" drop
   }
 
   chain output {
-    type filter hook output priority 100; policy accept;
+    type filter hook output priority 100
+    policy accept
   }
 
   chain forward {
-    type filter hook forward priority filter; policy drop;
+    type filter hook forward priority filter 
+    policy drop
 
-    # enable flow offloading for better throughput
+    # flow offloading para melhor performace
     # ip protocol { tcp, udp } flow offload @f
 
-    # Allow trusted network WAN access
+    # Permite acesso a rede local a intenret
     iifname { "lan",} oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
 
-    # Allow established WAN to return
+    # Permite conexões de retorno da wan
     iifname "ppp0" oifname {"lan",} ct state established,related counter accept comment "Allow established back to LANs"
     # https://samuel.kadolph.com/2015/02/mtu-and-tcp-mss-when-using-pppoe-2/
     # Clamp MSS to PMTU for TCP SYN packets
@@ -377,11 +362,13 @@ table inet filter {
 
 table ip nat {
   chain prerouting {
-    type nat hook prerouting priority filter; policy accept;
+    type nat hook prerouting priority filter
+    policy accept
   }
-  # Setup NAT masquerading on the ppp0 interface
+  # Masquerade de pacotes enviados para a internet
   chain postrouting {
-    type nat hook postrouting priority filter; policy accept;
+    type nat hook postrouting priority filter
+    policy accept
     oifname "ppp0" masquerade
   }
 }
@@ -389,36 +376,68 @@ table ip nat {
 
 ### 7. Servidor DHCP
 
-Se alguém se conectar à rede, precisará de um endereço IP. Vamos configurar nosso servidor DHCP.
+A configuração do serviço **DHCP** será feita pelo `kea.dhcp4`.
 
-`/etc/nixos/modules/dhcp_server.nix`
+`/etc/nixos/modules/dhcp_server.kea`
 
-```nix
-{ config, pkgs, ... }:
+```json
 {
-  services.dnsmasq = {
-    enable = true;
-    settings = {
-      interface = [ "lan" "guest" ];
-      dhcp-range = [
-        "lan,10.1.1.100,10.1.1.200,12h"  # LAN range
-        "guest,10.1.30.100,10.1.30.200,12h"  # Guest range
-        "iot,10.1.90.100,10.1.90.200,12h"  # IoT range
-      ];
-      dhcp-option = [
-        "6,10.1.1.62,8.8.8.8,8.8.4.4,208.67.222.22,208.67.220.220"
-        "15,mydomain.local"
-        "15,guest.localdomain,guest" 
-      ];
-      port = 0; #Desabilita servidor DNS
-    };
-  };
+  "Dhcp4": {
+    "valid-lifetime": 4000,
+    "renew-timer" : 1000,
+    "rebind-timer": 200,
+
+    "interfaces-config" : { 
+      "interfaces": [ "lan", "guest", "iot" ]
+    },
+
+    "lease-database": {
+      "type": "memfile",
+      "persist": true,
+      "name": "/var/lib/kea/dhcp4.leases"
+    },
+    
+    "subnet4" : [
+      {
+        "id": 1,
+        "interface" : "lan",
+        "subnet": "10.1.1.0/24",
+        "pools": [ { "pool": "10.1.1.100 - 10.1.1.200" } ],
+        "option-data": [
+          { "name": "routers", "data": "10.1.1.1" },
+          { "name": "domain-name-servers", "data": "8.8.8.8" },
+          { "name": "domain-search", "data": "example.com" }
+        ]
+      },
+      {
+        "id": 2,
+        "interface" : "guest",
+        "subnet": "10.1.30.0/24",
+        "pools": [ { "pool": "10.1.30.100 - 10.1.30.200" } ],
+        "option-data": [
+          { "name": "routers", "data": "10.1.30.1" },
+          { "name": "domain-name-servers", "data": "8.8.8.8" },
+        ]
+      },
+      {
+        "id": 3,
+        "interface" : "iot",
+        "subnet": "10.1.90.0/24",
+        "pools": [ { "pool": "10.1.90.100 - 10.1.90.200" } ],
+        "option-data": [
+          { "name": "routers", "data": "10.1.90.1" },
+          { "name": "domain-name-servers", "data": "8.8.8.8" },
+        ]
+      }
+    ]
+  }
 }
 ```
 
 ### 8. Serviços
 
-Tudo parece estar configurado conforme o esperado, mas os serviços. Habilitar o login de senha root é uma medida temporária, pois é arriscado deixar assim. Isso será temporário, e em breve vamos resolver isso.
+No arquivo `services.nix` encontraremos os principais serviços necessários para o funcionamento do sistema. Vamos habilitar o **serviço SSH** e também o **Servidor DHCP** do **Kea**.
+Como uma medida temporária, permitiremos o acesso do usuário `root` via SSH usando autenticação por senha.
 
 `/etc/nixos/modules/services.nix`
 
@@ -432,10 +451,23 @@ Tudo parece estar configurado conforme o esperado, mas os serviços. Habilitar o
       PasswordAuthentication = true;  # Habilitar autenticação por senha
     };
   };
+  openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
+      PasswordAuthentication = true;  # Enable password authentication
+    };
+  };
 }
 ```
 
 ### 9. Aplicar mudanças
+
+Como originalmente não haviámos configurado a partição `boot`, precisamos monta-la primeiro:
+
+```bash
+mount /dev/sda2 /boot
+```
 
 Para as mudanças surtirem efeito, é necessário aplica-las com o comando:
 

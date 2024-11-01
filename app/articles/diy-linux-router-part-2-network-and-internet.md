@@ -104,14 +104,14 @@ Let's have the following networks:
 | Network      | Interface | VLAN      |
 |--------------|-----------|----------:|
 |10.1.1.0/24   | Lan       | untagged  |
-|10.1.30.0/24  | GUEST     | 30        |
+|10.1.30.0/24  | Guest     | 30        |
 |10.1.90.0/24  | IoT       | 90        |
 |PPPoE         | PPP0      | 2         |
 
 Let's focus only on IPV4 for now. But we can have IPV6 later.
 
 - The switch has 8 ports.
-- **VLAN 1**: Ports 1, 3, 4, 5, 6, 7, 8 are untagged.
+- **VLAN 1**: Ports 1, 3 to 8 are untagged.
 - **VLAN 2**: Ports 1 and 2 are tagged.
 - **VLAN 30**: Port 1 and 3 are tagged.
 - **VLAN 90**: Port 1 and 3 are tagged.
@@ -127,7 +127,7 @@ Let's focus only on IPV4 for now. But we can have IPV6 later.
 | │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ |
 | └───┴───┴───┴───┴───┴───┴───┴───┘ |
 └───┬───┬───┬───┬───────────────────┘
-    │   │   │   └─► 4-8 Untagged VLAN 144
+    │   │   │   └─► 4-8 Untagged VLAN 1
     │   │   └─────► Untagged VLAN 1, Tagged VLAN 30, 90
     │   └─────────► Untagged VLAN 2
     └─────────────► Untagged VLAN 1, Tagged VLAN 2, 30, 90
@@ -142,7 +142,7 @@ As far as this Mac Mini only has one Gigabit Ethernet port, this NIC will be tie
 - `10.1.1.0/24` is a bridge bound to the NIC. In my case `enp4s0f0`. I leave it as untagged to be easy to reach the computer over the network, if I have some ssue with my switch.
 - `10.1.30.0/24` is `enp4s0f0.30` (VLAN 30) as `guest` network.
 - `10.1.90.0/24` is `enp4s0f0.90` (VLAN 90) as `iot` network.
-- `PPPoE` is `enp4s0f0.2` as `wan` network.
+- `PPPoE` is `enp4s0f0.2` as `wan` network to PPPoE connection.
 
 ## NixOS config
 
@@ -154,25 +154,25 @@ Let's configure our server by editing the `.nix` files accordingly. To maintain 
 /etc/nixos
 ├── configuration.nix 
 └── modules/ 
-      ├── networking.nix # Network settings/ enables NFTables
-      ├── pppoe.nix      # PPPoE connection setup
-      ├── services.nix   # Other services
-      ├── firewall.nix   # Firewall Configuration
-      └── nftables.nft   # NFT Rules
+      ├── networking.nix  # Network settings/ enables NFTables
+      ├── pppoe.nix       # PPPoE connection setup
+      ├── services.nix    # Other services
+      ├── nftables.nft    # NFT Rules
+      └── dhcp_server.kea # DHCP Server Configuration
 ```
 
 ### 1. Configuration files and folders
 
-First, let's create the necessary folders and files:
+Create all the necessary folders and files:
 
 ```bash
 mkdir -p /etc/nixos/modules
-touch /etc/nixos/modules/{{dhcp_server,firewall,networking,pppoe,services}.nix,nftables.nft}
+touch /etc/nixos/modules/{{networking,pppoe,services}.nix,nftables.nft,dhcp_server.kea}
 ```
 
 ### 2. Basic config
 
-Let's split our `configuration.nix` file into parts. As we are already editing the file, let's take advantage and enable packet forwarding, as the most basic thing a router does, and route traffic between networks.
+Let's split our `configuration.nix` file into parts for better organization and maintainability.
 
 `/etc/nixos/configuration.nix`
 
@@ -213,7 +213,6 @@ Let's split our `configuration.nix` file into parts. As we are already editing t
     ./modules/networking.nix
     ./modules/services.nix
     ./modules/pppoe.nix
-    ./modules/dhcp_server.nix
   ];
 
   environment.systemPackages = with pkgs; [
@@ -227,14 +226,14 @@ Let's split our `configuration.nix` file into parts. As we are already editing t
   ];
 
   # Set the hostId for ZFS
-  networking.hostId = "38e3ee20"; #Data extracted during the installation.;
+  networking.hostId = "38e3ee20"; #Data extracted during the installation for ZFS.;
 }
 ```
 
 ### 3. Networking
 
-Let's add our network configuration to `modules/networking.nix`.
-As mentioned before, our Mac Mini only has one NIC, this setup relies on VLANs to split the network into the intended parts.VLANs, 144, 222, and 333.
+We have our **network configuration** on `modules/networking.nix`.
+As mentioned before, our Mac Mini only has one NIC, this setup relies on VLANs to split the network into the intended parts.VLANs, 1, 30, and 90.
 
 `/etc/nixos/modules/networking.nix`
 
@@ -290,7 +289,7 @@ in
 
 ### 4. PPPoE connection
 
-WAN connection will be managed by a PPPoE connection, which will be available in `modules/pppoe.nix`
+We'll set up the PPPoE (Point-to-Point Protocol over Ethernet) connection for internet access. The configuration for this is located in the `modules/pppoe.nix` file.
 
 `/etc/nixos/modules/pppoe.nix`
 
@@ -330,7 +329,7 @@ WAN connection will be managed by a PPPoE connection, which will be available in
 ### 5. Firewall
 
 The Firewall configuration is done with `nftables`. We will do a very basic, but secure firewall configuration in the file `nftables.nft`. This setup will prevent any connection incoming from the internet, as well as from the guest network, while keeping everything open to the private network.
-It's important to note that there's a problem with the `flow offloading` rule. When validating the rules, it checks for flow offloading configuration, but the routine gives an error because the interface `ppp0` does not exist during the build time of NixOS. However, there's a [workaround](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3) by adding:
+The `flow offloading` rule. Which is aimed to improve network performance through the networks and the internet didn't worked as expected for me and because of that, I leaved it commented out on this tutorial, as you can try by yourself. [Details here](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).
 
 `/etc/nixos/modules/nftables.nft`
 
@@ -354,11 +353,13 @@ table inet filter {
   }
 
   chain output {
-    type filter hook output priority 100; policy accept;
+    type filter hook output priority 100
+    policy accept;
   }
 
   chain forward {
-    type filter hook forward priority filter; policy drop;
+    type filter hook forward priority filter 
+    policy drop
 
     # enable flow offloading for better throughput
     # ip protocol { tcp, udp } flow offload @f
@@ -388,49 +389,87 @@ table ip nat {
 
 ### 6. DHCP Server
 
-If somebody connects to the network, they need to have an IP address. Let's configure our DHCP server.
+Our **DHCP Server** configuration wil be done by `kea.dhcp4`
 
-`/etc/nixos/modules/dhcp_server.nix`
+`/etc/nixos/modules/dhcp_server.kea`
 
-```nix
-{ config, pkgs, ... }:
+```json
 {
-  services.dnsmasq = {
-    enable = true;
-    settings = {
-      interface = [ "lan" "guest" "iot" ];
-      dhcp-range = [
-        "lan,10.1.1.100,10.1.1.200,12h"  # LAN range
-        "guest,10.1.30.100,10.1.30.200,12h"  # Guest range
-        "iot,10.1.90.100,10.1.90.200,12h"  # IoT range
-      ];
-      dhcp-option = [
-        "6,8.8.8.8,8.8.4.4,208.67.222.22,208.67.220.220"
-        "15,localdomain"
-        "15,guest.localdomain,guest"
-      ];
-      port = 0; #Disable DNS Server
-    };
-  };
+  "Dhcp4": {
+    "valid-lifetime": 4000,
+    "renew-timer" : 1000,
+    "rebind-timer": 200,
+
+    "interfaces-config" : { 
+      "interfaces": [ "lan", "guest", "iot" ]
+    },
+
+    "lease-database": {
+      "type": "memfile",
+      "persist": true,
+      "name": "/var/lib/kea/dhcp4.leases"
+    },
+    
+    "subnet4" : [
+      {
+        "id": 1,
+        "interface" : "lan",
+        "subnet": "10.1.1.0/24",
+        "pools": [ { "pool": "10.1.1.100 - 10.1.1.200" } ],
+        "option-data": [
+          { "name": "routers", "data": "10.1.1.1" },
+          { "name": "domain-name-servers", "data": "8.8.8.8" },
+          { "name": "domain-search", "data": "example.com" }
+        ]
+      },
+      {
+        "id": 2,
+        "interface" : "guest",
+        "subnet": "10.1.30.0/24",
+        "pools": [ { "pool": "10.1.30.100 - 10.1.30.200" } ],
+        "option-data": [
+          { "name": "routers", "data": "10.1.30.1" },
+          { "name": "domain-name-servers", "data": "8.8.8.8" },
+        ]
+      },
+      {
+        "id": 3,
+        "interface" : "iot",
+        "subnet": "10.1.90.0/24",
+        "pools": [ { "pool": "10.1.90.100 - 10.1.90.200" } ],
+        "option-data": [
+          { "name": "routers", "data": "10.1.90.1" },
+          { "name": "domain-name-servers", "data": "8.8.8.8" },
+        ]
+      }
+    ]
+  }
 }
 ```
 
 ### 7. Services
 
-Everything seems to be configured as intended, but services. Enabling root password login is a temporary measure, as it is risky to leave it that way. This will be temporary, and soon we will address that.
+On `services.nix` file we have most of the services we need. We will enable the **SSH service** as the **Kea DHCP Server** service.
+As a temporary measure, let's enable login SSH with user `root` with password authentication.
 
 `/etc/nixos/modules/services.nix`
 
 ```nix
 {config, pkgs, ... }: {
   # Enable SSH service
-  services.openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
-      PasswordAuthentication = true;  # Enable password authentication
+  services = {
+    kea.dhcp4 = {
+      enable = true;
+      configFile = ./dhcp_server.kea;
     };
-  };
+    openssh = {
+      enable = true;
+      settings = {
+        PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
+        PasswordAuthentication = true;  # Enable password authentication
+      };
+    };
+  }
 }
 ```
 

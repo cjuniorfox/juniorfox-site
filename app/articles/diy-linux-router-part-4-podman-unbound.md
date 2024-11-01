@@ -30,19 +30,10 @@ Now, it's time to install **Podman**, a drop-in replacement for Docker with some
   - [Why Podman instead of Docker?](#why-podman-instead-of-docker)
 - [About Unbound](#about-unbound)
 - [Podman Setup](#podman-setup)
-  - [1. Update NixOS Configuration File](#1-update-nixos-configuration-file)
-  - [2. Setup Firewall for Podman Default Network](#2-setup-firewall-for-podman-default-network)
 - [Unbound-setup](#unbound-setup)
-  - [1. Create directories and volumes for unbound](#1-create-directories-and-volumes-for-unbound)
-  - [2. Build the YAML Deployment File](#2-build-the-yaml-deployment-file)
-  - [3. Additional Configuration Files](#3-additional-configuration-files)
-  - [4. Create a Podman Network for Unbound](#4-create-a-podman-network-for-unbound)
-  - [5. Add the Newly Created Network to the Firewall](#5-add-the-newly-created-network-to-the-firewall)
-  - [6. Start the Unbound Container](#6-start-the-unbound-container)
 - [Firewall Rules](#firewall-rules)
-  - [1. Update Firewall Configuration](#1-update-firewall-configuration)
-  - [2. Rebuild NixOS](#2-rebuild-nixos)
-  - [3. Reload Unbound Pod](#3-reload-unbound-pod)
+- [Update DHCP Settings](#update-dhcp-settings)
+- [Conclusion](#conclusion)
 
 ## About Podman
 
@@ -165,16 +156,18 @@ table inet filter {
   }
 
   chain input {
-    type filter hook input priority filter; policy drop;
+    type filter hook input priority filter 
+    policy drop
     
-    jump podman_networks_input;
+    jump podman_networks_input
     ...
   }
 
   chain forward {
-    type filter hook forward priority filter; policy drop;
+    type filter hook forward priority filter
+    policy drop
     ...
-    jump podman_networks_forward;
+    jump podman_networks_forward
     ...
   }
 }
@@ -230,18 +223,25 @@ spec:
           ephemeral-storage: "500Mi"
       env:
         - name: DOMAIN
-          value: "localdomain" # Same as defined in the dnsmasq configuration
+          value: "example.com" # Same as defined in the kea configuration
         - name: DHCPSERVER
-          value: "dnsmasq" # DHCP server used on our server
+          value: "kea" # DHCP server used on our server
       ports:
+        - containerPort: 853 # DNS over TLS for all networks
+          protocol: TCP
+          hostPort: 853
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.144.1 # LAN network
+          hostIP: 10.1.1.1 # LAN network
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.222.1 # Guest network
+          hostIP: 10.1.90.1 # Guest network
+        - containerPort: 90
+          protocol: UDP
+          hostPort: 90
+          hostIP: 10.1.90.1 # IoT network
       volumeMounts:
         - name: dhcp-volume
           mountPath: /dhcp.leases
@@ -253,7 +253,7 @@ spec:
   volumes:
     - name: dhcp-volume
       hostPath:
-        path: /var/lib/dnsmasq/dnsmasq.leases
+        path: /var/lib/kea/dhcp4.leases
     - name: unbound-conf-volume
       hostPath:
         path: /opt/podman/unbound/volumes/unbound-conf/
@@ -272,9 +272,11 @@ You can place additional configuration files in the `volumes/unbound-conf/` dire
 
 ```conf
 server:
-  private-domain: "localdomain."
-  local-zone: "localdomain." static
-  local-data: "macmini.localdomain. IN A 10.1.144.1"
+  private-domain: "example.com."
+  local-zone: "example.com." static
+  local-data: "macmini.example.com. IN A 10.1.1.1"
+  local-data: "macmini.example.com. IN A 10.1.30.1"
+  local-data: "macmini.example.com. IN A 10.1.90.1"
 ```
 
 ### 4. Create a Podman Network for Unbound
@@ -302,18 +304,12 @@ As mentioned earlier, it is mandatory to add the new network to the `nftables.nf
 table inet filter {
   ...
   chain podman_networks_input {
-    ip saddr 10.88.0.0/16 accept comment "Podman default network"
-    ip saddr 10.89.0.0/24 accept comment "Podman default Kube network"
+    ...
     ip saddr 10.89.1.248/30 accept comment "Podman unbound-net network"
   }
 
   chain podman_networks_forward {
-    ip saddr 10.88.0.0/16 accept comment "Podman default network"
-    ip daddr 10.88.0.0/16 accept comment "Podman default network"
-    
-    ip saddr 10.89.0.0/24 accept comment "Podman default Kube network"
-    ip daddr 10.89.0.0/24 accept comment "Podman default Kube network"
-    
+    ...
     ip saddr 10.89.1.248/30 accept comment "Podman unbound-net network"
     ip daddr 10.89.1.248/30 accept comment "Podman unbound-net network"
   }
@@ -343,7 +339,7 @@ podman kube play --replace \
 **Podman** has set up the ports specified in the `pod.yaml` file, and **Unbound** is now successfully resolving DNS queries for your gateway. Any device on your network can now use the gateway as its DNS server. You can verify this by running the following command and checking the response:
 
 ```bash
-dig @10.1.144.1 google.com
+dig @10.1.1.1 google.com
 
 ; <<>> DiG 9.18.28 <<>> @10.1.144.1 google.com
 ; (1 server found)
@@ -368,7 +364,7 @@ dig @10.1.144.1 google.com
 
 However, there are still a few more things to configure. One important task is to prevent hosts on the `lan` network from using any **DNS server** other than ours. This is necessary because some devices are hardcoded to use other **DNS Servers** like the Google's `8.8.8.8` DNS server. To address this, we'll configure the firewall to redirect any DNS requests (port `53`) to any host made through our gateway to **Unbound**.
 
-### 1. Update Firewall Configuration
+### Update Firewall Configuration
 
 Edit the `nftables.nft` file by adding the following:
 
@@ -382,19 +378,51 @@ table nat {
   }
   ...
   chain prerouting {
-    type nat hook prerouting priority filter; policy accept;
+    type nat hook prerouting priority filter
+    policy accept
     jump unbound_prerouting;
   }
 }
 ```
 
-### 2. Rebuild NixOS
+## Update DHCP Settings
+
+Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember that at `lan` network, every DNS server used for any client will be redirected to the local **Unbound server**.
+
+`/opt/podman/kea/volumes/kea-dhcp4.conf`
+
+```json
+
+  //Leave the rest of the configuration as it is
+  "subnet4" : [
+      {
+        "interface" : "lan",
+        "option-data": [
+          { "name": "domain-name-servers", "data": "10.1.1.1" },
+        ]
+      },
+      {
+        "interface" : "guest",
+        "option-data": [
+          { "name": "domain-name-servers", "data": "10.1.30.1" },
+        ]
+      },
+      {
+        "interface" : "iot",
+        "option-data": [
+          { "name": "domain-name-servers", "data": "10.1.90.1" },
+        ]
+      }
+    ]
+```
+
+### Rebuild NixOS
 
 ```bash
 nixos-rebuild switch
 ```
 
-### 3. Reload Unbound Pod
+### Reload Unbound Pod
 
 Everytime **Firewall rules** are reloaded, is good to reload Pods, so they can reconfigure the expected forward ports.
 
