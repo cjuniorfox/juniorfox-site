@@ -30,19 +30,9 @@ Agora, instalaremos o **Podman**, um substituto direto para o **Docker** com alg
   - [Por que Podman em vez de Docker?](#por-que-podman-em-vez-de-docker)
 - [Sobre o Unbound](#sobre-o-unbound)
 - [Configuração do Podman](#configuração-do-podman)
-  - [1. Atualizar o arquivo de configuração do NixOS](#1-atualizar-o-arquivo-de-configuração-do-nixos)
-  - [2. Configurar o firewall para a rede padrão do Podman](#2-configurar-o-firewall-para-a-rede-padrão-do-podman)
-- [Configuração do Unbound](#configuração-do-unbound)
-  - [1. Criar diretórios e volumes para o Unbound](#1-criar-diretórios-e-volumes-para-o-unbound)
-  - [2. Construir o arquivo de implantação YAML](#2-construir-o-arquivo-de-implantação-yaml)
-  - [3. Arquivos de configuração adicionais](#3-arquivos-de-configuração-adicionais)
-  - [4. Criar uma rede Podman para o Unbound](#4-criar-uma-rede-podman-para-o-unbound)
-  - [5. Adicionar a nova rede criada ao firewall](#5-adicionar-a-nova-rede-criada-ao-firewall)
-  - [6. Iniciar o container do Unbound](#6-iniciar-o-container-do-unbound)
 - [Regras de Firewall](#regras-de-firewall)
-  - [1. Atualizar a configuração do firewall](#1-atualizar-a-configuração-do-firewall)
-  - [2. Rebuild do NixOS](#2-rebuild-do-nixos)
-  - [3. Recarregar o Pod do Unbound](#3-recarregar-o-pod-do-unbound)
+- [Atualizar configuração de DHCP](#autalizar-configuração-de-dhcp)
+- [Conclusão](#conclusão)
 
 ## Sobre o Podman
 
@@ -152,29 +142,31 @@ Tendo os intervalos de rede, é hora de configurar nosso `nftables.nft`.
 table inet filter {
   ...
   chain podman_networks_input {
-    ip saddr 10.88.0.0/16 accept comment "Rede padrão do Podman"
-    ip saddr 10.89.0.0/24 accept comment "Rede Kube padrão do Podman"
+    ip saddr 10.88.0.0/16 accept comment "Podman default network"
+    ip saddr 10.89.0.0/24 accept comment "Podman default Kube network"
   }
 
   chain podman_networks_forward {
-    ip saddr 10.88.0.0/16 accept comment "Rede padrão do Podman"
-    ip daddr 10.88.0.0/16 accept comment "Rede padrão do Podman"
-
-    ip saddr 10.89.0.0/24 accept comment "Rede Kube padrão do Podman"
-    ip daddr 10.89.0.0/24 accept comment "Rede Kube padrão do Podman"
+    ip saddr 10.88.0.0/16 accept comment "Podman default network"
+    ip daddr 10.88.0.0/16 accept comment "Podman default network"
+    
+    ip saddr 10.89.0.0/24 accept comment "Podman default Kube network"
+    ip daddr 10.89.0.0/24 accept comment "Podman default Kube network"
   }
 
   chain input {
-    type filter hook input priority filter; policy drop;
+    type filter hook input priority filter 
+    policy drop
     
-    jump podman_networks_input;
+    jump podman_networks_input
     ...
   }
 
   chain forward {
-    type filter hook forward priority filter; policy drop;
+    type filter hook forward priority filter
+    policy drop
     ...
-    jump podman_networks_forward;
+    jump podman_networks_forward
     ...
   }
 }
@@ -230,18 +222,25 @@ spec:
           ephemeral-storage: "500Mi"
       env:
         - name: DOMAIN
-          value: "localdomain" # Mesmo definido na configuração do dnsmasq
+          value: "example.com" # Same as defined in the kea configuration
         - name: DHCPSERVER
-          value: "dnsmasq" # Servidor DHCP usado em nosso servidor
+          value: "kea" # DHCP server used on our server
       ports:
+        - containerPort: 853 # DNS over TLS for all networks
+          protocol: TCP
+          hostPort: 853
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.144.1 # Rede LAN
+          hostIP: 10.1.1.1 # LAN network
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.222.1 # Rede Guest
+          hostIP: 10.1.90.1 # Guest network
+        - containerPort: 90
+          protocol: UDP
+          hostPort: 90
+          hostIP: 10.1.90.1 # IoT network
       volumeMounts:
         - name: dhcp-volume
           mountPath: /dhcp.leases
@@ -253,7 +252,7 @@ spec:
   volumes:
     - name: dhcp-volume
       hostPath:
-        path: /var/lib/dnsmasq/dnsmasq.leases
+        path: /var/lib/kea/dhcp4.leases
     - name: unbound-conf-volume
       hostPath:
         path: /opt/podman/unbound/volumes/unbound-conf/
@@ -272,9 +271,11 @@ Você pode colocar arquivos de configuração adicionais no diretório `volumes/
 
 ```conf
 server:
-  private-domain: "localdomain."
-  local-zone: "localdomain." static
-  local-data: "macmini.localdomain. IN A 10.1.144.1"
+  private-domain: "example.com."
+  local-zone: "example.com." static
+  local-data: "macmini.example.com. IN A 10.1.1.1"
+  local-data: "macmini.example.com. IN A 10.1.30.1"
+  local-data: "macmini.example.com. IN A 10.1.90.1"
 ```
 
 ### 4. Criar uma rede Podman para o Unbound
@@ -302,20 +303,14 @@ Como mencionado anteriormente, é obrigatório adicionar o intervalo de rede ao 
 table inet filter {
   ...
   chain podman_networks_input {
-    ip saddr 10.88.0.0/16 accept comment "Rede padrão do Podman"
-    ip saddr 10.89.0.0/24 accept comment "Rede Kube padrão do Podman"
-    ip saddr 10.89.1.248/30 accept comment "Rede unbound-net do Podman"
+    ...
+    ip saddr 10.89.1.248/30 accept comment "Podman unbound-net network"
   }
 
   chain podman_networks_forward {
-    ip saddr 10.88.0.0/16 accept comment "Rede padrão do Podman"
-    ip daddr 10.88.0.0/16 accept comment "Rede padrão do Podman"
-
-    ip saddr 10.89.0.0/24 accept comment "Rede Kube padrão do Podman"
-    ip daddr 10.89.0.0/24 accept comment "Rede Kube padrão do Podman"
-    
-    ip saddr 10.89.1.248/30 accept comment "Rede unbound-net do Podman"
-    ip daddr 10.89.1.248/30 accept comment "Rede unbound-net do Podman"
+    ...
+    ip saddr 10.89.1.248/30 accept comment "Podman unbound-net network"
+    ip daddr 10.89.1.248/30 accept comment "Podman unbound-net network"
   }
   ...
 }
@@ -343,7 +338,7 @@ podman kube play --replace \
 O **Podman** roteou as portas configuradas no arquivo `pod.yaml`, e nesse momento, o **Unbound** já resolve nomes de servidores no Gateway. Qualquer host em sua rede agora pode usar o gateway como servidor DNS. Você pode testar executando seguinte comando:
 
 ```bash
-dig @10.1.144.1 google.com
+dig @10.1.1.1 google.com
 
 ; <<>> DiG 9.18.28 <<>> @10.1.144.1 google.com
 ; (1 server found)
@@ -368,7 +363,7 @@ dig @10.1.144.1 google.com
 
 No entanto, ainda há alguns detalhes. Uma tarefa importante é impedir que hosts na rede `lan` usem qualquer **servidor DNS** que não seja o nosso. Isso é importante porque alguns dispositivos são configurados para usar outro servidor DNS como o `8.8.8.8` do Google. Para resolver isso, configuraremos o firewall para redirecionar qualquer solicitação DNS (porta `53`) para qualquer host feita através do nosso gateway para o **Unbound**.
 
-### 1. Atualizar a configuração do firewall
+### Atualizar a configuração do firewall
 
 Edite o arquivo `nftables.nft` adicionando o seguinte:
 
@@ -382,19 +377,52 @@ table nat {
   }
   ...
   chain prerouting {
-    type nat hook prerouting priority filter; policy accept;
+    type nat hook prerouting priority filter
+    policy accept
     jump unbound_prerouting;
   }
 }
 ```
 
-### 2. Rebuild do NixOS
+## Atualizar configuração de DHCP
+
+Configure o `servidor DHCP` para anunciar o servidor `DNS`. Lembre-se de que na rede `lan`, todos os servidores DNS usados para qualquer cliente serão redirecionados para o **servidor Unbound local**.
+
+`/opt/podman/kea/volumes/kea-dhcp4.conf`
+
+```json
+
+  //Leave the rest of the configuration as it is
+  "subnet4" : [
+      {
+        "interface" : "lan",
+        "option-data": [
+          { "name": "domain-name-servers", "data": "10.1.1.1" },
+        ]
+      },
+      {
+        "interface" : "guest",
+        "option-data": [
+          { "name": "domain-name-servers", "data": "10.1.30.1" },
+        ]
+      },
+      {
+        "interface" : "iot",
+        "option-data": [
+          { "name": "domain-name-servers", "data": "10.1.90.1" },
+        ]
+      }
+    ]
+```
+
+
+### Rebuild do NixOS
 
 ```bash
 nixos-rebuild switch
 ```
 
-### 3. Recarregar o Pod do Unbound
+### Recarregar o Pod do Unbound
 
 Sempre que as **regras de firewall** forem recarregadas, é bom recarregar os Pods, para que eles possam reconfigurar os roteamento de portas esperados.
 

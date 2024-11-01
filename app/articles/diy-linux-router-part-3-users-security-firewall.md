@@ -26,16 +26,12 @@ In this part, we will increase security by creating users, changing SSH authenti
 ## Table of Contents
 
 - [Users](#users)
-  - [1. Generate Hashed Password (optional)](#1-generate-hashed-password-optional)
-  - [2. Create `users.nix` in `/etc/nixos/modules/`](#2-create-usersnix-in-etcnixosmodules)
-  - [3. Disable password authentication over SSH](#3-disable-password-authentication-over-ssh)
-  - [4. Update the configuration and try to log in](#4-update-the-configuration-and-try-to-log-in)
 - [Firewall](#firewall)
 - [Conclusion](#conclusion)
 
 ## Users
 
-Let's create our intended users. In my case, I need to have two: one to act as an administrator user named `admin` and another named `git` to have a personal and private **Git** repository.
+Let's create our intended users. You can create wherever user you need. In my case, I will have two: one to act as an administrator user named `admin` and another named `git` to have a personal and private **Git** repository.
 
 ### 1. Generate Hashed Password (optional)
 
@@ -49,26 +45,41 @@ Password: #type the password (hackme00)
 $6$ZeLsWXraGkrm9IDL$Y0eTIK4lQm8D0Kj7tSVzdTJ/VbPKea4ZPf0YaJR68Uz4MWCbG1EJp2YBOfWHNSZprZpjpbUvCIozbkr8yPNM0.
 ```
 
-Generate your public SSH keys by typing on your local machine. More details on how to generate keys can be found [at this link](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
+#### 2. SSH Keys
+
+You can generate your private and public key pair or using a pair that you already have. For example, if you have a GitHub account, you can use the keys generated when you [create a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
+
+Execute the following SSH key generation steps on your computer, not on the router server.
 
 ```bash
-ssh-keygen -C "user@machine_name"
-Enter file in which to save the key (/home/myuser/.ssh/id_rsa):
+ssh-keygen -t ed25519 -C "your_email@example.com" -f ~/.ssh/router-admin
+```
+
+```txt
+Generating public/private ed25519 key pair.
 Enter passphrase (empty for no passphrase): 
 Enter same passphrase again: 
-...
+Your identification has been saved in /root/.ssh/router-admin
+Your public key has been saved in /root/.ssh/router-admin.pub
+The key fingerprint is...
 ```
 
 Retrieve your SSH public keys and copy the content:
 
 ```bash
-cat ~/.ssh/id_rsa.pub
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@machine_name
+cat ~/.ssh/router-admin.pub
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... your_email@example.com
 ```
 
-### 2. Create `users.nix` in `/etc/nixos/modules/`
+Be aware that maintaining your router's private key can be a security risk. If you lose this private key, you'll lose access to the server. You should keep it in a safe place and not share it with anyone.
 
-Create your users. Replace the `authorization.keys` with the one generated above.
+Repeat the same process for every user you want to create. In my case, I repeated the process for the `git` user. You can use the same private key with many users if you want, but I consider this a security risk.
+
+### 3. Create `users.nix` in `/etc/nixos/modules/`
+
+Access the server via SSH using the user `root` and the `password` defined during the installation in the [part 1](/article/diy-linux-router-part-1-initial-setup) of this tutorial and do as follows:
+
+Create your users. Replace the `authorization.keys` with the one generated above as `~/.ssh/router.pub`.
 
 `/etc/nixos/modules/users.nix`
 
@@ -101,7 +112,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
   # Enable sudo for users in the 'wheel' group
   security.sudo = {
     enable = true;
-    wheelNeedsPassword = true;
+    wheelNeedsPassword = true;  # Optional: require a password for sudo. Set as false to allow passwordless sudo
   };
 }
 ```
@@ -111,46 +122,54 @@ Add the `users.nix` file to `configuration.nix`.
 `/etc/nixos/configuration.nix`
 
 ```nix
-{ config, pkgs, ... }:
-{
 ...
   imports = [
-    ./modules/networking.nix
-    ./modules/firewall.nix
-    ./modules/services.nix
-    ./modules/pppoe.nix
-    ./modules/dhcp_server.nix
+    ... # Other imports
     ./modules/users.nix
   ];
 ...
-}
 ```
 
-### 3. Disable password authentication over SSH
+### 4. Disable password authentication over SSH
 
 Disabling password authentication increases security, as the user will only be allowed to log in through `ssh keys`. Also, disabling `root` authentication is a good measure.
 
 `/etc/nixos/modules/services.nix`
 
 ```nix
-{config, pkgs, ... }: {
-  # Enable SSH service
-  services.openssh = {
+...
+  openssh = {
     enable = true;
     settings = {
       PermitRootLogin = "no";
       PasswordAuthentication = false;
     };
   };
-}
+...
 ```
 
-### 4. Update the configuration and try to log in
+### 5. Update the configuration and try to log in
 
 Rebuild the config:
 
 ```bash
 nixos-rebuild switch
+```
+
+Try to log in to the server using the `admin` using the private key generated earlier.
+
+```bash
+ssh -i ~/.ssh/router-admin admin@10.1.1.1
+```
+
+### 6. Lock the root Account
+
+Lock the `root` account increases the security of our server. It's not mandatory, but it's a good practice.
+
+**CAUTION** If you didn't had configured a password for the `admin` account, locking the `root` account will prevent you from logging in to the server locally, but only through `ssh`. Make sure you have created the `admin` account and it's being part of the `wheel` group.
+
+```bash
+passwd -l root
 ```
 
 ## Firewall
@@ -160,46 +179,50 @@ We configured our users, and now let's increase Firewall security.
 So far, what we did on our firewall was:
 
 - Allow all traffic incoming from the `lan` network.
-- Block any traffic incoming from `wan pppoe` and `guest`.
+- Block any traffic incoming from `wan pppoe` and `guest` except the internet access.
 
-It is fairly secure this way, but having more granular control over the incoming traffic is better because it guarantees that if some unintended service starts on our server, it doesn't allow incoming traffic. So, instead of allowing all traffic from `lan`, let's only allow `ssh` and `dhcp-client` service ports. We will increase this list over time as we enable other services like `dns` using **Unbound**, **samba**, and **NFS** for file sharing or **jellyfin** for Media Service. On NixOS, it is fairly easy to set up our firewall by updating the `nftables.nft` file.
-
+The server is quite secure this way, but a more granular control over traffic is desirable, as it ensures that if any of the configured services opens an additional port on our server, traffic to that port will not be automatically initiated. With this in mind, let's update our firewall to allow only the necessary traffic for our server. For the `lan`, `guest`, and `iot` networks, we'll enable only the `dhcp` service. For the `lan` network, in addition to `dhcp`, we'll allow access to `ssh`. We'll also enable `ssh` on `ppp0` to allow remote access. As we enable new services on our server, we'll open new ports. In NixOS, it's quite easy to configure our firewall by simply updating the `nftables.nft` file.
 `/etc/nixos/modules/nftables.nft`
 
 ```conf
 table inet filter {
+
   chain ssh_input {
-      iifname "lan" tcp dport 22 ct state { new, established } counter accept 
-        comment "Allow SSH on LAN"
-      
-      iifname "ppp0" tcp dport 22
-        limit rate 10/minute burst 50 packets 
-        ct state { new, established } accept
-        comment "Allow SSH traffic from ppp0 interface with rate limiting";
+    iifname "lan" tcp dport 22 ct state { new, established } counter accept comment "Allow SSH on LAN"
+    iifname "ppp0" tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic from ppp0 interface with rate limiting"
   }
 
   chain dhcp_input {
-      iifname { "lan", "guest" } udp dport 67 
-        ct state { new, established }
-        counter accept comment "Allow DHCP on LAN and Guest"
-    }
+    iifname { "lan", "guest", "iot" } udp dport 67 ct state { new, established } counter accept comment "Allow DHCP on LAN, Guest and IoT networks"
+  }
 
   chain input {
-    type filter hook input priority filter; policy drop;
+    type filter hook input priority filter
+    policy drop
 
-    jump ssh_input;
-    jump dhcp_input;
+    jump ssh_input
+    jump dhcp_input
 
     # Allow returning traffic from ppp0 and drop everything else
-    iifname "ppp0" ct state { established, related } counter accept;
-    iifname "ppp0" drop;
+    iifname "ppp0" ct state { established, related } counter accept
+    iifname "ppp0" counter drop
   }
+  
+  #Let `chain output`, `chain forward` and `table ip nas` as is.
 ...
 }
 ```
 
-This setup has created a discrete configuration for services enabled on our server. In this case, it only allows the `DHCP` service for `lan` and `guest` networks, and enables `ssh` for both `lan` and `ppp0`. You might think that allowing SSH traffic to our server is a security breach, but as long as we increased the security on `SSH` by blocking users from logging in with a password, allowing this traffic is up to security standards. Also, to make it difficult for any attempt to brute force the security encryption of our server, we have configured a rule to allow only **10 new connections per minute**.
+This setup has created a discrete configuration for services enabled on our server. In this case, it only allows the `DHCP` service for `lan`, `guest` and `iot` networks, and enables `ssh` for both `lan` and `ppp0`. You might think that allowing **SSH** traffic to our server is a security breach, but as long as we increased the security on `SSH` by blocking users from logging in with a password, allowing this traffic is up to security standards. Also, to make it difficult for any attempt to brute force the security encryption of our server, we have configured a rule to allow only **10 new connections per minute**.
+
+### Rebuild the configuration and test
+
+```bash
+nixos-rebuild switch
+```
+
+Logout and try to log in to the server using the `admin` using the private key generated earlier.
 
 ## Conclusion
 
-This wraps up this subject. In the next part, it's time to install `podman` and configure our DNS Server with Unbound on it.
+This wraps up this subject. In the next part, it's time to install `podman` and configure our **DNS Server** with Unbound on it.

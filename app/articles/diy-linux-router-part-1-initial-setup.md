@@ -29,16 +29,6 @@ Having this old Mac Mini doing nothing, and making it a Linux server would give 
   - [Manageable Switch TP-Link TL-SG108E](#manageable-switch-tp-link-tl-sg108e)
   - [Ubiquiti Unifi C6 Lite](#ubiquiti-unifi-c6-lite)
 - [Linux Setup](#linux-setup)
-  - [1. Download NixOS](#1-download-nixos)
-  - [2. Enable SSH Service](#2-enable-ssh-service)
-  - [3. SSH into the Mac Mini](#3-ssh-into-the-mac-mini)
-  - [4. Partition the Disk](#4-partition-the-disk)
-  - [5. Create ZFS Datasets](#5-create-zfs-datasets)
-  - [6. Mount the Filesystems](#6-mount-the-filesystems)
-  - [7. Generate NixOS Configuration](#7-generate-nixos-configuration)
-  - [8. Edit the Configuration](#8-edit-the-configuration)
-  - [9. Install NixOS](#9-install-nixos)
-  - [10. Post-Installation Configuration](#10-post-installation-configuration)
 - [Conclusion](#conclusion)
 
 ## The Idea
@@ -73,7 +63,7 @@ This Mac Mini is old and has been retired from its duty many years ago. As a des
 ![TL-SG108E - from www.redeszone.net](/assets/images/diy-linux-router/tl-sg108e.webp)
 *redeszone.net*
 
-The TP-Link TL-SG108E is a great choice for this project because it supports VLANs, which are essential for splitting the network into different segments. We will explore this further in Part 2 of this article.
+The TP-Link TL-SG108E is a great choice for this project because it supports VLANs, which are essential for splitting the network into different segments. We will explore this further in Part 2 of this series.
 
 ### Ubiquiti Unifi C6 Lite
 
@@ -108,13 +98,13 @@ ip --brief addr
 
 ### 3. SSH into the Mac Mini
 
-Access Macmini by using `ssh` with `Putty` or something similar, using the user `nixos`.
+Access Macmini by using `ssh` with `Putty` or something similar, using the user `nixos` and the password you set in the previous step.
 
 ### 4. Partition the Disk
 
 In this setup, I am going to use the ZFS filesystem. It's a resource-intensive filesystem, but it is resilient, fast, and offers great options for backup.
 
-Although ZFS is resource-intensive, it offers several advantages that make it worth the trade-off. ZFS provides excellent data integrity through checksumming, supports snapshots for easy backups, and is highly scalable, making it a great choice for a file server. However, if you find ZFS to be more than what you need, **BTRFS** is a lighter alternative that still supports many of ZFS's features, such as snapshotting and easy backups. BTRFS is also less resource-intensive, making it a good option for older hardware.
+Although ZFS is resource-intensive, it offers several advantages that make it worth the trade-off. ZFS provides excellent data integrity through checksumming, supports snapshots for easy backups, and is highly scalable, making it a great choice for a file server. However, if you find ZFS to be more than what you need, **BTRFS** is a lighter alternative that still supports many of ZFS's features, such as snapshotting and easy backups. BTRFS is also less resource-intensive, making it a good option for older hardware. This partition scheme will allow boot the system through **BIOS** and **UEFI** as well.
 
 ```bash
 sudo -i

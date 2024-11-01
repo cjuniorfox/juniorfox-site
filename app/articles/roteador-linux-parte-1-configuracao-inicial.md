@@ -29,16 +29,6 @@ Tendo este velho Mac Mini sem uso e transformá-lo em um servidor Linux daria um
   - [Switch Gerenciável TP-Link TL-SG108E](#switch-gerenciável-tp-link-tl-sg108e)
   - [Ubiquiti Unifi C6 Lite](#ubiquiti-unifi-c6-lite)
 - [Configuração do Linux](#configuração-do-linux)
-  - [1. Baixar o NixOS](#1-baixar-o-nixos)
-  - [2. Habilitar o Serviço SSH](#2-habilitar-o-serviço-ssh)
-  - [3. Acessar o Mac Mini via SSH](#3-acessar-o-mac-mini-via-ssh)
-  - [4. Particionar o Disco](#4-particionar-o-disco)
-  - [5. Criar Datasets ZFS](#5-criar-datasets-zfs)
-  - [6. Montar os Sistemas de Arquivos](#6-montar-os-sistemas-de-arquivos)
-  - [7. Gerar a Configuração do NixOS](#7-gerar-a-configuração-do-nixos)
-  - [8. Editar a Configuração](#8-editar-a-configuração)
-  - [9. Instalar o NixOS](#9-instalar-o-nixos)
-  - [10. Configuração Pós-Instalação](#10-configuração-pós-instalação)
 - [Conclusão](#conclusão)
 
 ## A Ideia
@@ -73,7 +63,7 @@ Este Mac Mini é antigo e como computador de mesa não tem muita utilidade, mas 
 ![TL-SG108E - de www.redeszone.net](/assets/images/diy-linux-router/tl-sg108e.webp)
 *redeszone.net*
 
-O TP-Link TL-SG108E é uma ótima escolha para este projeto porque suporta VLANs, que são essenciais para dividir a rede em diferentes segmentos que entraremos mais a fundo na parte 2 desse projeto.
+O TP-Link TL-SG108E é uma ótima escolha para este projeto porque suporta VLANs, que são essenciais para dividir a rede em diferentes segmentos. Entraremos mais a fundo sobre o assunto na parte 2 dessa série.
 
 ### Ubiquiti Unifi C6 Lite
 
@@ -108,24 +98,29 @@ ip --brief addr
 
 ### 3. Acessar o Mac Mini via SSH
 
-Acesse o Mac Mini usando `ssh` com `Putty` ou algo semelhante, usando o usuário `nixos`.
+Acesse o Mac Mini usando `ssh` com `Putty` ou algo semelhante, usando o usuário `nixos` e a senha que você definiu anteriormente.
 
 ### 4. Particionar o Disco
 
 Neste setup, vou usar o sistema de arquivos ZFS. É um sistema de arquivos que consome muitos recursos, mas é resiliente, rápido e oferece ótimas opções de backup.
 
-Embora o ZFS consuma muitos recursos, ele oferece várias vantagens que o tornam uma boa escolha. O ZFS fornece excelente integridade de dados por meio de checksumming, suporta snapshots para backups fáceis e é altamente escalável, tornando-o uma ótima escolha para um servidor de arquivos. No entanto, se você achar que o ZFS é mais do que você precisa, **BTRFS** é uma alternativa mais leve que ainda suporta muitos dos recursos do ZFS, como snapshots e backups fáceis. O BTRFS também consome menos recursos, tornando-o uma boa opção para hardware mais antigo.
+Embora o ZFS consuma muitos recursos, ele oferece várias vantagens que o tornam uma boa escolha. O ZFS fornece excelente integridade de dados por meio de checksumming, suporta snapshots para backups fáceis e é altamente escalável, tornando-o uma ótima escolha para um servidor de arquivos. No entanto, se você achar que o ZFS é mais do que você precisa, **BTRFS** é uma alternativa mais leve que ainda suporta muitos dos recursos do ZFS, como snapshots e backups fáceis. O BTRFS também consome menos recursos, tornando-o uma boa opção para hardware mais antigo. Esse esquema de particionamento permitirá tanto inicializar o sistema via **BIOS** quanto via **UEFI**.
 
 ```bash
 sudo -i
-parted /dev/sda mklabel gpt
-parted /dev/sda mkpart EFI 1MiB 4GiB
-parted /dev/sda set 1 esp on
-parted /dev/sda mkpart ZFS 4GiB 100%
-mkfs.msdos -F 32 -n EFI /dev/sda1
 ```
 
-### 5. Criar Datasets ZFS
+```bash
+parted /dev/sda mklabel gpt
+parted /dev/sda mkpart primary 1MiB 2MiB
+parted /dev/sda set 1 bios_grub on
+parted /dev/sda mkpart EFI 2MiB 514MiB
+parted /dev/sda set 2 esp on
+parted /dev/sda mkpart ZFS 514MiB 100%
+mkfs.msdos -F 32 -n EFI /dev/sda2
+```
+
+### 5. Datasets ZFS
 
 No ZFS, não se usa muito o termo "partição" porque realmente não é. O equivalente é "Datasets", que tem uma abordagem semelhante aos **Volumes BTRFS** no sistema de arquivos BTRFS.
 Há uma série de comandos que usaremos para criar nosso zpool e datasets.
@@ -137,7 +132,7 @@ Há uma série de comandos que usaremos para criar nosso zpool e datasets.
 - **acltype=posixacl**: Requisito para instalar Linux em um sistema formatado com ZFS.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool /dev/sda2
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool /dev/sda3
 zfs create -o mountpoint=none rpool/root
 zfs create -o mountpoint=legacy rpool/root/nixos
 zfs create -o mountpoint=legacy rpool/home
@@ -148,7 +143,7 @@ zfs create -o mountpoint=legacy rpool/home
 ```bash
 mount -t zfs rpool/root/nixos /mnt
 mkdir /mnt/boot
-mount /dev/sda1 /mnt/boot
+mount /dev/sda2 /mnt/boot
 ```
 
 ### 7. Gerar a Configuração do NixOS
