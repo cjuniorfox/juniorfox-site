@@ -91,6 +91,16 @@ Create `modules/podman.nix` file
 ```nix
 { pkgs, config, ... }:
 {
+  systemd.services.podman-restart = {
+    description = "Podman Start All Containers With Restart Policy Set To Always";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" "podman.socket" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.podman}/bin/podman start --all --filter restart-policy=always";
+    };
+  };
   virtualisation.containers.enable = true;
   virtualisation = {
     podman = {

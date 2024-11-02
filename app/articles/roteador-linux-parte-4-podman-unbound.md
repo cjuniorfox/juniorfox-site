@@ -90,6 +90,16 @@ Crie o arquivo `modules/podman.nix`
 ```nix
 { pkgs, config, ... }:
 {
+  systemd.services.podman-restart = {
+    description = "Podman Start All Containers With Restart Policy Set To Always";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" "podman.socket" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.podman}/bin/podman start --all --filter restart-policy=always";
+    };
+  };
   virtualisation.containers.enable = true;
   virtualisation = {
     podman = {
@@ -222,21 +232,21 @@ spec:
           ephemeral-storage: "500Mi"
       env:
         - name: DOMAIN
-          value: "example.com" # Same as defined in the kea configuration
+          value: "example.com" # O mesmo definido na configuração do Kea
         - name: DHCPSERVER
-          value: "kea" # DHCP server used on our server
+          value: "kea" # Servidor DHCP usado
       ports:
-        - containerPort: 853 # DNS over TLS for all networks
+        - containerPort: 853 # DNS por TLS poderá ser usado até pela internet
           protocol: TCP
           hostPort: 853
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.1.1 # LAN network
+          hostIP: 10.1.1.1 # LAN
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.90.1 # Guest network
+          hostIP: 10.1.90.1 # Guest
         - containerPort: 90
           protocol: UDP
           hostPort: 90
