@@ -178,6 +178,8 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     fsType = "zfs";
   };
 
+  time.timeZone = "America/Sao_Paulo";
+
   services.openssh = {
     enable = true;
     settings = {
