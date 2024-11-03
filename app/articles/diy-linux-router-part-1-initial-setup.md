@@ -16,6 +16,7 @@ This is the first part of a multipart series describing how to build your own Li
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
+- Part 5: [Nextcloud and Jellyfin](/article/diy-linux-router-part-5-nextcloud-jellyfin)
 
 Having this old Mac Mini doing nothing, and making it a Linux server would give it a new life. It is a capable, stable machine and far from being an ugly one. So let's do it.
 

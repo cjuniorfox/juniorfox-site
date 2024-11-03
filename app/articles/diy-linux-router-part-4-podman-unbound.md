@@ -16,6 +16,7 @@ This is the fourth part of a multipart series describing how to build your own L
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
+- Part 5: [Nextcloud and Jellyfin](/article/diy-linux-router-part-5-nextcloud-jellyfin)
 
 In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, and made security adjustments by setting up authentication methods and configuring the firewall.
 
