@@ -56,9 +56,9 @@ Both Jellyfin and Nextcloud store and access files. We could just create folders
 
 ```bash
 # Create the filesystems
-zfs create -o mountpoint=none rpool/srv
-zfs create -o mountpoint=/srv/nextcloud rpool/srv/nextcloud
-zfs create -o mountpoint=/srv/media rpool/srv/media
+zfs create -o mountpoint=none rpool/mnt
+zfs create -o mountpoint=/mnt/nextcloud rpool/mnt/nextcloud
+zfs create -o mountpoint=/mnt/media rpool/mnt/media
 ```
 
 ## Ingress
@@ -141,45 +141,38 @@ server {
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: "2024-09-12T19:53:43Z"
   labels:
     app: ingress
   name: ingress
 spec:
   networks:
-    - name: ingress-net  # Ensure this matches with the iso-server Pod
+    - name: ingress-net
   containers:
     - name: nginx
-      image: docker.io/library/nginx:alpine
+      image: docker.io/library/nginx:1.27.2-alpine
       ports:
       - containerPort: 80
         hostPort: 80
       - containerPort: 443
         hostPort: 443
       volumeMounts:
-      - mountPath: /ipxe
-        name: usr-local-src-podman-ingress-volumes-ipxe-host-0
       - mountPath: /etc/localtime
-        name: etc-localtime-host-1
+        name: etc-localtime-host
       - mountPath: /etc/nginx/conf.d
-        name: usr-local-src-podman-ingress-volumes-conf.d-host-2
+        name: opt-podman-ingress-conf-host
       - mountPath: /var/www
         name: ingress-www-pvc
       - mountPath: /etc/certificates
         name: certificates-pvc
   restartPolicy: Always
   volumes:
-  - name: usr-local-src-podman-ingress-volumes-ipxe-host-0
-    hostPath:
-      path: /usr/local/src/podman/ingress/volumes/ipxe
-      type: Directory
-  - name: etc-localtime-host-1
+  - name: etc-localtime-host
     hostPath:
       path: /etc/localtime
       type: File
-  - name: usr-local-src-podman-ingress-volumes-conf.d-host-2
+  - name: opt-podman-ingress-conf-host
     hostPath:
-      path: /usr/local/src/podman/ingress/volumes/conf.d
+      path: /opt/podman/ingress/conf
       type: Directory
   - name: ingress-www-pvc
     persistentVolumeClaim:
@@ -195,11 +188,11 @@ spec:
 
 ```bash
 podman kube play \
-  /opt/podman/ingress/pod.yaml \
+  /opt/podman/ingress/ingress.yaml \
   --replace --network ingress-net
 ```
 
-By doing this, the `www` and `certificate` volume was created and is shareable with other volumes. This is needed to validate the **SSL Certificates** to be created at the next step.
+By doing this, the `ingress-www` and `certificates` volumes will be used to validate the **SSL Certificates**, to be created at the next step.
 
 ### Let's Encrypt
 
@@ -219,28 +212,30 @@ kind: Pod
 metadata:
   creationTimestamp: "2024-09-12T19:53:43Z"
   labels:
-    app: certbot-pod
-  name: certbot-pod
+    app: lets-encrypt
+  name: lets-encrypt
 spec:
   networks:
     - name: ingress-net
   restartPolicy: Never
   containers:
     - name: certbot
-      image: docker.io/certbot/certbot:latest
+      image: docker.io/certbot/certbot:v2.11.0
       args:
       - certonly
+      - --agree-tos
+      - --non-interactive
       - -v
       - --webroot
       - -w
       - /var/www/
       - --force-renewal
       - --email
-      - your_email@gmail.com
+      - your_email@gmail.com # Replace with your email
       - -d
-      - jellyfin.example.net
+      - jellyfin.example.net # as `example.net` being your FQDN
       - -d
-      - nextcloud.example.net
+      - nextcloud.example.net # as `example.net` being your FQDN
       volumeMounts:
       - name: certificates-pvc
         mountPath: /etc/letsencrypt
@@ -267,15 +262,31 @@ podman kube play \
   --replace --network ingress-net
 ```
 
-By running this **pod**, the **SSL Certificate** will be created and stored at the `certificate` volume. The `www` one was used to validate the **SSL Certificate**. With the certificate, let's update the ingress pod to serve **HTTPS** traffic with this certificate.
+By running this **pod**, the **SSL Certificate** will be created and stored at the `certificate` volume. The `ingress-www` one was used to validate the **SSL Certificate**. With the certificate, let's update the ingress pod to serve **HTTPS** traffic with this certificate.
+
+The **lets-encrypt** pod will be stopped after the **SSL Certificate** is created. You will need to run the **lets-encrypt** pod again from time to time to renew the **SSL Certificate**.
+
+The certificate will be created at the `certificates` volume. You can check the logs of the **lets-encrypt** pod with the following command:
+
+```bash
+podman pod logs lets-encrypt
+```
+
+With the path of the certificate, update the configuration of the **nginx** with the certitication path.
 
 `/opt/podman/ingress/conf/default_server.conf`
 
 ```conf
+ssl_certificate     /etc/certificates/live/example.com/fullchain.pem;
+ssl_certificate_key /etc/certificates/live/example.com/privkey.pem; 
+
 server {
-  listen 443 ssl;
-  server_name nextcloud.example.com;
-  ssl_certificate /etc/letsencrypt/live/nextcloud.example.com/fullchain.pem;
+    listen 80 default_server;
+    server_name _;
+
+    location ~ /.well-known/acme-challenge/ {
+      root /var/www/;
+    }
 }
 ```
 
@@ -285,21 +296,29 @@ server {
 podman pod restart ingress
 ```
 
-You can access nextcloud.example.com and jellyfin.example.com. If everything goes right, you'll see the **NGINX default page** with **SSL encryption**.
+You can access nextcloud.example.com and jellyfin.example.com. If everything goes right, you'll see the **404 error** with **SSL encryption**.
 
 ## Nextcloud
 
 Now that we have the **Ingress** ready, we can start creating the **Nextcloud** service.
 
+Create a path to place **Nextcloud** configuration files.
+
+```bash
+mkdir -p /opt/podman/nextcloud/
+```
+
 ### Secrets
 
 We will need to create a **secret** for the **Nextcloud** service. This secret will be used to store the **Nextcloud** database password. This secret will be placed in a `yaml` file to be deployed on **Podman**. I wrote a simple script to create the secret for us with a random 32-digits password. You can use it to create the secret for you.
+
+#### 1. Create the secret file
 
 <!-- markdownlint-disable MD033 -->
 <details>
   <summary>Click to expand the <b>create_secret.sh</b> file.</summary>
   
-`create_secret.sh`
+`/opt/podman/nextcloud/create_secret.sh`
 
 ```sh
 #!/bin/bash
@@ -321,7 +340,8 @@ echo "Secret file created with the name secrets.yaml"
 ```
 
 ```bash
-chmod +x create_secret.sh
+chmod +x /opt/podman/nextcloud/create_secret.sh
+cd /opt/podman/nextcloud
 ./create_secret.sh
 ```
 
@@ -330,6 +350,33 @@ Secret file created with the name secrets.yaml
 ```
 
 </details> <!-- markdownlint-enable MD033 -->
+
+#### 2. Deploy the secret file created
+
+```bash
+podman kube play /opt/podman/nextcloud/secrets.yaml
+```
+
+#### 3. Check for the newly created secret
+
+You can check it out if the secret was created by running the following command:
+
+```bash
+podman secret list
+```
+
+```txt
+ID                         NAME               DRIVER      CREATED             UPDATED
+b22f3338bbdcec1ecd2044933  nextcloud-secrets  file        About a minute ago  About a minute ago
+```
+
+#### 4. Delete the `secrets.yaml` file
+
+Maintaining the secret file can be a security flaw. It's a good practice to delete the secret file after deployment. Be aware that you cannot retrieve it's secret contents again in the future.
+
+```bash
+rm -f /opt/podman/nextcloud/secrets.yaml
+```
 
 ### YAML for Nextcloud
 
@@ -347,7 +394,7 @@ kind: Pod
 metadata:
   labels:
     app: nextcloud
-  name: nextcloud-pod
+  name: nextcloud
 
 spec:
   restartPolicy: Always
@@ -364,7 +411,7 @@ spec:
           ephemeral-storage: 50Mi
       volumeMounts:
       - mountPath: /var/www/html
-        name: nextcloud-html-pvc
+        name: mnt-nextcloud-html-host
       env:
       - name: MYSQL_DATABASE
         value: nextcloud
@@ -408,9 +455,12 @@ spec:
             key: mariadbRootPassword
 
   volumes:
-  - name: nextcloud-html-pvc
-    persistentVolumeClaim:
-      claimName: nextcloud_html
+  - name: mnt-nextcloud-html-host
+    hostPath:
+      path: /mnt/nextcloud/html
+      type: Directory
+
+
   - name: nextcloud-db-pvc
     persistentVolumeClaim:
       claimName: nextcloud_db
@@ -421,12 +471,19 @@ spec:
 This `yaml` file will create a **Nextcloud** service with a **MariaDB** database. It will use `/srv/nextcloud` as the **Nextcloud** data directory. Start the **Nextcloud** service with the following command:
 
 ```bash
+mkdir -p /mnt/nextcloud/html/
 podman kube play \
   /opt/podman/nextcloud/nextcloud.yaml \
   --replace --network ingress-net
 ```
 
 ## Jellyfin
+
+As usual, create a directory to maintain **Jellyfin** configuration files.
+
+```bash
+mkdir -p /opt/podman/jellyfin
+```
 
 The **Jellyfin** service will be deployed on **Podman**. To do this, we will need to create a `yaml` file with the following content:
 
@@ -436,33 +493,42 @@ The **Jellyfin** service will be deployed on **Podman**. To do this, we will nee
   `/opt/podman/jellyfin/jellyfin.yaml`
 
   ```yaml
-  apiVersion: v1
-  kind: Pod
-  metadata:
-    labels:
-      app: jellyfin
-    name: jellyfin-pod
-
-  spec:
-    restartPolicy: Always
-    containers:
-      - image: jellyfin/jellyfin:10.9.1
-        name: jellyfin
-        resources:
-          limits:
-            memory: 500Mi
-            ephemeral-storage: 500Mi
-          requests:
-            cpu: 1.0
-            memory: 100Mi
-            ephemeral-storage: 100Mi
-        volumeMounts:
-          - mountPath: /config
-            name: jellyfin-config
-            subPath: jellyfin
-            readOnly: false
-
-#[keep writing it]
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jellyfin
+  name: jellyfin
+spec:
+  restartPolicy: Always
+  containers:
+    - image: docker.io/jellyfin/jellyfin:10.9.1
+      name: jellyfin
+      resources:
+        limits:
+          memory: 500Mi
+          ephemeral-storage: 500Mi
+        requests:
+          cpu: 1.0
+          memory: 100Mi
+          ephemeral-storage: 100Mi
+      volumeMounts:
+        - mountPath: /config
+          name: jellyfin-config-pvc
+        - mountPath: /cache
+          name: jellyfin-cache-pvc
+        - mountPath: /media
+          name: media
+  volumes:
+    - name: jellyfin-config-pvc
+      persistentVolumeClaim:
+        claimName: jellyfin_config
+    - name: jellyfin-cache-pvc
+      persistentVolumeClaim:
+        claimName: jellyfin_cache
+    - name: media
+      hostPath:
+        path: /mnt/media
 ```
 
 </details> <!-- markdownlint-enable MD033 -->
@@ -485,7 +551,12 @@ Our services are up and running on our Gateway and comes the time to configure o
 
 ```conf
 server {
-  set $upstream http://nextcloud-pod;
+    listen 80;
+    server_name nextcloud.example.com;
+    return 301 https://$host$request_uri;
+}
+server {
+  set $upstream http://nextcloud;
   listen 443 ssl;
   server_name nextcloud.example.com;
   root /var/www/html;
@@ -506,7 +577,12 @@ server {
 
 ```conf
 server {
-  set $upstream http://jellyfin-pod;
+    listen 80;
+    server_name jellyfin.example.com;
+    return 301 https://$host$request_uri;
+}
+server {
+  set $upstream http://jellyfin:8096;
   listen 443 ssl;
   server_name jellyfin.example.com;
   location / {
@@ -515,7 +591,32 @@ server {
 }
 ```
 
-### 3. Restart **ingress**
+### 3. Configure the resolver
+
+To **NGINX** reach services, it's necessary to set a resolver. To do that, do as follows:
+
+1. Check the **ingress-net's gateway** configuration by typing:
+
+```bash
+podman network inspect ingress-net \
+  --format 'Gateway: {{ range .Subnets }}{{.Gateway}}{{end}}'
+```
+
+```txt
+Gateway: 10.90.1.1
+```
+<!-- markdownlint-disable MD029 -->
+2. Create the resolver with the `IP Address` obtained:
+
+`/opt/podman/ingress/conf/resolver.conf`
+
+```conf
+resolver 10.90.1.1 valid=30s;
+```
+
+### 4. Restart **ingress**
+
+Everything is set. Restart the **ingress** service.
 
 ```bash
 podman pod restart ingress
