@@ -204,13 +204,13 @@ mkdir -p /opt/podman/unbound/volumes/unbound-conf/
 
 ### 2. Build the YAML Deployment File
 
-Next, create a `pod.yaml` file in `/opt/podman/unbound/`. This file is based on the example provided in the **Docker** image repository [cjuniorfox/unbound](https://github.com/cjuniorfox/unbound/).
+Next, create a `unbound.yaml` file in `/opt/podman/unbound/`. This file is based on the example provided in the **Docker** image repository [cjuniorfox/unbound](https://github.com/cjuniorfox/unbound/).
 
 <!-- markdownlint-disable MD033 -->
 <details>
-  <summary>Click to expand the <b>pod.yaml</b> file.</summary>
+  <summary>Click to expand the <b>unbound.yaml</b> file.</summary>
 
-`/opt/podman/unbound/pod.yaml`
+`/opt/podman/unbound/unbound.yaml`
 
 ```yaml
 apiVersion: v1
