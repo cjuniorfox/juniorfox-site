@@ -207,7 +207,8 @@ Let's split our `configuration.nix` file into parts for better organization and 
       options = [ "noatime" "discard" ];
     };
   };
-    
+  
+  time.timeZone = "America/Sao_Paulo";
   
   # Importing the other modules
   imports = [
@@ -222,6 +223,7 @@ Let's split our `configuration.nix` file into parts for better organization and 
     ethtool
     htop
     ppp
+    openssl
     tcpdump
     vim
   ];
