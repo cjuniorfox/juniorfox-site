@@ -56,7 +56,7 @@ Both Jellyfin and Nextcloud store and access files. We could just create folders
 
 ```bash
 # Create the filesystems
-zfs create -o mountpoint=none rpool/mnt
+zfs create -o canmount=off -o mountpoint=none rpool/mnt
 zfs create -o mountpoint=/mnt/nextcloud rpool/mnt/nextcloud
 zfs create -o mountpoint=/mnt/media rpool/mnt/media
 ```
