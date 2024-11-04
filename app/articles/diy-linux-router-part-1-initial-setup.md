@@ -158,13 +158,14 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
 zfs create -o mountpoint=none rpool/root
 zfs create -o mountpoint=legacy rpool/root/nixos
+zfs create -o mountpoint=legacy rpool/home
 ```
 
 ### 6. Mount the Filesystems and create the Home dataset
 
 ```bash
 mount -t zfs rpool/root/nixos /mnt
-zfs create -o mountpoint=/home rpool/home
+mount -t zfs rpool/home /mnt/home
 mkdir /mnt/boot
 mount ${BOOT} /mnt/boot
 ```
@@ -201,9 +202,20 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     supportedFilesystems = [ "zfs" ];
   };
 
-  fileSystems."/" = {
-    device = "rpool/root/nixos";
-    fsType = "zfs";
+  fileSystems = {
+    "/boot" = {
+      device = "${BOOT}"; 
+      fsType = "vfat";
+      options = [ "noatime" "discard" ];
+    };
+    "/" = {
+      device = "rpool/root/nixos";
+      fsType = "zfs";
+    };
+    "/home" = {
+      device = "rpool/home";
+      fsType = "zfs";
+    };
   };
 
   time.timeZone = "America/Sao_Paulo";
@@ -246,11 +258,22 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     };
   };
 
-  fileSystems."/" = {
-    device = "rpool/root/nixos";
-    fsType = "zfs";
+  fileSystems = {
+    "/boot" = {
+      device = "${BOOT}"; 
+      fsType = "vfat";
+      options = [ "noatime" "discard" ];
+    };
+    "/" = {
+      device = "rpool/root/nixos";
+      fsType = "zfs";
+    };
+    "/home" = {
+      device = "rpool/home";
+      fsType = "zfs";
+    };
   };
-
+  
   time.timeZone = "America/Sao_Paulo";
 
   services.openssh = {

@@ -157,13 +157,14 @@ Há uma série de comandos que usaremos para criar nosso zpool e datasets.
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
 zfs create -o mountpoint=none rpool/root
 zfs create -o mountpoint=legacy rpool/root/nixos
-zfs create -o mountpoint=/home rpool/home
+zfs create -o mountpoint=legacy rpool/home
 ```
 
 ### 6. Montar os Sistemas de Arquivos
 
 ```bash
 mount -t zfs rpool/root/nixos /mnt
+mount -t zfs rpool/home /mnt/home
 mkdir /mnt/boot
 mount ${BOOT} /mnt/boot
 ```
@@ -201,16 +202,21 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   };
 
   fileSystems = {
-    "/" = {
-      device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
 
     "/boot" = {
       device = "${BOOT}"; 
       fsType = "vfat";
       options = [ "noatime" "discard" ];
     };
+    "/" = {
+      device = "rpool/root/nixos";
+      fsType = "zfs";
+    };
+    "/home" = {
+      device = "rpool/home";
+      fsType = "zfs";
+    };
+
   };
 
   time.timeZone = "America/Sao_Paulo";
@@ -254,15 +260,18 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   };
 
   fileSystems = {
-    "/" = {
-      device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
-
     "/boot" = {
       device = "${BOOT}"; 
       fsType = "vfat";
       options = [ "noatime" "discard" ];
+    };
+    "/" = {
+      device = "rpool/root/nixos";
+      fsType = "zfs";
+    };
+    "/home" = {
+      device = "rpool/home";
+      fsType = "zfs";
     };
   };
 
@@ -294,7 +303,15 @@ Execute o comando de instalação:
 nixos-install
 ```
 
-### 10. Configuração Pós-Instalação
+### 10. Desmontar todo o sistema de arquivos
+
+```bash
+cd /
+umount -Rl /mnt
+zpool export -a
+```
+
+### 11. Configuração Pós-Instalação
 
 Uma vez que o NixOS esteja instalado, você pode começar a configurar os serviços que rodarão no seu roteador. Aqui estão alguns dos principais serviços que você vai querer configurar:
 
