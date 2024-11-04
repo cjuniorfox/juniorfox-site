@@ -154,9 +154,9 @@ Há uma série de comandos que usaremos para criar nosso zpool e datasets.
 - **acltype=posixacl**: Requisito para instalar Linux em um sistema formatado com ZFS.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl -O mountpoint=none rpool ${ROOT}
 zfs create -o mountpoint=none rpool/root
-zfs create -o mountpoint=legacy rpool/root/nixos
+zfs create -o mountpoint=legacy -o canmount=noauto rpool/root/nixos
 zfs create -o mountpoint=legacy rpool/home
 ```
 
@@ -164,6 +164,7 @@ zfs create -o mountpoint=legacy rpool/home
 
 ```bash
 mount -t zfs rpool/root/nixos /mnt
+mkdir /mnt/home
 mount -t zfs rpool/home /mnt/home
 mkdir /mnt/boot
 mount ${BOOT} /mnt/boot
@@ -194,8 +195,11 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     loader = {
       efi.canTouchEfiVariables = true;
       grub = {
-        terminal = [ "console" "serial" ];
-        serialCommand = "serial --speed=115200 --unit=0 --word-size=8 --parity=no --stop-bit=1";
+        extraConfig = "
+          serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1
+          terminal_input serial
+          terminal_output serial
+        "
         enable = true;
         efiSupport = true;
         device = "nodev";
@@ -256,8 +260,11 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     kernelParams = [ "console=tty0" "console=ttyS0,115200" ];
     loader = {
       grub = {
-        terminal = [ "console" "serial" ];
-        serialCommand = "serial --speed=115200 --unit=0 --word-size=8 --parity=no --stop-bit=1";
+        extraConfig = "
+          serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1
+          terminal_input serial
+          terminal_output serial
+        "
         enable = true;
         device = "${DISK}";
         zfsSupport = true;
