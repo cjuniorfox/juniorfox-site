@@ -164,8 +164,10 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   system.stateVersion = "24.05";
   boot = {
     loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
+      grub = {
+        enable = true;
+        device = "/dev/sda";
+      };
     };
     supportedFilesystems = [ "zfs" ];
   };
@@ -175,12 +177,19 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     fsType = "zfs";
   };
 
-  fileSystems."/boot" = {
-    device = "/dev/sda1";
-    fsType = "vfat";
+  time.timeZone = "America/Sao_Paulo";
+
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "yes";
+      PasswordAuthentication = true;
+    };
   };
 
-  # Definir o hostId para o ZFS
+  environment.systemPackages = with pkgs; [ vim ];
+
+  # Set the hostId for ZFS
   networking.hostId = "$(head -c 8 /etc/machine-id)";
 }
 EOF

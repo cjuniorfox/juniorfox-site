@@ -31,7 +31,7 @@ Agora, instalaremos o **Podman**, um substituto direto para o **Docker** com alg
 - [Sobre o Unbound](#sobre-o-unbound)
 - [Configuração do Podman](#configuração-do-podman)
 - [Regras de Firewall](#regras-de-firewall)
-- [Atualizar configuração de DHCP](#autalizar-configuração-de-dhcp)
+- [Atualizar configuração de DHCP](#atualizar-configuração-de-dhcp)
 - [Conclusão](#conclusão)
 
 ## Sobre o Podman
@@ -202,13 +202,13 @@ mkdir -p /opt/podman/unbound/volumes/unbound-conf/
 
 ### 2. Construir o arquivo de implantação YAML
 
-Crie um arquivo `pod.yaml` em `/opt/podman/unbound/`, baseado no exemplo fornecido em [cjuniorfox/unbound](https://github.com/cjuniorfox/unbound/).
+Crie um arquivo `unbound.yaml` em `/opt/podman/unbound/`, baseado no exemplo fornecido em [cjuniorfox/unbound](https://github.com/cjuniorfox/unbound/).
 
 <!-- markdownlint-disable MD033 -->
 <details>
-  <summary>Clique para expandir o arquivo <b>pod.yaml</b>.</summary>
+  <summary>Clique para expandir o arquivo <b>unbound.yaml</b>.</summary>
 
-`/opt/podman/unbound/pod.yaml`
+`/opt/podman/unbound/unbound.yaml`
 
 ```yaml
 apiVersion: v1

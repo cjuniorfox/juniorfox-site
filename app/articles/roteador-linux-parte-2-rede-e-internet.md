@@ -204,6 +204,8 @@ Dividiremos nosso `configuration.nix` em módulos separados para manter a organi
       options = [ "noatime" "discard" ];
     };
   };
+
+  time.timeZone = "America/Sao_Paulo";
   
   # Importando os outros módulos
   imports = [
@@ -218,6 +220,7 @@ Dividiremos nosso `configuration.nix` em módulos separados para manter a organi
     ethtool
     htop
     ppp
+    openssl
     tcpdump
     vim
   ];
