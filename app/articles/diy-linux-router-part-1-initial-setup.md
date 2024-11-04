@@ -111,14 +111,37 @@ Although ZFS is resource-intensive, it offers several advantages that make it wo
 sudo -i
 ```
 
+Select the disk. You can check your disk by `ls /dev/disk/by-id/`
+
 ```bash
-parted /dev/sda mklabel gpt
-parted /dev/sda mkpart primary 1MiB 2MiB
-parted /dev/sda set 1 bios_grub on
-parted /dev/sda mkpart EFI 2MiB 514MiB
-parted /dev/sda set 2 esp on
-parted /dev/sda mkpart ZFS 514MiB 100%
-mkfs.msdos -F 32 -n EFI /dev/sda2
+DISK=/dev/disk/by-id/scsi-SATA_disk1
+BIOS=${DISK}-part1
+EFI=${DISK}-part2
+ROOT=${DISK}-part3
+```
+
+Wipe the disk entirely. Be aware that will erase all existing data.
+
+```bash
+wipefs -a ${DISK}
+```
+
+For flash-based storage, if the disk was previously used, you may want to do a full-disk discard (TRIM/UNMAP).
+
+```bash
+blkdiskcard -f ${DISK}
+```
+
+Create the partition schema.
+
+```bash
+parted ${DISK} mklabel gpt
+parted ${DISK} mkpart primary 1MiB 2MiB
+parted ${DISK} set 1 bios_grub on
+parted ${DISK} mkpart EFI 2MiB 514MiB
+parted ${DISK} set 2 esp on
+parted ${DISK} mkpart ZFS 514MiB 100%
+mkfs.msdos -F 32 -n EFI ${EFI}
 ```
 
 ### 5. Create ZFS Datasets
@@ -133,10 +156,10 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 - **acltype=posixacl**: Requirement for installing Linux on a ZFS formatted system.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool /dev/sda3
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
 zfs create -o mountpoint=none rpool/root
 zfs create -o mountpoint=legacy rpool/root/nixos
-zfs create -o mountpoint=legacy rpool/home
+zfs create -o mountpoint=/home rpool/home
 ```
 
 ### 6. Mount the Filesystems
@@ -144,7 +167,7 @@ zfs create -o mountpoint=legacy rpool/home
 ```bash
 mount -t zfs rpool/root/nixos /mnt
 mkdir /mnt/boot
-mount /dev/sda2 /mnt/boot
+mount ${EFI} /mnt/boot
 ```
 
 ### 7. Generate NixOS Configuration
@@ -167,7 +190,8 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     loader = {
       grub = {
         enable = true;
-        device = "/dev/sda";
+        efiSupport = true;
+        device = "${DISK}";
       };
     };
     supportedFilesystems = [ "zfs" ];

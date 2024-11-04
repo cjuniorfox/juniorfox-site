@@ -110,14 +110,37 @@ Embora o ZFS consuma muitos recursos, ele oferece várias vantagens que o tornam
 sudo -i
 ```
 
+Escolha seu dispositivo de armazenamento. Você pode verificar com: `ls /dev/disk/by-id/`
+
 ```bash
-parted /dev/sda mklabel gpt
-parted /dev/sda mkpart primary 1MiB 2MiB
-parted /dev/sda set 1 bios_grub on
-parted /dev/sda mkpart EFI 2MiB 514MiB
-parted /dev/sda set 2 esp on
-parted /dev/sda mkpart ZFS 514MiB 100%
-mkfs.msdos -F 32 -n EFI /dev/sda2
+DISK=/dev/disk/by-id/scsi-SATA_disk1
+BIOS=${DISK}-part1
+EFI=${DISK}-part2
+ROOT=${DISK}-part3
+```
+
+Remova todas as partições do armazenamento. Lembre-se que isso apagará toda a informação existente no disco.
+
+```bash
+wipefs -a ${DISK}
+```
+
+Para SSDs, se o disco foi utilizado anteriormente, você pode querer aplicar o descarte completo de cach de blocos (TRIM/UNMAP).
+
+```bash
+blkdiskcard -f ${DISK}
+```
+
+Crie o esquema de particionamento.
+
+```bash
+parted ${DISK} mklabel gpt
+parted ${DISK} mkpart primary 1MiB 2MiB
+parted ${DISK} set 1 bios_grub on
+parted ${DISK} mkpart EFI 2MiB 514MiB
+parted ${DISK} set 2 esp on
+parted ${DISK} mkpart ZFS 514MiB 100%
+mkfs.msdos -F 32 -n EFI ${EFI}
 ```
 
 ### 5. Datasets ZFS
@@ -132,10 +155,10 @@ Há uma série de comandos que usaremos para criar nosso zpool e datasets.
 - **acltype=posixacl**: Requisito para instalar Linux em um sistema formatado com ZFS.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool /dev/sda3
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
 zfs create -o mountpoint=none rpool/root
 zfs create -o mountpoint=legacy rpool/root/nixos
-zfs create -o mountpoint=legacy rpool/home
+zfs create -o mountpoint=/home rpool/home
 ```
 
 ### 6. Montar os Sistemas de Arquivos
@@ -143,7 +166,7 @@ zfs create -o mountpoint=legacy rpool/home
 ```bash
 mount -t zfs rpool/root/nixos /mnt
 mkdir /mnt/boot
-mount /dev/sda2 /mnt/boot
+mount ${EFI} /mnt/boot
 ```
 
 ### 7. Gerar a Configuração do NixOS
@@ -166,7 +189,8 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     loader = {
       grub = {
         enable = true;
-        device = "/dev/sda";
+        efiSupport = true;
+        device = "${DISK}";
       };
     };
     supportedFilesystems = [ "zfs" ];
