@@ -129,7 +129,7 @@ wipefs -a ${DISK}
 For flash-based storage, if the disk was previously used, you may want to do a full-disk discard (TRIM/UNMAP).
 
 ```bash
-blkdiskcard -f ${DISK}
+blkdiscard -f ${DISK}
 ```
 
 Create the partition schema.

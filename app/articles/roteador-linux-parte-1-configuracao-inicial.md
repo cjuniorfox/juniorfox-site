@@ -128,7 +128,7 @@ wipefs -a ${DISK}
 Para SSDs, se o disco foi utilizado anteriormente, você pode querer aplicar o descarte completo de cach de blocos (TRIM/UNMAP).
 
 ```bash
-blkdiskcard -f ${DISK}
+blkdiscard -f ${DISK}
 ```
 
 Crie o esquema de particionamento.
