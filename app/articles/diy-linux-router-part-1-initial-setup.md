@@ -159,13 +159,13 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
 zfs create -o mountpoint=none rpool/root
 zfs create -o mountpoint=legacy rpool/root/nixos
-zfs create -o mountpoint=/home rpool/home
 ```
 
-### 6. Mount the Filesystems
+### 6. Mount the Filesystems and create the Home dataset
 
 ```bash
 mount -t zfs rpool/root/nixos /mnt
+zfs create -o mountpoint=/home rpool/home
 mkdir /mnt/boot
 mount ${EFI} /mnt/boot
 ```
@@ -178,7 +178,11 @@ nixos-generate-config --root /mnt
 
 ### 8. Edit the Configuration
 
-Open the `/mnt/etc/nixos/configuration.nix` file and make sure to enable ZFS support. Add the following lines:
+Open the `/mnt/etc/nixos/configuration.nix` file and make sure to enable ZFS support. There's two versions for this configuration file, one for `BIOS` and other `UEFI`.
+
+<!-- markdownlint-disable MD033 -->
+<details>
+  <summary>UEFI <b>configuration.nix</b>.</summary>
 
 ```bash
 cat << EOF > /mnt/etc/nixos/configuration.nix
@@ -188,10 +192,14 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   system.stateVersion = "24.05";
   boot = {
     loader = {
+      efi = {
+        canTouchEfiVariables = true;
+        efiSysMountPoint = "/boot/efi";
+      };
       grub = {
         enable = true;
         efiSupport = true;
-        device = "${DISK}";
+        device = "nodev";
       };
     };
     supportedFilesystems = [ "zfs" ];
@@ -219,6 +227,53 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 }
 EOF
 ```
+
+</details><!-- markdownlint-enable MD033 -->
+
+<!-- markdownlint-disable MD033 -->
+<details>
+  <summary>BIOS <b>configuration.nix</b>.</summary>
+
+```bash
+cat << EOF > /mnt/etc/nixos/configuration.nix
+{ config, pkgs, ... }:
+
+{
+  system.stateVersion = "24.05";
+  boot = {
+    loader = {
+      grub = {
+        enable = true;
+        device = "${DISK}";
+        zfsSupport = true;
+      };
+    };
+  };
+
+  fileSystems."/" = {
+    device = "rpool/root/nixos";
+    fsType = "zfs";
+  };
+
+  time.timeZone = "America/Sao_Paulo";
+
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "yes";
+      PasswordAuthentication = true;
+    };
+  };
+
+  environment.systemPackages = with pkgs; [ vim ];
+
+  # Set the hostId for ZFS
+  networking.hostId = "$(head -c 8 /etc/machine-id)";
+}
+EOF
+```
+
+</details><!-- markdownlint-enable MD033 -->
 
 ### 9. Install NixOS
 

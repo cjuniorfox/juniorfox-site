@@ -172,6 +172,7 @@ touch /etc/nixos/modules/{{networking,pppoe,services}.nix,nftables.nft,dhcp_serv
 ### 2. Configuração básica
 
 Dividiremos nosso `configuration.nix` em módulos separados para manter a organização e facilitar a manutenção.
+Não substitua o arquivo todo, mas apenas insira as partes destacadas.
 
 `/etc/nixos/configuration.nix`
 
@@ -180,34 +181,15 @@ Dividiremos nosso `configuration.nix` em módulos separados para manter a organi
 {
   system.stateVersion = "24.05";
   boot = {
-    loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
-    };
-    supportedFilesystems = [ "zfs" ];
+    ...
     kernel.sysctl = {
       "net.ipv4.conf.all.forwarding" = true;
       "net.ipv6.conf.all.forwarding" = false;
     };
   };
 
+  ...
 
-  fileSystems = {
-    "/" = {
-      device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
-
-    "/boot" = {
-      device = "/dev/sda1"; 
-      fsType = "vfat";
-      options = [ "noatime" "discard" ];
-    };
-  };
-
-  time.timeZone = "America/Sao_Paulo";
-  
-  # Importando os outros módulos
   imports = [
     ./modules/networking.nix
     ./modules/services.nix
@@ -225,8 +207,8 @@ Dividiremos nosso `configuration.nix` em módulos separados para manter a organi
     vim
   ];
 
-  # Definir o hostId para ZFS
-  networking.hostId = "38e3ee20"; #Informação extraída durante a instalação para ZFS
+  ...
+
 }
 ```
 
