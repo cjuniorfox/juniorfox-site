@@ -191,9 +191,12 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 {
   system.stateVersion = "24.05";
   boot = {
+    kernelParams = [ "console=tty0" "console=ttyS0,115200" ];
     loader = {
       efi.canTouchEfiVariables = true;
       grub = {
+        terminal = [ "console" "serial" ];
+        serialCommand = "serial --speed=115200 --unit=0 --word-size=8 --parity=no --stop-bit=1";
         enable = true;
         efiSupport = true;
         device = "nodev";
@@ -249,8 +252,11 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 {
   system.stateVersion = "24.05";
   boot = {
+    kernelParams = [ "console=tty0" "console=ttyS0,115200" ];
     loader = {
       grub = {
+        terminal = [ "console" "serial" ];
+        serialCommand = "serial --speed=115200 --unit=0 --word-size=8 --parity=no --stop-bit=1";
         enable = true;
         device = "${DISK}";
         zfsSupport = true;
@@ -273,7 +279,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
       fsType = "zfs";
     };
   };
-  
+
   time.timeZone = "America/Sao_Paulo";
 
   services.openssh = {
