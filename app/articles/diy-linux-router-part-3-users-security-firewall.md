@@ -16,6 +16,7 @@ This is the third part of a multipart series describing how to build your own Li
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
+- Part 5: [Nextcloud and Jellyfin](/article/diy-linux-router-part-5-nextcloud-jellyfin)
 
 In the first and second parts, we installed the operating system, configured the network, and set up the Mac Mini to work as a router.
 In this part, we will increase security by creating users, changing SSH authentication, and hardening the firewall configuration.
