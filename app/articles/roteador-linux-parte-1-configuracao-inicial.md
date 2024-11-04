@@ -114,8 +114,7 @@ Escolha seu dispositivo de armazenamento. Você pode verificar com: `ls /dev/dis
 
 ```bash
 DISK=/dev/disk/by-id/scsi-SATA_disk1
-BIOS=${DISK}-part1
-EFI=${DISK}-part2
+BOOT=${DISK}-part2
 ROOT=${DISK}-part3
 ```
 
@@ -140,7 +139,7 @@ parted ${DISK} set 1 bios_grub on
 parted ${DISK} mkpart EFI 2MiB 514MiB
 parted ${DISK} set 2 esp on
 parted ${DISK} mkpart ZFS 514MiB 100%
-mkfs.msdos -F 32 -n EFI ${EFI}
+mkfs.msdos -F 32 -n EFI ${BOOT}
 ```
 
 ### 5. Datasets ZFS
@@ -166,7 +165,7 @@ zfs create -o mountpoint=/home rpool/home
 ```bash
 mount -t zfs rpool/root/nixos /mnt
 mkdir /mnt/boot
-mount ${EFI} /mnt/boot
+mount ${BOOT} /mnt/boot
 ```
 
 ### 7. Gerar a Configuração do NixOS
@@ -211,7 +210,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     };
 
     "/boot" = {
-      device = "${EFI}"; 
+      device = "${BOOT}"; 
       fsType = "vfat";
       options = [ "noatime" "discard" ];
     };
@@ -264,7 +263,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     };
 
     "/boot" = {
-      device = "${EFI}"; 
+      device = "${BOOT}"; 
       fsType = "vfat";
       options = [ "noatime" "discard" ];
     };

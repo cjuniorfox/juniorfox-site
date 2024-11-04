@@ -115,8 +115,7 @@ Select the disk. You can check your disk by `ls /dev/disk/by-id/`
 
 ```bash
 DISK=/dev/disk/by-id/scsi-SATA_disk1
-BIOS=${DISK}-part1
-EFI=${DISK}-part2
+BOOT=${DISK}-part2
 ROOT=${DISK}-part3
 ```
 
@@ -141,7 +140,7 @@ parted ${DISK} set 1 bios_grub on
 parted ${DISK} mkpart EFI 2MiB 514MiB
 parted ${DISK} set 2 esp on
 parted ${DISK} mkpart ZFS 514MiB 100%
-mkfs.msdos -F 32 -n EFI ${EFI}
+mkfs.msdos -F 32 -n EFI ${BOOT}
 ```
 
 ### 5. Create ZFS Datasets
@@ -167,7 +166,7 @@ zfs create -o mountpoint=legacy rpool/root/nixos
 mount -t zfs rpool/root/nixos /mnt
 zfs create -o mountpoint=/home rpool/home
 mkdir /mnt/boot
-mount ${EFI} /mnt/boot
+mount ${BOOT} /mnt/boot
 ```
 
 ### 7. Generate NixOS Configuration
