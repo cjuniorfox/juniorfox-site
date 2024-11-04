@@ -177,7 +177,11 @@ nixos-generate-config --root /mnt
 
 ### 8. Editar a Configuração
 
-Abra o arquivo `/mnt/etc/nixos/configuration.nix` e certifique-se de habilitar o suporte ao ZFS. Adicione as seguintes linhas:
+Crie o arquivo `/mnt/etc/nixos/configuration.nix` e garanta que habilitou o suporte a **ZFS**. Há duas versões do arquivo de configuração, uma para `BIOS` e outra para `UEFI`.
+
+<!-- markdownlint-disable MD033 -->
+<details>
+  <summary>UEFI <b>configuration.nix</b>.</summary>
 
 ```bash
 cat << EOF > /mnt/etc/nixos/configuration.nix
@@ -187,18 +191,30 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   system.stateVersion = "24.05";
   boot = {
     loader = {
+      efi = {
+        canTouchEfiVariables = true;
+        efiSysMountPoint = "/boot/efi";
+      };
       grub = {
         enable = true;
         efiSupport = true;
-        device = "${DISK}";
+        device = "nodev";
       };
     };
     supportedFilesystems = [ "zfs" ];
   };
 
-  fileSystems."/" = {
-    device = "rpool/root/nixos";
-    fsType = "zfs";
+  fileSystems = {
+    "/" = {
+      device = "rpool/root/nixos";
+      fsType = "zfs";
+    };
+
+    "/boot" = {
+      device = "${EFI}"; 
+      fsType = "vfat";
+      options = [ "noatime" "discard" ];
+    };
   };
 
   time.timeZone = "America/Sao_Paulo";
@@ -218,6 +234,61 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 }
 EOF
 ```
+
+</details><!-- markdownlint-enable MD033 -->
+
+<!-- markdownlint-disable MD033 -->
+<details>
+  <summary>BIOS <b>configuration.nix</b>.</summary>
+
+```bash
+cat << EOF > /mnt/etc/nixos/configuration.nix
+{ config, pkgs, ... }:
+
+{
+  system.stateVersion = "24.05";
+  boot = {
+    loader = {
+      grub = {
+        enable = true;
+        device = "${DISK}";
+        zfsSupport = true;
+      };
+    };
+  };
+
+  fileSystems = {
+    "/" = {
+      device = "rpool/root/nixos";
+      fsType = "zfs";
+    };
+
+    "/boot" = {
+      device = "${EFI}"; 
+      fsType = "vfat";
+      options = [ "noatime" "discard" ];
+    };
+  };
+
+  time.timeZone = "America/Sao_Paulo";
+
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "yes";
+      PasswordAuthentication = true;
+    };
+  };
+
+  environment.systemPackages = with pkgs; [ vim ];
+
+  # Set the hostId for ZFS
+  networking.hostId = "$(head -c 8 /etc/machine-id)";
+}
+EOF
+```
+
+</details><!-- markdownlint-enable MD033 -->
 
 ### 9. Instalar o NixOS
 
