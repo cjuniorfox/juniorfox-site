@@ -191,10 +191,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   system.stateVersion = "24.05";
   boot = {
     loader = {
-      efi = {
-        canTouchEfiVariables = true;
-        efiSysMountPoint = "/boot/efi";
-      };
+      efi.canTouchEfiVariables = true;
       grub = {
         enable = true;
         efiSupport = true;
