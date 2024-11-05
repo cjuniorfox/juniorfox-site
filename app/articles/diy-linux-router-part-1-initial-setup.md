@@ -156,9 +156,9 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 
 ```bash
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
-zfs create -o mountpoint=/ canmount=off rpool/root
+zfs create -o mountpoint=none -o canmount=off rpool/root
 zfs create -o mountpoint=/ rpool/root/nixos
-zfs create -o rpool/home
+zfs create -o mountpoint=/home rpool/home
 ```
 
 ### 6. Mount the Filesystems and create the Home dataset
@@ -243,12 +243,8 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 {
   system.stateVersion = "24.05";
   boot = {
-    kernelParams = [ "console=ttyS0,115200" ];
     loader = {
       grub = {
-        extraConfig = "
-          serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1
-        ";
         enable = true;
         device = "${DISK}";
       };
@@ -257,9 +253,8 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   };
 
   fileSystems."/" = {
-      device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
+    device = "rpool/root/nixos";
+    fsType = "zfs";
   };
 
   time.timeZone = "America/Sao_Paulo";
