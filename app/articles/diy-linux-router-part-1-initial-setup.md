@@ -192,10 +192,15 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 
 {
   system.stateVersion = "24.05";
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.efi.efiSysMountPoint = "/boot/efi";
-  boot.supportedFilesystems = [ "zfs" ];
+  boot= {
+    loader = {
+      systemd-boot.enable = true;  
+      efi.canTouchEfiVariables = true;
+      efi.efiSysMountPoint = "/boot/efi"; 
+    };
+    supportedFilesystems = [ "zfs" ];
+  };
+
 
   fileSystems."/" = {
     device = "rpool/root/nixos";

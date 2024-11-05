@@ -183,7 +183,7 @@ Do not replace the entire file, but just add the following lines.
 ```nix
 { config, pkgs, ... }:
 {
-  system.stateVersion = "24.05";
+  ...
   boot = {
     ...
     kernel.sysctl = {
