@@ -161,14 +161,15 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
 zfs create -o mountpoint=none -o canmount=off rpool/root
 zfs create -o mountpoint=/ rpool/root/nixos
+zfs create -o mountpoint=/boot rpool/boot
 zfs create -o mountpoint=/home rpool/home
 ```
 
 ### 6. Mount Boot filesystem
 
 ```bash
-mkdir /mnt/boot
-mount ${BOOT} /mnt/boot
+mkdir /mnt/boot/efi
+mount ${BOOT} /mnt/boot/efi
 ```
 
 ### 7. Generate NixOS Configuration
@@ -191,14 +192,10 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 
 {
   system.stateVersion = "24.05";
-  boot = {
-    loader = {
-      efi.canTouchEfiVariables = true;
-      grub.enable = true;
-      grub.device="nodev";
-    };
-    supportedFilesystems = [ "zfs" ];
-  };
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.efi.efiSysMountPoint = "/boot/efi";
+  boot.supportedFilesystems = [ "zfs" ];
 
   fileSystems."/" = {
     device = "rpool/root/nixos";
