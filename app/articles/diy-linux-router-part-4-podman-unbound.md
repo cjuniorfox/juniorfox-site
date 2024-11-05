@@ -340,7 +340,7 @@ Start the **Unbound** pod on the `unbound-net` network with the fixed IP address
 
 ```bash
 podman kube play --replace \
-  /opt/podman/unbound/pod.yaml \
+  /opt/podman/unbound/unbound.yaml \
   --network unbound-net \
   --ip 10.89.1.250
 ```
