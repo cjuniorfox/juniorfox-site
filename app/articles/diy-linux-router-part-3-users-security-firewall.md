@@ -16,7 +16,8 @@ This is the third part of a multipart series describing how to build your own Li
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
-- Part 5: [Nextcloud and Jellyfin](/article/diy-linux-router-part-5-nextcloud-jellyfin)
+- Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
+- Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 
 In the first and second parts, we installed the operating system, configured the network, and set up the Mac Mini to work as a router.
 In this part, we will increase security by creating users, changing SSH authentication, and hardening the firewall configuration.
@@ -205,6 +206,7 @@ So far, what we did on our firewall was:
 - Block any traffic incoming from `wan pppoe` and `guest` except the internet access.
 
 The server is quite secure this way, but a more granular control over traffic is desirable, as it ensures that if any of the configured services opens an additional port on our server, traffic to that port will not be automatically initiated. With this in mind, let's update our firewall to allow only the necessary traffic for our server. For the `lan`, `guest`, and `iot` networks, we'll enable only the `dhcp` service. For the `lan` network, in addition to `dhcp`, we'll allow access to `ssh`. We'll also enable `ssh` on `ppp0` to allow remote access. As we enable new services on our server, we'll open new ports. In NixOS, it's quite easy to configure our firewall by simply updating the `nftables.nft` file.
+
 `/etc/nixos/modules/nftables.nft`
 
 ```conf

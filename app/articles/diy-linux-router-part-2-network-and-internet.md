@@ -16,7 +16,8 @@ This is the second part of a multipart series describing how to build your own L
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
-- Part 5: [Nextcloud and Jellyfin](/article/diy-linux-router-part-5-nextcloud-jellyfin)
+- Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
+- Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 
 In the first part, we covered the hardware setup and installed a basic Linux system using NixOS on top of a ZFS filesystem.
 In this part, we will configure VLANs and their networks, set up a PPPoE connection, configure the DHCP server, and implement basic firewall rules.
@@ -445,6 +446,7 @@ As a temporary measure, let's enable login SSH with user `root` with password au
 
 {
   services = {
+    envfs.enable = true
     # Enable SSH Service
     openssh = {
       enable = true;

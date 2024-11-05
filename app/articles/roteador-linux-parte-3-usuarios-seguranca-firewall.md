@@ -16,6 +16,8 @@ Esta é a terceira parte de uma série de artigos descrevendo como construir seu
 - Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
 - Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
 - Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
+- Parte 5: [Wifi](/article/roteador-linux-parte-5-wifi)
+- Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
 
 Nas primeiras e segundas partes, instalamos o sistema operacional, configuramos a rede e configuramos o Mac Mini para funcionar como um roteador.
 Nesta parte, vamos aumentar a segurança criando usuários, alterando a autenticação SSH e reforçando a configuração do firewall.

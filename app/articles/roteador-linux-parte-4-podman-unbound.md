@@ -16,6 +16,8 @@ Esta é a quarta parte de uma série multipartes que descreve como construir seu
 - Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
 - Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
 - Parte 3: [Usuários, Segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
+- Parte 5: [Wifi](/article/roteador-linux-parte-5-wifi)
+- Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
 
 Nos artigos anteriores, instalamos o sistema operacional, configuramos o **Mac Mini** como Gateway de internet usando **PPPoE** e realizamos ajustes de segurança configurando os métodos de autenticação e o firewall.
 
@@ -401,7 +403,6 @@ Configure o `servidor DHCP` para anunciar o servidor `DNS`. Lembre-se de que na 
 `/opt/podman/kea/volumes/kea-dhcp4.conf`
 
 ```json
-
   //Leave the rest of the configuration as it is
   "subnet4" : [
       {

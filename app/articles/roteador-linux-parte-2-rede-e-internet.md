@@ -16,6 +16,8 @@ Esta é a segunda parte de uma série de artigos descrevendo como construir seu 
 - Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
 - Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
 - Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
+- Parte 5: [Wifi](/article/roteador-linux-parte-5-wifi)
+- Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
 
 Na primeira parte, abordamos a configuração de hardware e instalamos um sistema Linux básico usando NixOS usando o sistema de arquivos ZFS. Nesta parte, vamos configurar VLANs e suas redes, a conexão PPPoE, configurar o servidor DHCP e implementar regras básicas de firewall.
 
@@ -443,6 +445,7 @@ Como uma medida temporária, permitiremos o acesso do usuário `root` via SSH us
 
 {
   services = {
+    envfs.enable = true
     # Habilitar serviço SSH
     openssh = {
       enable = true;

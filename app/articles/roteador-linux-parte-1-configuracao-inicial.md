@@ -16,6 +16,8 @@ Esta é a primeira parte de uma série de artigos descrevendo como construir seu
 - Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
 - Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
 - Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
+- Parte 5: [Wifi](/article/roteador-linux-parte-5-wifi)
+- Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
 
 Tendo este velho Mac Mini sem uso e transformá-lo em um servidor Linux daria uma nova vida a ele. É uma máquina capaz, estável e longe de ser feia. Então, vamos fazer isso.
 
