@@ -167,9 +167,19 @@ zfs create -o mountpoint=/home rpool/home
 
 ### 6. Mount Boot filesystem
 
+#### UEFI
+
 ```bash
+zfs create -o mountpoint=/boot rpool/boot
 mkdir /mnt/boot/efi
 mount ${BOOT} /mnt/boot/efi
+```
+
+#### BIOS
+
+```bash
+mkdir /mnt/boot
+mount ${BOOT} /mnt/boot
 ```
 
 ### 7. Generate NixOS Configuration
@@ -201,7 +211,11 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     supportedFilesystems = [ "zfs" ];
   };
 
-
+  fileSystems."/boot/efi" = {
+      device = "${BOOT}"; 
+      fsType = "vfat";
+      options = [ "noatime" "discard" ];
+  };
   fileSystems."/" = {
     device = "rpool/root/nixos";
     fsType = "zfs";
@@ -245,6 +259,11 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     supportedFilesystems = [ "zfs" ];
   };
 
+  fileSystems."/boot" = {
+      device = "${BOOT}"; 
+      fsType = "vfat";
+      options = [ "noatime" "discard" ];
+  };
   fileSystems."/" = {
     device = "rpool/root/nixos";
     fsType = "zfs";
@@ -300,4 +319,5 @@ Each of these services can be configured in your NixOS configuration file (`/etc
 
 By repurposing an old Mac Mini and using NixOS, you've created a powerful and flexible Linux router that can manage your network, provide cloud storage, block ads, and more. This setup is highly customizable and can be expanded with additional services as needed. Whether you're looking to improve your home network or just want to experiment with NixOS, this project is a great way to breathe new life into old hardware.
 This wraps up the first part of this article. In the second part, we’ll configure our network, including VLAN configuration to split our network into `private`, `guest`, and `wan`, as well as setting up a PPPoE connection and basic firewall rules using `nftables`.
-Feel free to check out the full project on my [GitHub](http://github.com/cjuniorfox) and share your own experiences in the comments!
+
+- Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
