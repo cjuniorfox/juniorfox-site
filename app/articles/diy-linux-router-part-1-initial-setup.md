@@ -115,6 +115,9 @@ Select the disk. You can check your disk by `ls /dev/disk/by-id/`
 
 ```bash
 DISK=/dev/disk/by-id/scsi-SATA_disk1
+```
+
+```bash
 BOOT=${DISK}-part2
 ROOT=${DISK}-part3
 ```
@@ -189,14 +192,10 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 {
   system.stateVersion = "24.05";
   boot = {
-    kernelParams = [ "console=tty0" "console=ttyS0,115200" ];
     loader = {
       efi.canTouchEfiVariables = true;
-      grub = {
-        enable = true;
-        efiSupport = true;
-        device = "nodev";
-      };
+      grub.enable = true;
+      grub.device="nodev";
     };
     supportedFilesystems = [ "zfs" ];
   };
@@ -238,10 +237,8 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   system.stateVersion = "24.05";
   boot = {
     loader = {
-      grub = {
-        enable = true;
-        device = "${DISK}";
-      };
+      grub.enable = true;
+      grub.device = "${DISK}";
     };
     supportedFilesystems = [ "zfs" ];
   };
