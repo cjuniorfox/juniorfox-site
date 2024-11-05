@@ -273,7 +273,15 @@ Run the installation command:
 nixos-install
 ```
 
-### 10. Post-Installation Configuration
+### 10. Umount the filesystem
+
+```bash
+cd /
+umount -Rl /mnt
+zpool export -a
+```
+
+### 11. Post-Installation Configuration
 
 Once NixOS is installed, you can begin configuring the services that will run on your router. Here are some of the key services you'll want to set up:
 
