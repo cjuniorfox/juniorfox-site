@@ -179,7 +179,7 @@ Não substitua o arquivo todo, mas apenas insira as partes destacadas.
 ```nix
 { config, pkgs, ... }:
 {
-  system.stateVersion = "24.05";
+  ...
   boot = {
     ...
     kernel.sysctl = {
