@@ -161,12 +161,9 @@ zfs create -o mountpoint=/ rpool/root/nixos
 zfs create -o mountpoint=/home rpool/home
 ```
 
-### 6. Mount the Filesystems and create the Home dataset
+### 6. Mount Boot filesystem
 
 ```bash
-mount -t zfs rpool/root/nixos /mnt
-mkdir /mnt/home
-mount -t zfs rpool/home /mnt/home
 mkdir /mnt/boot
 mount ${BOOT} /mnt/boot
 ```
@@ -196,9 +193,6 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     loader = {
       efi.canTouchEfiVariables = true;
       grub = {
-        extraConfig = "
-          serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1
-        ";
         enable = true;
         efiSupport = true;
         device = "nodev";
