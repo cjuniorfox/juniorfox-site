@@ -114,6 +114,9 @@ Escolha seu dispositivo de armazenamento. Você pode verificar com: `ls /dev/dis
 
 ```bash
 DISK=/dev/disk/by-id/scsi-SATA_disk1
+```
+
+```bash
 BOOT=${DISK}-part2
 ROOT=${DISK}-part3
 ```
@@ -154,20 +157,18 @@ Há uma série de comandos que usaremos para criar nosso zpool e datasets.
 - **acltype=posixacl**: Requisito para instalar Linux em um sistema formatado com ZFS.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl -O mountpoint=none rpool ${ROOT}
-zfs create -o mountpoint=none rpool/root
-zfs create -o mountpoint=legacy -o canmount=noauto rpool/root/nixos
-zfs create -o mountpoint=legacy rpool/home
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
+zfs create -o mountpoint=none -o canmount=off rpool/root
+zfs create -o mountpoint=/ rpool/root/nixos
+zfs create -o mountpoint=/boot rpool/boot
+zfs create -o mountpoint=/home rpool/home
 ```
 
 ### 6. Montar os Sistemas de Arquivos
 
 ```bash
-mount -t zfs rpool/root/nixos /mnt
-mkdir /mnt/home
-mount -t zfs rpool/home /mnt/home
-mkdir /mnt/boot
-mount ${BOOT} /mnt/boot
+mkdir /mnt/boot/efi
+mount ${BOOT} /mnt/boot/efi
 ```
 
 ### 7. Gerar a Configuração do NixOS
@@ -190,40 +191,14 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 
 {
   system.stateVersion = "24.05";
-  boot = {
-    kernelParams = [ "console=tty0" "console=ttyS0,115200" ];
-    loader = {
-      efi.canTouchEfiVariables = true;
-      grub = {
-        extraConfig = "
-          serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1
-          terminal_input serial
-          terminal_output serial
-        "
-        enable = true;
-        efiSupport = true;
-        device = "nodev";
-      };
-    };
-    supportedFilesystems = [ "zfs" ];
-  };
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.efi.efiSysMountPoint = "/boot/efi";
+  boot.supportedFilesystems = [ "zfs" ];
 
-  fileSystems = {
-
-    "/boot" = {
-      device = "${BOOT}"; 
-      fsType = "vfat";
-      options = [ "noatime" "discard" ];
-    };
-    "/" = {
-      device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
-    "/home" = {
-      device = "rpool/home";
-      fsType = "zfs";
-    };
-
+  fileSystems."/" = {
+    device = "rpool/root/nixos";
+    fsType = "zfs";
   };
 
   time.timeZone = "America/Sao_Paulo";
@@ -257,35 +232,16 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 {
   system.stateVersion = "24.05";
   boot = {
-    kernelParams = [ "console=tty0" "console=ttyS0,115200" ];
     loader = {
-      grub = {
-        extraConfig = "
-          serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1
-          terminal_input serial
-          terminal_output serial
-        "
-        enable = true;
-        device = "${DISK}";
-        zfsSupport = true;
-      };
+      grub.enable = true;
+      grub.device = "${DISK}";
     };
+    supportedFilesystems = [ "zfs" ];
   };
 
-  fileSystems = {
-    "/boot" = {
-      device = "${BOOT}"; 
-      fsType = "vfat";
-      options = [ "noatime" "discard" ];
-    };
-    "/" = {
-      device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
-    "/home" = {
-      device = "rpool/home";
-      fsType = "zfs";
-    };
+  fileSystems."/" = {
+    device = "rpool/root/nixos";
+    fsType = "zfs";
   };
 
   time.timeZone = "America/Sao_Paulo";

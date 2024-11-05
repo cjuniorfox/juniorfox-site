@@ -115,6 +115,9 @@ Select the disk. You can check your disk by `ls /dev/disk/by-id/`
 
 ```bash
 DISK=/dev/disk/by-id/scsi-SATA_disk1
+```
+
+```bash
 BOOT=${DISK}-part2
 ROOT=${DISK}-part3
 ```
@@ -155,20 +158,18 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 - **acltype=posixacl**: Requirement for installing Linux on a ZFS formatted system.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl -O mountpoint=none rpool ${ROOT}
-zfs create -o mountpoint=none rpool/root
-zfs create -o mountpoint=legacy -o canmount=noauto rpool/root/nixos
-zfs create -o mountpoint=legacy rpool/home
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
+zfs create -o mountpoint=none -o canmount=off rpool/root
+zfs create -o mountpoint=/ rpool/root/nixos
+zfs create -o mountpoint=/boot rpool/boot
+zfs create -o mountpoint=/home rpool/home
 ```
 
-### 6. Mount the Filesystems and create the Home dataset
+### 6. Mount Boot filesystem
 
 ```bash
-mount -t zfs rpool/root/nixos /mnt
-mkdir /mnt/home
-mount -t zfs rpool/home /mnt/home
-mkdir /mnt/boot
-mount ${BOOT} /mnt/boot
+mkdir /mnt/boot/efi
+mount ${BOOT} /mnt/boot/efi
 ```
 
 ### 7. Generate NixOS Configuration
@@ -191,38 +192,14 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 
 {
   system.stateVersion = "24.05";
-  boot = {
-    kernelParams = [ "console=tty0" "console=ttyS0,115200" ];
-    loader = {
-      efi.canTouchEfiVariables = true;
-      grub = {
-        extraConfig = "
-          serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1
-          terminal_input serial
-          terminal_output serial
-        "
-        enable = true;
-        efiSupport = true;
-        device = "nodev";
-      };
-    };
-    supportedFilesystems = [ "zfs" ];
-  };
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.efi.efiSysMountPoint = "/boot/efi";
+  boot.supportedFilesystems = [ "zfs" ];
 
-  fileSystems = {
-    "/boot" = {
-      device = "${BOOT}"; 
-      fsType = "vfat";
-      options = [ "noatime" "discard" ];
-    };
-    "/" = {
-      device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
-    "/home" = {
-      device = "rpool/home";
-      fsType = "zfs";
-    };
+  fileSystems."/" = {
+    device = "rpool/root/nixos";
+    fsType = "zfs";
   };
 
   time.timeZone = "America/Sao_Paulo";
@@ -256,35 +233,16 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 {
   system.stateVersion = "24.05";
   boot = {
-    kernelParams = [ "console=tty0" "console=ttyS0,115200" ];
     loader = {
-      grub = {
-        extraConfig = "
-          serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1
-          terminal_input serial
-          terminal_output serial
-        "
-        enable = true;
-        device = "${DISK}";
-        zfsSupport = true;
-      };
+      grub.enable = true;
+      grub.device = "${DISK}";
     };
+    supportedFilesystems = [ "zfs" ];
   };
 
-  fileSystems = {
-    "/boot" = {
-      device = "${BOOT}"; 
-      fsType = "vfat";
-      options = [ "noatime" "discard" ];
-    };
-    "/" = {
-      device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
-    "/home" = {
-      device = "rpool/home";
-      fsType = "zfs";
-    };
+  fileSystems."/" = {
+    device = "rpool/root/nixos";
+    fsType = "zfs";
   };
 
   time.timeZone = "America/Sao_Paulo";
@@ -315,7 +273,15 @@ Run the installation command:
 nixos-install
 ```
 
-### 10. Post-Installation Configuration
+### 10. Umount the filesystem
+
+```bash
+cd /
+umount -Rl /mnt
+zpool export -a
+```
+
+### 11. Post-Installation Configuration
 
 Once NixOS is installed, you can begin configuring the services that will run on your router. Here are some of the key services you'll want to set up:
 
