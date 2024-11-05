@@ -1,14 +1,14 @@
 ---
-title: "DIY Linux Router - Part 5 - Nextcloud and Jellyfin"
-articleId: "diy-linux-router-part-5-nextcloud-jellyfin"
-date: "2024-11-02"
+title: "DIY Linux Router - Part 6 - Nextcloud and Jellyfin"
+articleId: "diy-linux-router-part-6-nextcloud-jellyfin"
+date: "2024-11-05"
 author: "Carlos Junior"
 category: "Linux"
 brief: "In the fifth part of this series, we will install Jellyfin, a private media server for home use, and Nextcloud, a private cloud storage solution."
 image: "/assets/images/diy-linux-router/nextcloud-jellyfin.webp"
 keywords : ["macmini","router", "linux", "nixos", "pppoe", "unbound", "podman", "docker"]
 lang : "en"
-other-langs : [{"lang":"pt","article":"roteador-linux-parte-4-podman-unbound"}]
+other-langs : [{"lang":"pt","article":"roteador-linux-parte-6-nextcloud-jellyfin"}]
 ---
 
 This is the fifth part of a multipart series describing how to build your own Linux router.
@@ -17,6 +17,7 @@ This is the fifth part of a multipart series describing how to build your own Li
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
+- Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 
 In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, setup Firewall and Unbound as DNS Server.
 
