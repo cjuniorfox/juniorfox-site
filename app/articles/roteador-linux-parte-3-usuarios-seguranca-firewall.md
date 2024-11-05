@@ -77,7 +77,7 @@ Repita o processo para cada usuário que desejar criar. No meu caso, repeti o pr
 
 ### 3. Criar `users.nix` em `/etc/nixos/modules/`
 
-Acesse o servidor via SSH usando através do usuário `root` e a senha na [parte 1](/article/roteador-linux-parte-1-configuracao-inicial) desse tutorial e faça o seguinte:
+Acesse o servidor via SSH usando através do usuário `root` e a senha na [parte 1](/article/roteador-linux-parte-1-configuracao-inicial) desse tutorial.
 
 Crie seus usuários. Substitua as `authorization.keys` pela chave gerada acima em `~/.ssh/router-admin.pub`.
 
@@ -112,7 +112,7 @@ Crie seus usuários. Substitua as `authorization.keys` pela chave gerada acima e
   # Habilitar sudo para usuários no grupo 'wheel'
   security.sudo = {
     enable = true;
-    wheelNeedsPassword = true; # Opcional: exigir senha ao usar sudo. Use false para permitir sudo sem senha.
+    wheelNeedsPassword = true; # Opcional: exigir senha ao usar sudo. Use false para permitir sudo sem senha ou se não definiu uma senha para o usuário admin.
   };
 }
 ```
@@ -137,15 +137,15 @@ Desabilitar a autenticação por senha aumenta a segurança, pois o usuário só
 `/etc/nixos/modules/services.nix`
 
 ```nix
-...
-  openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "no";
-      PasswordAuthentication = false;
+  services = { 
+  ...
+    openssh = {
+      enable = true;
+      settings.PermitRootLogin = "no";
+      settings.PasswordAuthentication = false;
     };
+  ...
   };
-...
 ```
 
 ### 5. Atualize a configuração e tente fazer login
@@ -162,7 +162,29 @@ Teste a autenticação ao servidor com o usuário `admin`, usando  a chave priva
 ssh -i ~/.ssh/router-admin admin@10.1.1.1
 ```
 
-### 6. Trancar conta root
+### 6. Adicionar configuração de SSH
+
+Para não precisar digitar toda a vez `ssh -i ~/.ssh/router-admin admin@10.1.1.1` para se autênticar, adicione ao arquivo `~/.ssh/config`:
+
+```yaml
+Host macmini
+  Hostname 10.1.1.1
+  user admin
+  IdentityFile ~/.ssh/router-admin
+
+Host macmini
+  Hostname 10.1.1.1
+  user admin
+  IdentityFile ~/.ssh/router-git
+```
+
+Teste o acesso **SSH** sem informar o arquivo de chaves.
+
+```bash
+ssh admin@macmini
+```
+
+### 7. Trancar conta root (opcional)
 
 Desabilitar o login do usuário `root` aumenta a segurança do servidor. Não é mandatório, mas é uma boa prática.
 
@@ -188,7 +210,9 @@ O servidor está bastante seguro dessa forma, mas um controle mais granular sobr
 
 ```conf
 table inet filter {
+  # Mantenha `flowtable` e demais regras do firewall.
 
+  # Adicione esses `chains` a tabela `inet filter`.
   chain ssh_input {
     iifname "lan" tcp dport 22 ct state { new, established } counter accept comment "Allow SSH on LAN"
     iifname "ppp0" tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic from ppp0 interface with rate limiting"
@@ -198,6 +222,7 @@ table inet filter {
     iifname { "lan", "guest", "iot" } udp dport 67 ct state { new, established } counter accept comment "Allow DHCP on LAN, Guest and IoT networks"
   }
 
+  # Substituia todo o `chain input` por esses valores.
   chain input {
     type filter hook input priority filter
     policy drop
@@ -205,7 +230,6 @@ table inet filter {
     jump ssh_input
     jump dhcp_input
 
-    # Allow returning traffic from ppp0 and drop everything else
     iifname "ppp0" ct state { established, related } counter accept
     iifname "ppp0" counter drop
   }
@@ -227,3 +251,5 @@ Faça logout fazer login no servidor com o usuário `admin` usando a chave priva
 ## Conclusão
 
 Melhoramos a segurança de nosso servidor. Na próxima parte, instalaremos o `podman` e configuraremos nosso **Servidor DNS** com **Unbound**.
+
+- Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)

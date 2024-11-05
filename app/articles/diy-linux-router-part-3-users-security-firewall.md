@@ -113,7 +113,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
   # Enable sudo for users in the 'wheel' group
   security.sudo = {
     enable = true;
-    wheelNeedsPassword = true;  # Optional: require a password for sudo. Set as false to allow passwordless sudo
+    wheelNeedsPassword = true;  # Optional: require a password for sudo. Set as false to allow passwordless sudo or you had not specified a password for the admin user.
   };
 }
 ```
@@ -138,15 +138,15 @@ Disabling password authentication increases security, as the user will only be a
 `/etc/nixos/modules/services.nix`
 
 ```nix
-...
-  openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "no";
-      PasswordAuthentication = false;
+  services = { 
+  ...
+    openssh = {
+      enable = true;
+      settings.PermitRootLogin = "no";
+      settings.PasswordAuthentication = false;
     };
+  ...
   };
-...
 ```
 
 ### 5. Update the configuration and try to log in
@@ -163,7 +163,29 @@ Try to log in to the server using the `admin` using the private key generated ea
 ssh -i ~/.ssh/router-admin admin@10.1.1.1
 ```
 
-### 6. Lock the root Account
+### 6. Add to SSH configuration file
+
+If you do not want to type `ssh -i ~/.ssh/router-admin admin@10.1.1.1` everytime to authenticate into the serverm, configure the file `~/.ssh/config` as following:
+
+```yaml
+Host macmini
+  Hostname 10.1.1.1
+  user admin
+  IdentityFile ~/.ssh/router-admin
+
+Host macmini
+  Hostname 10.1.1.1
+  user admin
+  IdentityFile ~/.ssh/router-git
+```
+
+Teste o acesso **SSH** sem informar o arquivo de chaves.
+
+```bash
+ssh admin@macmini
+```
+
+### 7. Lock the root Account (optional)
 
 Lock the `root` account increases the security of our server. It's not mandatory, but it's a good practice.
 
@@ -187,7 +209,9 @@ The server is quite secure this way, but a more granular control over traffic is
 
 ```conf
 table inet filter {
+  # Keep `flowtable` and all existing firewall rules.
 
+  # Add the following chains to `inet filter` table.
   chain ssh_input {
     iifname "lan" tcp dport 22 ct state { new, established } counter accept comment "Allow SSH on LAN"
     iifname "ppp0" tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic from ppp0 interface with rate limiting"
@@ -197,6 +221,7 @@ table inet filter {
     iifname { "lan", "guest", "iot" } udp dport 67 ct state { new, established } counter accept comment "Allow DHCP on LAN, Guest and IoT networks"
   }
 
+  # Replace `chain input` to this one.
   chain input {
     type filter hook input priority filter
     policy drop
@@ -204,7 +229,6 @@ table inet filter {
     jump ssh_input
     jump dhcp_input
 
-    # Allow returning traffic from ppp0 and drop everything else
     iifname "ppp0" ct state { established, related } counter accept
     iifname "ppp0" counter drop
   }
@@ -227,3 +251,5 @@ Logout and try to log in to the server using the `admin` using the private key g
 ## Conclusion
 
 This wraps up this subject. In the next part, it's time to install `podman` and configure our **DNS Server** with Unbound on it.
+
+- Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
