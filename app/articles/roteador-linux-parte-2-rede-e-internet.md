@@ -457,12 +457,6 @@ Como uma medida temporária, permitiremos o acesso do usuário `root` via SSH us
 
 ### 9. Aplicar mudanças
 
-Como originalmente não haviámos configurado a partição `boot`, precisamos monta-la primeiro:
-
-```bash
-mount /dev/sda2 /boot
-```
-
 Para as mudanças surtirem efeito, é necessário aplica-las com o comando:
 
 ```bash

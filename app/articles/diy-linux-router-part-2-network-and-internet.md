@@ -457,12 +457,6 @@ As a temporary measure, let's enable login SSH with user `root` with password au
 
 ### 8. Apply changes
 
-As initially we not have configured the boot partition, we need to mount the partitions first.
-
-```bash
-mount /dev/sda2 /boot
-```
-
 To changes take effect, is needed to apply the changes made so far executing the following command:
 
 ```bash
