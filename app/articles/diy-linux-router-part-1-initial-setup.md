@@ -155,9 +155,9 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 - **acltype=posixacl**: Requirement for installing Linux on a ZFS formatted system.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl -O mountpoint=none rpool ${ROOT}
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT}
 zfs create -o mountpoint=none rpool/root
-zfs create -o mountpoint=legacy -o canmount=noauto rpool/root/nixos
+zfs create -o mountpoint=legacy rpool/root/nixos
 zfs create -o mountpoint=legacy rpool/home
 ```
 
@@ -200,7 +200,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
           serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1
           terminal_input serial
           terminal_output serial
-        "
+        ";
         enable = true;
         efiSupport = true;
         device = "nodev";
@@ -209,20 +209,9 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     supportedFilesystems = [ "zfs" ];
   };
 
-  fileSystems = {
-    "/boot" = {
-      device = "${BOOT}"; 
-      fsType = "vfat";
-      options = [ "noatime" "discard" ];
-    };
-    "/" = {
-      device = "rpool/root/nixos";
-      fsType = "zfs";
-    };
-    "/home" = {
-      device = "rpool/home";
-      fsType = "zfs";
-    };
+  fileSystems."/" = {
+    device = "rpool/root/nixos";
+    fsType = "zfs";
   };
 
   time.timeZone = "America/Sao_Paulo";
@@ -266,9 +255,9 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
         "
         enable = true;
         device = "${DISK}";
-        zfsSupport = true;
       };
     };
+    supportedFilesystems = [ "zfs" ];
   };
 
   fileSystems = {
