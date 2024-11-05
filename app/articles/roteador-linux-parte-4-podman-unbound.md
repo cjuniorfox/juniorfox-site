@@ -425,7 +425,6 @@ Configure o `servidor DHCP` para anunciar o servidor `DNS`. Lembre-se de que na 
     ]
 ```
 
-
 ### Rebuild do NixOS
 
 ```bash
