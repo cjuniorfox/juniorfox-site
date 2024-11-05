@@ -449,6 +449,8 @@ As a temporary measure, let's enable login SSH with user `root` with password au
       settings.PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
       settings.PasswordAuthentication = true; # Enable password authentication
     };
+    kea.dhcp4.enable = true;
+    kea.dhcp4.configFile = ./dhcp_server.kea;
   };
 }
 ```

@@ -447,6 +447,8 @@ Como uma medida temporária, permitiremos o acesso do usuário `root` via SSH us
       settings.PermitRootLogin = "yes"; # Permitir login root (opcional, por razões de segurança você pode querer desativar isso)
       settings.PasswordAuthentication = true; # Habilita autenticação por senha
     };
+    kea.dhcp4.enable = true;
+    kea.dhcp4.configFile = ./dhcp_server.kea;
   };
 }
 ```
