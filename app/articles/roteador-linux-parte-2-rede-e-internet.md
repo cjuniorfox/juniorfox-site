@@ -239,6 +239,8 @@ ip link
 let nic = "enp4s0f0"; # Seu adaptador de rede
 in
 {
+  kea.dhcp4.enable = true;
+  kea.dhcp4.configFile = ./dhcp_server.kea;
   networking = {
     useDHCP = false;
     hostName = "macmini";
