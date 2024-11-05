@@ -320,12 +320,13 @@ The `flow offloading` rule. Which is aimed to improve network performance throug
 table inet filter {
   # Flow offloading for better throughput. Remove it you you have troubles with.
   flowtable f {
-    hook ingress priority 0;
-    devices = { ppp0, lan };
+    hook ingress priority 0
+    devices = { ppp0, lan }
   }
 
   chain input {
-    type filter hook input priority filter; policy drop;
+    type filter hook input priority filter 
+    policy drop
 
     # Allow trusted networks to access the router
     iifname {"lan","enp6s0"} counter accept
@@ -337,7 +338,7 @@ table inet filter {
 
   chain output {
     type filter hook output priority 100
-    policy accept;
+    policy accept
   }
 
   chain forward {

@@ -316,12 +316,13 @@ A regra `flow offloading`, que tem o objetivo de melhorar o desempenho da ligaç
 table inet filter {
   # Flow offloading para melhor performace. Remova se tiver problemas gerar o build.
   flowtable f {
-    hook ingress priority 0;
-    devices = { ppp0, lan };
+    hook ingress priority 0
+    devices = { ppp0, lan }
   }
 
   chain input {
-    type filter hook input priority filter; policy drop;
+    type filter hook input priority filter
+    policy drop
 
     # Permite todo o tráfego na rede local
     iifname {"lan", } counter accept
