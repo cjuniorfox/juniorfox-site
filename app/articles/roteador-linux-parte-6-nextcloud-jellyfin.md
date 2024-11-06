@@ -651,10 +651,10 @@ spec:
   ...
 ```
 
-Refaça o deploy do pod `unifi-network` com o parâmetro `network=ingress-net`:
+Refaça o deploy do pod `unifi-network` com o parâmetro `--network=ingress-net`:
 
 ```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml` --network ingress-net
+podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml --network ingress-net
 ```
 
 ### 4. Configure o resolver
