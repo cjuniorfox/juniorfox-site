@@ -441,7 +441,7 @@ Our **DHCP Server** configuration wil be done by `kea.dhcp4`
 
 ### 7. Services
 
-On `services.nix` file we have most of the services we need. We will enable the **SSH service** as the **Kea DHCP Server** service.
+Remove the `services` from `configuration.nix` and place it at `services.nix` file we have most of the services we need. We will enable the **SSH service** as the **Kea DHCP Server** service.
 As a temporary measure, let's enable login SSH with user `root` with password authentication.
 
 `/etc/nixos/modules/services.nix`

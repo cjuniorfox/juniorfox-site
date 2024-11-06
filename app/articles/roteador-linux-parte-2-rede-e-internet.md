@@ -439,7 +439,7 @@ A configuração do serviço **DHCP** será feita pelo `kea.dhcp4`.
 
 ### 8. Serviços
 
-No arquivo `services.nix` encontraremos os principais serviços necessários para o funcionamento do sistema. Vamos habilitar o **serviço SSH** e também o **Servidor DHCP** do **Kea**.
+Remova `services` do `configuration.nix` e coloque em `services.nix` encontraremos os principais serviços necessários para o funcionamento do sistema. Vamos habilitar o **serviço SSH** e também o **Servidor DHCP** do **Kea**.
 Como uma medida temporária, permitiremos o acesso do usuário `root` via SSH usando autenticação por senha.
 
 `/etc/nixos/modules/services.nix`
