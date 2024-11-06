@@ -332,8 +332,7 @@ table inet filter {
   }
 
   chain input {
-    type filter hook input priority filter 
-    policy drop
+    type filter hook input priority filter; policy drop;
 
     # Allow trusted networks to access the router
     iifname {"lan","enp6s0"} counter accept
@@ -344,13 +343,11 @@ table inet filter {
   }
 
   chain output {
-    type filter hook output priority 100
-    policy accept
+    type filter hook output priority 100; policy accept;
   }
 
   chain forward {
-    type filter hook forward priority filter 
-    policy drop
+    type filter hook forward priority filter; policy drop;
 
     # enable flow offloading for better throughput
     ip protocol { tcp, udp } flow offload @f

@@ -329,8 +329,7 @@ table inet filter {
   }
 
   chain input {
-    type filter hook input priority filter
-    policy drop
+    type filter hook input priority filter; policy drop;
 
     # Permite todo o tráfego na rede local
     iifname "lan" counter accept
@@ -341,13 +340,11 @@ table inet filter {
   }
 
   chain output {
-    type filter hook output priority 100
-    policy accept
+    type filter hook output priority 100; policy accept;
   }
 
   chain forward {
-    type filter hook forward priority filter 
-    policy drop
+    type filter hook forward priority filter; policy drop;
 
     # flow offloading para melhor performace
     ip protocol { tcp, udp } flow offload @f
@@ -365,13 +362,11 @@ table inet filter {
 
 table ip nat {
   chain prerouting {
-    type nat hook prerouting priority filter
-    policy accept
+    type nat hook prerouting priority filter; policy accept;
   }
   # Masquerade de pacotes enviados para a internet
   chain postrouting {
-    type nat hook postrouting priority filter
-    policy accept
+    type nat hook postrouting priority filter; policy accept;
     oifname "ppp0" masquerade
   }
 }

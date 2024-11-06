@@ -168,16 +168,14 @@ table inet filter {
   }
 
   chain input {
-    type filter hook input priority filter 
-    policy drop
+    type filter hook input priority filter; policy drop;
     ...
     jump podman_networks_input
     ...
   }
 
   chain forward {
-    type filter hook forward priority filter
-    policy drop
+    type filter hook forward priority filter; policy drop;
     ...
     jump podman_networks_forward
     ...
@@ -385,14 +383,13 @@ Edit the `nftables.nft` file by adding the following:
 ```conf
 ...
 table nat {
-  chain unbound_prerouting {
-    iifname {"lan", } ip daddr != 10.89.1.250 udp dport 53 dnat to 10.89.1.250:53
+  chain redirect_dns {
+    iifname "lan" ip daddr != 10.89.1.250 udp dport 53 dnat to 10.89.1.250:53
   }
   ...
   chain prerouting {
-    type nat hook prerouting priority filter
-    policy accept
-    jump unbound_prerouting
+    type nat hook prerouting priority filter; policy accept;
+    jump redirect_dns
   }
 }
 ```
@@ -403,7 +400,7 @@ Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember tha
 
 **Leave the rest of the configuration as it is.**
 
-`/opt/podman/kea/volumes/kea-dhcp4.conf`
+`/etc/nixos/modules/kea-dhcp4.conf`
 
 ```json
   
