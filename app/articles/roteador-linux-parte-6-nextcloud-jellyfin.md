@@ -601,7 +601,11 @@ map $http_upgrade $connection_upgrade {
   default upgrade;
   ''      close;
 }
-
+server {
+    listen 80;
+    server_name unifi.example.com;
+    return 301 https://$host$request_uri;
+}
 server {
   listen 443 ssl;
   server_name unifi.example.com;
