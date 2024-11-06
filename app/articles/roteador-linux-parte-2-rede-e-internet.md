@@ -266,6 +266,12 @@ in
       guest = { ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }]; };
       iot = { ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; } ]; };
     };
+    firewall.enable = false;
+    nftables = {
+      enable = true;
+      rulesetFile = ./nftables.nft;
+      flattenRulesetFile = true;
+    };
   };
 }
 ```

@@ -299,39 +299,6 @@ Se estiver tendo problemas com a adoção automática, você pode checar novamen
 - As portas `8080/tcp` e `3478/udp` estarem abertas e acessíveis;
 - Alterado o **inform host** conforme mecionado [acima](#adoção-do-dispositivo);
 
-Se após as verificações, ainda esteja tendo problemas em adotar seu dispositivo, você pode realizar um novo deploy do **Unifi Network Application** usando o parâmetro `--network=host`. Mas antes, é preciso remover todos os redirecionamentos de portas configurados no arquivo `unifi-network.yaml`, basta deletar ou comentar com um `#` todas as linhas contendo:
-
-- `ports:`
-- `containerPort:`
-- `hostPort:`
-- `hostIP:`
-
-Realize um novo deploy do `unifi-network.yaml`
-
-```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml --network=host
-```
-
-Executando o **pod** dessa forma, as portas `8080/tcp` e `3478/udp` precisam ser abertas manualmente no **NFTables**:
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-table inet filter {
-  ...
-  chain unifi_input {
-    iifname "lan" tcp dport 8080 ct state { new, established } counter accept comment "Allow Unifi HTTP"
-    iifname "lan" udp dport 3478 ct state { new, established } counter accept comment "Allow Unifi STUN port"
-  }
-  ...
-  chain input {
-    ...
-    jump unifi_input
-  }
-...
-}
-```
-
 ### Adoção manual
 
 Se todos os ajustes realizados não fizeram seu dispositivo **Unifi** ser adotado, talvez seu dispositivo já tenha sido adotado por outro painel e precisa ser adotado manualmente. É possível faze-lo conforme abaixo:
@@ -341,7 +308,9 @@ ssh ubnt@$AP-IP
 set-inform http://10.1.1.1:8080/inform
 ```
 
-A senha padrão é `ubnt`. Se você já tiver previamente adotado o dispositivo, a senha será a **senha de acesso do Unifi**. Verifique o **endereço IP** no arquivo do `servidor DHCP` em `/var/lib/kea/dhcp4.leases`. Maiores detalhes na documentação do [LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+Verifique o endereço IP do **AP** no arquivo do `servidor DHCP` em `/var/lib/kea/dhcp4.leases`.
+
+O nome de usuário e a senha padrão são `ubnt`. Se o dispositivo já foi adotado anteriormente, verifique no painel anterior qual é o `nome de usuário` e `senha` configurados em **Configurações** > **Sistema** > **Avançado**. Geralmente, o `nome de usuário` e a `senha` são os da **conta Unifi**. Vale mencionar que, sempre que você quiser substituir seu **Network Application**, remover seus dispositivos do mesmo antes de desativar a aplicação. Fazer backups de sua configuração também é uma boa medida para evitar dores de cabeça ao readotar dispositivos. Mais detalhes na [documentação LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
 
 ## Conclusão
 
