@@ -39,7 +39,7 @@ Nesta parte, vamos fazer algo mais útil com nosso servidor, instalando alguns b
 - [Nextcloud](#nextcloud)
 - [Jellyfin](#jellyfin)
 - [Configurar Ingress](#configurar-ingress)
-- [Conclusão](#conclusao)
+- [Conclusão](#conclusão)
 
 ## O que é o Nextcloud
 
@@ -55,7 +55,6 @@ Então, por que não ter seu próprio conteúdo e executar seu próprio servidor
 Tanto o Jellyfin quanto o Nextcloud armazenam e acessam arquivos. Poderíamos simplesmente criar pastas para eles, mas configurar o armazenamento adequadamente é melhor para garantir o backup dos dados. Com o **ZFS**, é bastante fácil criar os **datasets** necessários para cada serviço.
 
 ```bash
-# Create the filesystems
 zfs create -o canmount=off -o mountpoint=none rpool/mnt
 zfs create -o canmount=off -o mountpoint=none rpool/mnt/container-volumes
 zfs create -o mountpoint=/mnt/container-volumes/nextcloud rpool/mnt/container-volumes/nextcloud

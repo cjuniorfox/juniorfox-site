@@ -56,7 +56,6 @@ So, why not own your proper content and run your own on-demand media server? Jel
 Both Jellyfin and Nextcloud store and access files. We could just create folders for them, but properly setting up the storage is better for properly backing up the data. With **ZFS** is fairly easy to create the intended **datasets** for each service.
 
 ```bash
-# Create the filesystems
 zfs create -o mountpoint=none rpool/mnt
 zfs create -o mountpoint=/mnt/container-volumes/nextcloud rpool/mnt/container-volumes/nextcloud
 zfs create -o mountpoint=/mnt/container-volumes/media rpool/mnt/container-volumes/media
