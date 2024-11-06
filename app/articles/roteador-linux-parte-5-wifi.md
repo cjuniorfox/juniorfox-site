@@ -299,7 +299,14 @@ Se estiver tendo problemas com a adoção automática, você pode checar novamen
 - As portas `8080/tcp` e `3478/udp` estarem abertas e acessíveis;
 - Alterado o **inform host** conforme mecionado [acima](#adoção-do-dispositivo);
 
-Se após as verificações, ainda esteja tendo problemas em adotar seu dispositivo, você pode realizar um novo deploy do **Unifi Network Application** usando o parâmetro `--network=host`:
+Se após as verificações, ainda esteja tendo problemas em adotar seu dispositivo, você pode realizar um novo deploy do **Unifi Network Application** usando o parâmetro `--network=host`. Mas antes, é preciso remover todos os redirecionamentos de portas configurados no arquivo `unifi-network.yaml`, basta deletar ou comentar com um `#` todas as linhas contendo:
+
+- `ports:`
+- `containerPort:`
+- `hostPort:`
+- `hostIP:`
+
+Realize um novo deploy do `unifi-network.yaml`
 
 ```bash
 podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml --network=host

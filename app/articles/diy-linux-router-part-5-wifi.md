@@ -301,7 +301,14 @@ You you are having trouble with automatic adoption, you can double check if the 
 - Ports `8080/tcp` and `3478/udp` being open and accessible.
 - Changed the **inform host** mentioned [above](#device-adoption).
 
-If you checked and and still having trouble with adopting your device, you can redeploy the **Unifi Network Application** using the `--network=host` option by running:
+If you checked and and still having trouble with adopting your device, you can redeploy the **Unifi Network Application** using the `--network=host` option, but first you need to remove all forward ports on the `unifi-network.yaml`, it's just a matter of commenting out with `#` or remove all lines containing:
+
+- `ports:`
+- `containerPort:`
+- `hostPort:`
+- `hostIP:`
+
+Do a new deployment of `unifi-network.yaml`:
 
 ```bash
 podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml --network=host
