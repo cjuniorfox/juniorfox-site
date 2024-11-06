@@ -397,7 +397,7 @@ specs:
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.90.1 # Guest network
+          hostIP: 10.1.30.1 # Guest network
         - containerPort: 90
           protocol: UDP
           hostPort: 90
