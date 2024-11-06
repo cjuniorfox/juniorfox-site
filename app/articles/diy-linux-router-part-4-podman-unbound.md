@@ -268,7 +268,7 @@ spec:
         path: /var/lib/kea/dhcp4.leases
     - name: unbound-conf-volume
       hostPath:
-        path: /opt/podman/unbound/volumes/unbound-conf/
+        path: /opt/podman/unbound/conf.d/
     - name: unbound-conf-d-pvc
       persistentVolumeClaim:
         claimName: unbound-conf
