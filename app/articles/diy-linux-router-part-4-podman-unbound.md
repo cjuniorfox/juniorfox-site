@@ -374,9 +374,37 @@ dig @10.1.1.1 google.com
 ;; MSG SIZE  rcvd: 55
 ```
 
-However, there are still a few more things to configure. One important task is to prevent hosts on the `lan` network from using any **DNS server** other than ours. This is necessary because some devices are hardcoded to use other **DNS Servers** like the Google's `8.8.8.8` DNS server. To address this, we'll configure the firewall to redirect any DNS requests (port `53`) to any host made through our gateway to **Unbound**.
+However, there are devices tending to use other DNS servers than Unbound, which I don't want to. So, I made a rule that redirects every DNS request on network **LAN** to **Unbound**. The client has no idea what happens.
 
-### Update Firewall Configuration
+### 1. Remove the `Port Forward` from Unbound's `yaml`
+
+To avoid conflicts on firewall rules, we have to remove the `port forward` rule to LAN. It's just a matter of removing or comment out these lines:
+
+```yaml
+specs:
+...
+  containers:
+  ...
+      ports:
+        - containerPort: 853 # DNS over TLS for all networks
+          protocol: TCP
+          hostPort: 853
+    ## Comment out or delete these lines. Leave the rest as is.
+    #   - containerPort: 53
+    #     protocol: UDP
+    #     hostPort: 53
+    #     hostIP: 10.1.1.1 # LAN network
+        - containerPort: 53
+          protocol: UDP
+          hostPort: 53
+          hostIP: 10.1.90.1 # Guest network
+        - containerPort: 90
+          protocol: UDP
+          hostPort: 90
+          hostIP: 10.1.90.1 # IoT network
+```
+
+### 2. Update Firewall Configuration
 
 Edit the `nftables.nft` file by adding the following:
 
@@ -392,7 +420,7 @@ table nat {
   chain prerouting {
     type nat hook prerouting priority filter
     policy accept
-    jump unbound_prerouting;
+    jump unbound_prerouting
   }
 }
 ```

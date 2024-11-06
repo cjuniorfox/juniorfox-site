@@ -244,15 +244,15 @@ spec:
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.1.1 # LAN
+          hostIP: 10.1.1.1 # Rede LAN
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.90.1 # Guest
+          hostIP: 10.1.90.1 # Rede Guest
         - containerPort: 90
           protocol: UDP
           hostPort: 90
-          hostIP: 10.1.90.1 # IoT network
+          hostIP: 10.1.90.1 # Rede IoT
       volumeMounts:
         - name: dhcp-volume
           mountPath: /dhcp.leases
@@ -373,9 +373,37 @@ dig @10.1.1.1 google.com
 ;; MSG SIZE  rcvd: 55
 ```
 
-No entanto, ainda há alguns detalhes. Uma tarefa importante é impedir que hosts na rede `lan` usem qualquer **servidor DNS** que não seja o nosso. Isso é importante porque alguns dispositivos são configurados para usar outro servidor DNS como o `8.8.8.8` do Google. Para resolver isso, configuraremos o firewall para redirecionar qualquer solicitação DNS (porta `53`) para qualquer host feita através do nosso gateway para o **Unbound**.
+No entanto, há dispositivos que tendem a usar outros servidores DNS que não o Unbound, o que eu não quero. Então, criei uma regra que redireciona todas as solicitações DNS na rede **LAN** para o **Unbound**. O cliente nem percebe o que acontece.
 
-### Atualizar a configuração do firewall
+### 1. Remova o `Port Forward` do arquivo `yaml` do Unbound
+
+Para evitar conflitos nas regras de firewall, precisamos remover a regra de `port forward` para a LAN. Basta remover ou comentar essas linhas:
+
+```yaml
+specs:
+...
+  containers:
+  ...
+      ports:
+        - containerPort: 853 # DNS sobre TLS para todas as redes
+          protocol: TCP
+          hostPort: 853
+    ## Comente ou exclua estas linhas. Mantenha o restante como está.
+    #   - containerPort: 53
+    #     protocol: UDP
+    #     hostPort: 53
+    #     hostIP: 10.1.1.1 # Rede LAN
+        - containerPort: 53
+          protocol: UDP
+          hostPort: 53
+          hostIP: 10.1.90.1 # Rede Guest
+        - containerPort: 90
+          protocol: UDP
+          hostPort: 90
+          hostIP: 10.1.90.1 # Rede IoT
+```
+
+### 2. Atualize a configuração do firewall
 
 Edite o arquivo `nftables.nft` adicionando o seguinte:
 
@@ -391,7 +419,7 @@ table nat {
   chain prerouting {
     type nat hook prerouting priority filter
     policy accept
-    jump unbound_prerouting;
+    jump unbound_prerouting
   }
 }
 ```
