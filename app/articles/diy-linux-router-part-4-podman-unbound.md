@@ -400,7 +400,7 @@ Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember tha
 
 **Leave the rest of the configuration as it is.**
 
-`/etc/nixos/modules/kea-dhcp4.conf`
+`/etc/nixos/modules/dhcp_server.kea`
 
 ```json
   

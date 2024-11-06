@@ -400,7 +400,7 @@ Configure o `servidor DHCP` para anunciar o servidor `DNS`. Lembre-se de que na 
 
 **Deixe o resto do arquivo como está.**
 
-`/etc/nixos/modules/kea-dhcp4.conf`
+`/etc/nixos/modules/dhcp_server.kea`
 
 ```json
   "subnet4" : [
