@@ -32,7 +32,8 @@ Now, it's time to install **Podman**, a drop-in replacement for Docker with some
   - [Why Podman instead of Docker?](#why-podman-instead-of-docker)
 - [About Unbound](#about-unbound)
 - [Podman Setup](#podman-setup)
-- [Unbound-setup](#unbound-setup)
+- [Unbound Setup](#unbound-setup)
+- [Podman Setup](#podman-setup)
 - [Firewall Rules](#firewall-rules)
 - [Update DHCP Settings](#update-dhcp-settings)
 - [Conclusion](#conclusion)
@@ -93,16 +94,6 @@ Create `modules/podman.nix` file
 ```nix
 { pkgs, config, ... }:
 {
-  systemd.services.podman-restart = {
-    description = "Podman Start All Containers With Restart Policy Set To Always";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" "podman.socket" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.podman}/bin/podman start --all --filter restart-policy=always";
-    };
-  };
   virtualisation.containers.enable = true;
   virtualisation = {
     podman = {
@@ -129,9 +120,12 @@ Since we are using `nftables`, Podman does not automatically apply firewall rule
 
 ```bash
 podman network ls
-# NETWORK ID    NAME                         DRIVER
-# 000000000000  podman                       bridge
-# 6b3beeb78ea9  podman-default-kube-network  bridge
+```
+
+```txt
+ NETWORK ID    NAME                         DRIVER
+ 000000000000  podman                       bridge
+ 6b3beeb78ea9  podman-default-kube-network  bridge
 ```
 
 Currently, there are two networks: `podman`, which is the default network for any container created without specifying a network, and `podman-default-kube-network`, which is the default for pods created with `podman kube play`.
@@ -139,12 +133,19 @@ Currently, there are two networks: `podman`, which is the default network for an
 Now let's check the network ranges for those networks.
 
 ```bash
-
 podman network inspect podman --format '{{range .Subnets}}{{.Subnet}}{{end}}'
-# 10.88.0.0/16
+```
 
+```txt
+10.88.0.0/16
+```
+
+```bash
 podman network inspect podman-default-kube-network --format '{{range .Subnets}}{{.Subnet}}{{end}}'
-# 10.89.0.0/24
+```
+
+```txt
+10.89.0.0/24
 ```
 
 With the network ranges, it's time to configure our `nftables.nft`.
@@ -168,16 +169,14 @@ table inet filter {
   }
 
   chain input {
-    type filter hook input priority filter 
-    policy drop
-    
+    type filter hook input priority filter; policy drop;
+    ...
     jump podman_networks_input
     ...
   }
 
   chain forward {
-    type filter hook forward priority filter
-    policy drop
+    type filter hook forward priority filter; policy drop;
     ...
     jump podman_networks_forward
     ...
@@ -200,7 +199,7 @@ Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using
 First, create a directory to store Podman's deployment `yaml` file and volumes. In this example, I'll create the directory under `/opt/podman` and place an `unbound` folder inside it. Additionally, create the `volumes/unbound-conf/` directory to store extra configuration files.
 
 ```sh
-mkdir -p /opt/podman/unbound/volumes/unbound-conf/
+mkdir -p /opt/podman/unbound/conf.d/
 ```
 
 ### 2. Build the YAML Deployment File
@@ -249,27 +248,27 @@ spec:
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.90.1 # Guest network
+          hostIP: 10.1.30.1 # Guest network
         - containerPort: 90
           protocol: UDP
           hostPort: 90
           hostIP: 10.1.90.1 # IoT network
       volumeMounts:
-        - name: dhcp-volume
+        - name: var-lib-kea-dhcp4.leases-host
           mountPath: /dhcp.leases
-        - name: unbound-conf-volume
+        - name: opt-podman-unbound-confd-host
           mountPath: /unbound-conf
-        - name: unbound-conf-d-pvc
+        - name: unbound-conf-pvc          
           mountPath: /etc/unbound/unbound.conf.d
   restartPolicy: Always
   volumes:
-    - name: dhcp-volume
+    - name: var-lib-kea-dhcp4.leases-host
       hostPath:
         path: /var/lib/kea/dhcp4.leases
-    - name: unbound-conf-volume
+    - name: opt-podman-unbound-confd-host
       hostPath:
         path: /opt/podman/unbound/conf.d/
-    - name: unbound-conf-d-pvc
+    - name: unbound-conf-pvc      
       persistentVolumeClaim:
         claimName: unbound-conf
 ```
@@ -280,7 +279,7 @@ spec:
 
 You can place additional configuration files in the `volumes/unbound-conf/` directory. These files can be used to enable features like a **TLS DNS server** for internet traffic or to define DNS names for hosts on your network. You can also block DNS resolution for specific hosts on the internet. This step is optional. Below is an example configuration that enables DNS resolution for the **Mac Mini** gateway server on the `lan` network.
 
-`/opt/podman/unbound/volumes/unbound-conf/local.conf`
+`/opt/podman/unbound/conf.d/local.conf`
 
 ```conf
 server:
@@ -376,35 +375,7 @@ dig @10.1.1.1 google.com
 
 However, there are devices tending to use other DNS servers than Unbound, which I don't want to. So, I made a rule that redirects every DNS request on network **LAN** to **Unbound**. The client has no idea what happens.
 
-### 1. Remove the `Port Forward` from Unbound's `yaml`
-
-To avoid conflicts on firewall rules, we have to remove the `port forward` rule to LAN. It's just a matter of removing or comment out these lines:
-
-```yaml
-specs:
-...
-  containers:
-  ...
-      ports:
-        - containerPort: 853 # DNS over TLS for all networks
-          protocol: TCP
-          hostPort: 853
-    ## Comment out or delete these lines. Leave the rest as is.
-    #   - containerPort: 53
-    #     protocol: UDP
-    #     hostPort: 53
-    #     hostIP: 10.1.1.1 # LAN network
-        - containerPort: 53
-          protocol: UDP
-          hostPort: 53
-          hostIP: 10.1.90.1 # Guest network
-        - containerPort: 90
-          protocol: UDP
-          hostPort: 90
-          hostIP: 10.1.90.1 # IoT network
-```
-
-### 2. Update Firewall Configuration
+### Update Firewall Configuration
 
 Edit the `nftables.nft` file by adding the following:
 
@@ -413,14 +384,13 @@ Edit the `nftables.nft` file by adding the following:
 ```conf
 ...
 table nat {
-  chain unbound_prerouting {
-    iifname {"lan", } ip daddr != 10.89.1.250 udp dport 53 dnat to 10.89.1.250:53
+  chain redirect_dns {
+    iifname "lan" ip daddr != 10.89.1.250 udp dport 53 dnat to 10.89.1.250:53
   }
   ...
   chain prerouting {
-    type nat hook prerouting priority filter
-    policy accept
-    jump unbound_prerouting
+    type nat hook prerouting priority filter; policy accept;
+    jump redirect_dns
   }
 }
 ```
@@ -429,10 +399,12 @@ table nat {
 
 Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember that at `lan` network, every DNS server used for any client will be redirected to the local **Unbound server**.
 
-`/opt/podman/kea/volumes/kea-dhcp4.conf`
+**Leave the rest of the configuration as it is.**
+
+`/etc/nixos/modules/dhcp_server.kea`
 
 ```json
-  //Leave the rest of the configuration as it is
+  
   "subnet4" : [
       {
         "interface" : "lan",

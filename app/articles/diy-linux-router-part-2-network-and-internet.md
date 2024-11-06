@@ -242,10 +242,8 @@ ip link
 ```nix
 { config, pkgs, ... }:
 let nic = "enp1s0"; # Your main network adapter
-
+in
 {
-  kea.dhcp4.enable = true;
-  kea.dhcp4.configFile = ./dhcp_server.kea;
   networking = {
     useDHCP = false;
     hostName = "macmini";
@@ -257,19 +255,18 @@ let nic = "enp1s0"; # Your main network adapter
       guest = { id = 30; interface = "${nic}"; };
       iot = { id = 90; interface = "${nic}"; };
     };
-    #Lan será uma ponte de rede.
+    #Lan will be a bridge to the main adapter.
     bridges = {
       "lan" = { interfaces = [ "${nic}" ]; };
     };
     interfaces = {
       "${nic}".useDHCP = false;
-      # Gerenciando as VLAns
+      # Handle VLANs
       wan.useDHCP = false;
       lan = { ipv4.addresses = [{ address = "10.1.1.1";  prefixLength = 24; } ]; };
       guest = { ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }]; };
       iot = { ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; } ]; };
     };
-
     firewall.enable = false;
     nftables = {
       enable = true;
@@ -335,8 +332,7 @@ table inet filter {
   }
 
   chain input {
-    type filter hook input priority filter 
-    policy drop
+    type filter hook input priority filter; policy drop;
 
     # Allow trusted networks to access the router
     iifname {"lan","enp6s0"} counter accept
@@ -347,22 +343,20 @@ table inet filter {
   }
 
   chain output {
-    type filter hook output priority 100
-    policy accept
+    type filter hook output priority 100; policy accept;
   }
 
   chain forward {
-    type filter hook forward priority filter 
-    policy drop
+    type filter hook forward priority filter; policy drop;
 
     # enable flow offloading for better throughput
     ip protocol { tcp, udp } flow offload @f
 
     # Allow trusted network WAN access
-    iifname { "lan",} oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
+    iifname "lan" oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
 
     # Allow established WAN to return
-    iifname "ppp0" oifname {"lan",} ct state established,related counter accept comment "Allow established back to LANs"
+    iifname "ppp0" oifname "lan" ct state established,related counter accept comment "Allow established back to LANs"
     # https://samuel.kadolph.com/2015/02/mtu-and-tcp-mss-when-using-pppoe-2/
     # Clamp MSS to PMTU for TCP SYN packets
     oifname "ppp0" tcp flags syn tcp option maxseg size set rt mtu
@@ -443,7 +437,7 @@ Our **DHCP Server** configuration wil be done by `kea.dhcp4`
 
 ### 7. Services
 
-On `services.nix` file we have most of the services we need. We will enable the **SSH service** as the **Kea DHCP Server** service.
+Remove the `services` from `configuration.nix` and place it at `services.nix` file we have most of the services we need. We will enable the **SSH service** as the **Kea DHCP Server** service.
 As a temporary measure, let's enable login SSH with user `root` with password authentication.
 
 `/etc/nixos/modules/services.nix`
@@ -453,13 +447,15 @@ As a temporary measure, let's enable login SSH with user `root` with password au
 
 {
   services = {
-    envfs.enable = true
+    envfs.enable = true;
     # Enable SSH Service
     openssh = {
       enable = true;
       settings.PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
       settings.PasswordAuthentication = true; # Enable password authentication
     };
+    kea.dhcp4.enable = true;
+    kea.dhcp4.configFile = ./dhcp_server.kea;
   };
 }
 ```

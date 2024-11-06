@@ -118,11 +118,6 @@ Escolha seu dispositivo de armazenamento. Você pode verificar com: `ls /dev/dis
 DISK=/dev/disk/by-id/scsi-SATA_disk1
 ```
 
-```bash
-BOOT=${DISK}-part2
-ROOT=${DISK}-part3
-```
-
 Remova todas as partições do armazenamento. Lembre-se que isso apagará toda a informação existente no disco.
 
 ```bash
@@ -144,7 +139,14 @@ parted ${DISK} set 1 bios_grub on
 parted ${DISK} mkpart EFI 2MiB 514MiB
 parted ${DISK} set 2 esp on
 parted ${DISK} mkpart ZFS 514MiB 100%
-mkfs.msdos -F 32 -n EFI ${BOOT}
+mkfs.msdos -F 32 -n EFI ${DISK}-part2
+```
+
+Obtenha o `UUID` das partições
+
+```bash
+BOOT="/dev/disk/by-uuid/"$(blkid -s UUID -o value ${DISK}-part2)
+ROOT="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part3)
 ```
 
 ### 5. Datasets ZFS
@@ -214,7 +216,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   fileSystems."/boot/efi" = {
       device = "${BOOT}"; 
       fsType = "vfat";
-      options = [ "noatime" "discard" ];
+      options = [ "umask=0077" "shortname=winnt" ];
   };
   fileSystems."/" = {
     device = "rpool/root/nixos";
@@ -262,7 +264,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   fileSystems."/boot" = {
       device = "${BOOT}"; 
       fsType = "vfat";
-      options = [ "noatime" "discard" ];
+      options = [ "umask=0077" "shortname=winnt" ];
   };
   fileSystems."/" = {
     device = "rpool/root/nixos";

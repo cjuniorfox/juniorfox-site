@@ -226,8 +226,7 @@ table inet filter {
 
   # Substituia todo o `chain input` por esses valores.
   chain input {
-    type filter hook input priority filter
-    policy drop
+    type filter hook input priority filter; policy drop;
 
     jump ssh_input
     jump dhcp_input

@@ -39,7 +39,7 @@ Nesta parte, vamos fazer algo mais útil com nosso servidor, instalando alguns b
 - [Nextcloud](#nextcloud)
 - [Jellyfin](#jellyfin)
 - [Configurar Ingress](#configurar-ingress)
-- [Conclusão](#conclusao)
+- [Conclusão](#conclusão)
 
 ## O que é o Nextcloud
 
@@ -55,10 +55,10 @@ Então, por que não ter seu próprio conteúdo e executar seu próprio servidor
 Tanto o Jellyfin quanto o Nextcloud armazenam e acessam arquivos. Poderíamos simplesmente criar pastas para eles, mas configurar o armazenamento adequadamente é melhor para garantir o backup dos dados. Com o **ZFS**, é bastante fácil criar os **datasets** necessários para cada serviço.
 
 ```bash
-# Create the filesystems
-zfs create -o mountpoint=none rpool/mnt
-zfs create -o mountpoint=/mnt/nextcloud rpool/mnt/nextcloud
-zfs create -o mountpoint=/mnt/media rpool/mnt/media
+zfs create -o canmount=off -o mountpoint=none rpool/mnt
+zfs create -o canmount=off -o mountpoint=none rpool/mnt/container-volumes
+zfs create -o mountpoint=/mnt/container-volumes/nextcloud rpool/mnt/container-volumes/nextcloud
+zfs create -o mountpoint=/mnt/container-volumes/media rpool/mnt/container-volumes/media
 ```
 
 ## Ingress
@@ -295,8 +295,6 @@ server {
 podman pod restart ingress
 ```
 
-Você pode acessar `nextcloud.example.com` e `jellyfin.example.com`. Se tudo correr bem, você verá o **erro 404** com **criação SSL**.
-
 ## Nextcloud
 
 Agora que temos o **Ingress** pronto, podemos começar a criar o serviço **Nextcloud**.
@@ -336,7 +334,7 @@ data:
   mysqlPassword: $(echo -n ${MYSQL_PASSWORD} | base64)
 EOF
 
-echo "Arquivo de segredo criado com o nome secrets.yaml"
+echo "Arquivo de segredo criado com o nome secret.yaml"
 ```
 
 ```bash
@@ -354,7 +352,7 @@ Arquivo de segredo criado com o nome secret.yaml
 #### 2. Implante o arquivo de segredo criado
 
 ```bash
-podman kube play /opt/podman/nextcloud/secrets.yaml
+podman kube play /opt/podman/nextcloud/secret.yaml
 ```
 
 #### 3. Verifique se o segredo foi corretamente criado
@@ -370,12 +368,12 @@ ID                         NAME               DRIVER      CREATED             UP
 b22f3338bbdcec1ecd2044933  nextcloud-secret  file        About a minute ago  About a minute ago
 ```
 
-#### 4. Delete o arquivo `secrets.yaml`
+#### 4. Delete o arquivo `secret.yaml`
 
 Manter o arquivo de segredo pode ser uma falha de segurança. É uma boa prática excluir o arquivo de segredo após o deployment. Esteja ciente de que você não poderá recuperar seu conteúdo secreto no futuro.
 
 ```bash
-rm -f /opt/podman/nextcloud/secrets.yaml
+rm -f /opt/podman/nextcloud/secret.yaml
 ```
 
 ### YAML para Nextcloud
@@ -411,7 +409,7 @@ spec:
           ephemeral-storage: 50Mi
       volumeMounts:
       - mountPath: /var/www/html
-        name: mnt-nextcloud-html-host
+        name: mnt-container-volumes-nextcloud-html-host
       env:
       - name: MYSQL_DATABASE
         value: nextcloud
@@ -455,9 +453,9 @@ spec:
             key: mariadbRootPassword
 
   volumes:
-  - name: mnt-nextcloud-html-host
+  - name: mnt-container-volumes-nextcloud-html-host
     hostPath:
-      path: /mnt/nextcloud/html
+      path: /mnt/container-volumes/nextcloud/html
       type: Directory
 
 
@@ -471,7 +469,7 @@ spec:
 Este arquivo `yaml` criará um serviço **Nextcloud** com um banco de dados **MariaDB**. Ele usará `/srv/nextcloud` como o diretório de dados do **Nextcloud**. Inicie o serviço **Nextcloud** com o seguinte comando:
 
 ```bash
-mkdir -p /mnt/nextcloud/html/
+mkdir -p /mnt/container-volumes/nextcloud/html/
 podman kube play \
   /opt/podman/nextcloud/nextcloud.yaml \
   --replace --network ingress-net
@@ -490,9 +488,10 @@ O serviço **Jellyfin** será implantado no **Podman**. Para isso, precisaremos 
 <!-- markdownlint-disable MD033 -->
 <details>
   <summary>Clique para expandir o arquivo <b>jellyfin.yaml</b>.</summary>
+
   `/opt/podman/jellyfin/jellyfin.yaml`
 
-  ```yaml
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -518,7 +517,7 @@ spec:
         - mountPath: /cache
           name: jellyfin-cache-pvc
         - mountPath: /media
-          name: media
+          name: mnt-container-volumes-media-host
   volumes:
     - name: jellyfin-config-pvc
       persistentVolumeClaim:
@@ -526,9 +525,9 @@ spec:
     - name: jellyfin-cache-pvc
       persistentVolumeClaim:
         claimName: jellyfin_cache
-    - name: media
+    - name: mnt-container-volumes-media-host
       hostPath:
-        path: /mnt/media
+        path: /mnt/container-volumes/media
 ```
 
 </details> <!-- markdownlint-enable MD033 -->
@@ -602,7 +601,11 @@ map $http_upgrade $connection_upgrade {
   default upgrade;
   ''      close;
 }
-
+server {
+    listen 80;
+    server_name unifi.example.com;
+    return 301 https://$host$request_uri;
+}
 server {
   listen 443 ssl;
   server_name unifi.example.com;
@@ -644,7 +647,7 @@ spec:
   ...
   ports:
   ...
-  # Remov as linhas abaixo:
+  # Remova as linhas abaixo:
   - containerPort: 8443
       hostPort: 8443
       hostIP: 10.1.1.1
@@ -652,10 +655,10 @@ spec:
   ...
 ```
 
-Refaça o deploy do pod `unifi-network` com o parâmetro `network=ingress-net`:
+Refaça o deploy do pod `unifi-network` com o parâmetro `--network=ingress-net`:
 
 ```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml` --network ingress-net
+podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml --network ingress-net
 ```
 
 ### 4. Configure o resolver
@@ -693,7 +696,7 @@ podman pod restart ingress
 
 Meu domínio está configurado no **Cloudflare**. Para resolver os DNSs  locais, terei que recuperar as entradas DNS no **Clouflare** e acessar esses serviços via **IP público** pela **Internet**. Isso não é necessário, pois consigo resolver os endereços localmente. Para fazer isso, vamos atualizar a configuração do **Unbound** para resolver esses endereços localmente, editando o arquivo `local.conf`.
 
-`/opt/unbound/conf/local.conf`
+`/opt/podman/unbound/conf.d/local.conf`
 
 ```conf
 server:
@@ -710,7 +713,7 @@ server:
 Reinicie Unbound:
 
 ```bash
-podman kube play --replace /opt/unbound/unbound.yaml
+podman kube play --replace /opt/podman/unbound/unbound.yaml
 ```
 
 ## Conclusão

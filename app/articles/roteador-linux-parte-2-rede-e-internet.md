@@ -241,8 +241,6 @@ ip link
 let nic = "enp4s0f0"; # Seu adaptador de rede
 in
 {
-  kea.dhcp4.enable = true;
-  kea.dhcp4.configFile = ./dhcp_server.kea;
   networking = {
     useDHCP = false;
     hostName = "macmini";
@@ -331,11 +329,10 @@ table inet filter {
   }
 
   chain input {
-    type filter hook input priority filter
-    policy drop
+    type filter hook input priority filter; policy drop;
 
     # Permite todo o tráfego na rede local
-    iifname {"lan", } counter accept
+    iifname "lan" counter accept
 
     # Permite conexões de retorno e bloqueia todo o resto
     iifname "ppp0" ct state { established, related } counter accept
@@ -343,19 +340,17 @@ table inet filter {
   }
 
   chain output {
-    type filter hook output priority 100
-    policy accept
+    type filter hook output priority 100; policy accept;
   }
 
   chain forward {
-    type filter hook forward priority filter 
-    policy drop
+    type filter hook forward priority filter; policy drop;
 
     # flow offloading para melhor performace
     ip protocol { tcp, udp } flow offload @f
 
     # Permite acesso a rede local a intenret
-    iifname { "lan",} oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
+    iifname "lan" oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
 
     # Permite conexões de retorno da wan
     iifname "ppp0" oifname {"lan",} ct state established,related counter accept comment "Allow established back to LANs"
@@ -367,13 +362,11 @@ table inet filter {
 
 table ip nat {
   chain prerouting {
-    type nat hook prerouting priority filter
-    policy accept
+    type nat hook prerouting priority filter; policy accept;
   }
   # Masquerade de pacotes enviados para a internet
   chain postrouting {
-    type nat hook postrouting priority filter
-    policy accept
+    type nat hook postrouting priority filter; policy accept;
     oifname "ppp0" masquerade
   }
 }
@@ -441,7 +434,7 @@ A configuração do serviço **DHCP** será feita pelo `kea.dhcp4`.
 
 ### 8. Serviços
 
-No arquivo `services.nix` encontraremos os principais serviços necessários para o funcionamento do sistema. Vamos habilitar o **serviço SSH** e também o **Servidor DHCP** do **Kea**.
+Remova `services` do `configuration.nix` e coloque em `services.nix` encontraremos os principais serviços necessários para o funcionamento do sistema. Vamos habilitar o **serviço SSH** e também o **Servidor DHCP** do **Kea**.
 Como uma medida temporária, permitiremos o acesso do usuário `root` via SSH usando autenticação por senha.
 
 `/etc/nixos/modules/services.nix`
@@ -451,7 +444,7 @@ Como uma medida temporária, permitiremos o acesso do usuário `root` via SSH us
 
 {
   services = {
-    envfs.enable = true
+    envfs.enable = true;
     # Habilitar serviço SSH
     openssh = {
       enable = true;

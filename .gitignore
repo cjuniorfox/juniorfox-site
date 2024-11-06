@@ -130,5 +130,5 @@ dist
 .pnp.*
 
 **/assets/_build/
-**/secrets.yaml
+**/secret.yaml
 **/secrets.json
