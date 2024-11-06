@@ -58,8 +58,8 @@ Both Jellyfin and Nextcloud store and access files. We could just create folders
 ```bash
 # Create the filesystems
 zfs create -o mountpoint=none rpool/mnt
-zfs create -o mountpoint=/mnt/nextcloud rpool/mnt/nextcloud
-zfs create -o mountpoint=/mnt/media rpool/mnt/media
+zfs create -o mountpoint=/mnt/container-volumes/nextcloud rpool/mnt/container-volumes/nextcloud
+zfs create -o mountpoint=/mnt/container-volumes/media rpool/mnt/container-volumes/media
 ```
 
 ## Ingress
@@ -458,7 +458,7 @@ spec:
   volumes:
   - name: mnt-nextcloud-html-host
     hostPath:
-      path: /mnt/nextcloud/html
+      path: /mnt/container-volumes/nextcloud/html
       type: Directory
 
 
@@ -472,7 +472,7 @@ spec:
 This `yaml` file will create a **Nextcloud** service with a **MariaDB** database. It will use `/srv/nextcloud` as the **Nextcloud** data directory. Start the **Nextcloud** service with the following command:
 
 ```bash
-mkdir -p /mnt/nextcloud/html/
+mkdir -p /mnt/container-volumes/nextcloud/html/
 podman kube play \
   /opt/podman/nextcloud/nextcloud.yaml \
   --replace --network ingress-net
@@ -529,7 +529,7 @@ spec:
         claimName: jellyfin_cache
     - name: media
       hostPath:
-        path: /mnt/media
+        path: /mnt/container-volumes/media
 ```
 
 </details> <!-- markdownlint-enable MD033 -->
