@@ -254,7 +254,7 @@ spec:
       volumeMounts:
         - name: dhcp-volume
           mountPath: /dhcp.leases
-        - name: unbound-conf-volume
+        - name: opt-podman-unbound-confd-host
           mountPath: /unbound-conf
         - name: unbound-conf-d-pvc
           mountPath: /etc/unbound/unbound.conf.d
@@ -263,7 +263,7 @@ spec:
     - name: dhcp-volume
       hostPath:
         path: /var/lib/kea/dhcp4.leases
-    - name: unbound-conf-volume
+    - name: opt-podman-unbound-confd-host
       hostPath:
         path: /opt/podman/unbound/conf.d
     - name: unbound-conf-d-pvc
