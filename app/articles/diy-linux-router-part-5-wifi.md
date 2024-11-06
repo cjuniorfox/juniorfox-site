@@ -310,7 +310,9 @@ ssh ubnt@$AP-IP
 set-inform http://10.1.1.1:8080/inform
 ```
 
-The default password is `ubnt`. If was previously adopted, your **Unifi account's password** is the AP's password. Check what is the IP address by looking at the `DHCP server` file at `/var/lib/kea/dhcp4.leases`. More details on [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+Check the IP address of **AP** by looking at the `DHCP server` file at `/var/lib/kea/dhcp4.leases`.
+
+The default username and password is `ubnt`. If the device was previously adopted, check on their previous panel what is the `username` and `password` set under **Settings** > **System** > **Advanced**. Generally, the `username` and `password` are the **Unifi account's** one. It's valuable to mention that every time you want to replace your Ubiquiti Network Application, is a good measure to remove your devices before decommissioning that panel. Making backups for your configuration is also a good measure to prevent headaches re-adopting devices—more details on [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
 
 ## Conclusion
 

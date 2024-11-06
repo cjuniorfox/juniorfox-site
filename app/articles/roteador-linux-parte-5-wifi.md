@@ -308,7 +308,9 @@ ssh ubnt@$AP-IP
 set-inform http://10.1.1.1:8080/inform
 ```
 
-A senha padrão é `ubnt`. Se você já tiver previamente adotado o dispositivo, a senha será a **senha de acesso do Unifi**. Verifique o **endereço IP** no arquivo do `servidor DHCP` em `/var/lib/kea/dhcp4.leases`. Maiores detalhes na documentação do [LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+Verifique o endereço IP do **AP** no arquivo do `servidor DHCP` em `/var/lib/kea/dhcp4.leases`.
+
+O nome de usuário e a senha padrão são `ubnt`. Se o dispositivo já foi adotado anteriormente, verifique no painel anterior qual é o `nome de usuário` e `senha` configurados em **Configurações** > **Sistema** > **Avançado**. Geralmente, o `nome de usuário` e a `senha` são os da **conta Unifi**. Vale mencionar que, sempre que você quiser substituir seu **Network Application**, remover seus dispositivos do mesmo antes de desativar a aplicação. Fazer backups de sua configuração também é uma boa medida para evitar dores de cabeça ao readotar dispositivos. Mais detalhes na [documentação LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
 
 ## Conclusão
 
