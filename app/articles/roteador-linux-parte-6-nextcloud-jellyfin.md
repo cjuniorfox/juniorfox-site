@@ -488,7 +488,7 @@ O serviço **Jellyfin** será implantado no **Podman**. Para isso, precisaremos 
 <!-- markdownlint-disable MD033 -->
 <details>
   <summary>Clique para expandir o arquivo <b>jellyfin.yaml</b>.</summary>
-  
+
   `/opt/podman/jellyfin/jellyfin.yaml`
 
   ```yaml
@@ -517,7 +517,7 @@ spec:
         - mountPath: /cache
           name: jellyfin-cache-pvc
         - mountPath: /media
-          name: media
+          name: mnt-container-volumes-media-host
   volumes:
     - name: jellyfin-config-pvc
       persistentVolumeClaim:
@@ -525,7 +525,7 @@ spec:
     - name: jellyfin-cache-pvc
       persistentVolumeClaim:
         claimName: jellyfin_cache
-    - name: media
+    - name: mnt-container-volumes-media-host
       hostPath:
         path: /mnt/container-volumes/media
 ```
