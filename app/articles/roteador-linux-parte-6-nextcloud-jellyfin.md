@@ -13,11 +13,11 @@ other-langs : [{"lang":"en","article":"diy-linux-router-part-6-nextcloud-jellyfi
 
 Esta é a quinta parte de uma série de múltiplas partes que descreve como construir seu próprio roteador Linux.
 
-- Parte 1: [Configuração Inicial](/article/diy-linux-router-part-1-initial-setup)
-- Parte 2: [Rede e Internet](/article/diy-linux-router-part-2-network-and-internet)
-- Parte 3: [Usuários, Segurança e Firewall](/article/diy-linux-router-part-3-users-security-firewall)
-- Parte 4: [Podman e Unbound](/article/diy-linux-router-part-4-podman-unbound)
-- Parte 5: [Wifi](/article/diy-linux-router-part-5-wifi)
+- Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
+- Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
+- Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
+- Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
+- Parte 5: [Wifi](/article/roteador-linux-parte-5-wifi)
 
 Nas partes anteriores, instalamos o sistema operacional, configuramos a funcionalidade de internet do gateway usando PPPoE e configuramos o Firewall e o Unbound como servidores DNS.
 
