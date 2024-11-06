@@ -409,7 +409,7 @@ spec:
           ephemeral-storage: 50Mi
       volumeMounts:
       - mountPath: /var/www/html
-        name: mnt-nextcloud-html-host
+        name: mnt-container-volumes-nextcloud-html-host
       env:
       - name: MYSQL_DATABASE
         value: nextcloud
@@ -453,7 +453,7 @@ spec:
             key: mariadbRootPassword
 
   volumes:
-  - name: mnt-nextcloud-html-host
+  - name: mnt-container-volumes-nextcloud-html-host
     hostPath:
       path: /mnt/container-volumes/nextcloud/html
       type: Directory
