@@ -210,7 +210,6 @@ The **Let's Encrypt** is a free service that provides **SSL Certificates**. It's
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: "2024-09-12T19:53:43Z"
   labels:
     app: lets-encrypt
   name: lets-encrypt
