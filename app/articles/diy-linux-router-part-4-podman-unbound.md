@@ -280,7 +280,7 @@ spec:
 
 You can place additional configuration files in the `volumes/unbound-conf/` directory. These files can be used to enable features like a **TLS DNS server** for internet traffic or to define DNS names for hosts on your network. You can also block DNS resolution for specific hosts on the internet. This step is optional. Below is an example configuration that enables DNS resolution for the **Mac Mini** gateway server on the `lan` network.
 
-`/opt/podman/unbound/volumes/unbound-conf/local.conf`
+`/opt/podman/unbound/conf.d/local.conf`
 
 ```conf
 server:
