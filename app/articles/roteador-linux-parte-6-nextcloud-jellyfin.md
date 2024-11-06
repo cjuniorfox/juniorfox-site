@@ -491,7 +491,7 @@ O serviço **Jellyfin** será implantado no **Podman**. Para isso, precisaremos 
 
   `/opt/podman/jellyfin/jellyfin.yaml`
 
-  ```yaml
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:

@@ -488,9 +488,9 @@ The **Jellyfin** service will be deployed on **Podman**. To do this, we will nee
 <details>
   <summary>Click to expand the <b>jellyfin.yaml</b>.</summary>
 
-  `/opt/podman/jellyfin/jellyfin.yaml`
+`/opt/podman/jellyfin/jellyfin.yaml`
 
-  ```yaml
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
