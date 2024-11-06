@@ -16,6 +16,8 @@ Esta é a segunda parte de uma série de artigos descrevendo como construir seu 
 - Parte 1: [Configuração Inicial](/article/roteador-linux-parte-1-configuracao-inicial)
 - Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
 - Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
+- Parte 5: [Wifi](/article/roteador-linux-parte-5-wifi)
+- Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
 
 Na primeira parte, abordamos a configuração de hardware e instalamos um sistema Linux básico usando NixOS usando o sistema de arquivos ZFS. Nesta parte, vamos configurar VLANs e suas redes, a conexão PPPoE, configurar o servidor DHCP e implementar regras básicas de firewall.
 
@@ -217,41 +219,52 @@ Não substitua o arquivo todo, mas apenas insira as partes destacadas.
 Nossa configuração de rede será no `modules/networking.nix`.
 Como mencionado antes, como esse *Mac Mini* só tem uma placa de rede, esta configuração se baseará em **VLANs** para que que essa interface sirva as redes pretendidas: VLANs 1, 30 e 90.
 
+No exemplo, utilizo o adaptador de rede do Macmini `enp4s0f0`. Verifique o nome correto do seu adaptador de rede com o comando:
+
+```bash
+ip link
+```
+
+```txt
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: enp4s0f0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether c4:2c:90:65:50:13 brd ff:ff:ff:ff:ff:ff
+3: wlp3s0b1: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 60:34:4c:13:41:f0 brd ff:ff:ff:ff:ff:ff
+```
+
 `/etc/nixos/modules/networking.nix`
 
 ```nix
 { config, pkgs, ... }:
-let nic = "enp1s0"; # Your main network adapter
+let nic = "enp4s0f0"; # Seu adaptador de rede
 in
 {
+  kea.dhcp4.enable = true;
+  kea.dhcp4.configFile = ./dhcp_server.kea;
   networking = {
     useDHCP = false;
     hostName = "macmini";
+    nameservers = [ "1.1.1.1" "8.8.8.8" ];
    
     # Define VLANS
     vlans = {
-      wan = { id = 2; interface = ${nic}; };
-      guest = { id = 30; interface = ${nic}; };
-      iot = { id = 90; interface = ${nic}; };
+      wan = { id = 2; interface = "${nic}"; };
+      guest = { id = 30; interface = "${nic}"; };
+      iot = { id = 90; interface = "${nic}"; };
     };
-    #Lan will be a bridge to the main adapter. Easier to maintain
+    #Lan will be a bridge to the main adapter.
     bridges = {
-      "lan" = { interfaces = [ ${nic} ]; };
+      "lan" = { interfaces = [ "${nic}" ]; };
     };
     interfaces = {
-      # Don't request DHCP on the physical interfaces
       "${nic}".useDHCP = false;
       # Handle VLANs
-      wan = { useDHCP = false };
-      lan = {
-        ipv4.addresses = [{ address = "10.1.1.1";  prefixLength = 24; } ];
-      };
-      guest = {
-        ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }];
-      };
-      iot = {
-        ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; }];
-      };
+      wan.useDHCP = false;
+      lan = { ipv4.addresses = [{ address = "10.1.1.1";  prefixLength = 24; } ]; };
+      guest = { ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }]; };
+      iot = { ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; } ]; };
     };
   };
 }
@@ -305,14 +318,15 @@ A regra `flow offloading`, que tem o objetivo de melhorar o desempenho da ligaç
 
 ```conf
 table inet filter {
-  # enable flow offloading for better throughput
-  #flowtable f {
-  #  hook ingress priority 0;
-  #  devices = { ppp0, lan };
-  #}
+  # Flow offloading para melhor performace. Remova se tiver problemas gerar o build.
+  flowtable f {
+    hook ingress priority 0
+    devices = { ppp0, lan }
+  }
 
   chain input {
-    type filter hook input priority filter; policy drop;
+    type filter hook input priority filter
+    policy drop
 
     # Permite todo o tráfego na rede local
     iifname {"lan", } counter accept
@@ -332,7 +346,7 @@ table inet filter {
     policy drop
 
     # flow offloading para melhor performace
-    # ip protocol { tcp, udp } flow offload @f
+    ip protocol { tcp, udp } flow offload @f
 
     # Permite acesso a rede local a intenret
     iifname { "lan",} oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
@@ -427,32 +441,24 @@ Como uma medida temporária, permitiremos o acesso do usuário `root` via SSH us
 `/etc/nixos/modules/services.nix`
 
 ```nix
-{config, pkgs, ... }: {
-  # Habilitar serviço SSH
-  services.openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "yes"; # Permitir login root (opcional, por razões de segurança você pode querer desativar isso)
-      PasswordAuthentication = true;  # Habilitar autenticação por senha
+{ config, pkgs, ... }:
+
+{
+  services = {
+    envfs.enable = true
+    # Habilitar serviço SSH
+    openssh = {
+      enable = true;
+      settings.PermitRootLogin = "yes"; # Permitir login root (opcional, por razões de segurança você pode querer desativar isso)
+      settings.PasswordAuthentication = true; # Habilita autenticação por senha
     };
-  };
-  openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
-      PasswordAuthentication = true;  # Enable password authentication
-    };
+    kea.dhcp4.enable = true;
+    kea.dhcp4.configFile = ./dhcp_server.kea;
   };
 }
 ```
 
 ### 9. Aplicar mudanças
-
-Como originalmente não haviámos configurado a partição `boot`, precisamos monta-la primeiro:
-
-```bash
-mount /dev/sda2 /boot
-```
 
 Para as mudanças surtirem efeito, é necessário aplica-las com o comando:
 
@@ -463,3 +469,5 @@ nixos-rebuild switch
 ## Conclusão
 
 Isso é tudo por enquanto! Na próxima parte, vamos focar em melhorar a segurança desativando o login da conta root, habilitando o acesso SSH via autenticação por chave e reforçando ainda mais o firewall com regras e permissões mais granulares.
+
+- Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)

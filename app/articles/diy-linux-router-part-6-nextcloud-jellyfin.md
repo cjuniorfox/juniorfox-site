@@ -1,14 +1,14 @@
 ---
-title: "DIY Linux Router - Part 5 - Nextcloud and Jellyfin"
-articleId: "diy-linux-router-part-5-nextcloud-jellyfin"
-date: "2024-11-02"
+title: "DIY Linux Router - Part 6 - Nextcloud and Jellyfin"
+articleId: "diy-linux-router-part-6-nextcloud-jellyfin"
+date: "2024-11-05"
 author: "Carlos Junior"
 category: "Linux"
-brief: "In the fifth part of this series, we will install Jellyfin, a private media server for home use, and Nextcloud, a private cloud storage solution."
+brief: "In the sixth part of this series, we will install Jellyfin, a private media server for home use, and Nextcloud, a private cloud storage solution."
 image: "/assets/images/diy-linux-router/nextcloud-jellyfin.webp"
 keywords : ["macmini","router", "linux", "nixos", "pppoe", "unbound", "podman", "docker"]
 lang : "en"
-other-langs : [{"lang":"pt","article":"roteador-linux-parte-4-podman-unbound"}]
+other-langs : [{"lang":"pt","article":"roteador-linux-parte-6-nextcloud-jellyfin"}]
 ---
 
 This is the fifth part of a multipart series describing how to build your own Linux router.
@@ -17,6 +17,7 @@ This is the fifth part of a multipart series describing how to build your own Li
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
+- Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 
 In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, setup Firewall and Unbound as DNS Server.
 
@@ -56,7 +57,7 @@ Both Jellyfin and Nextcloud store and access files. We could just create folders
 
 ```bash
 # Create the filesystems
-zfs create -o canmount=off -o mountpoint=none rpool/mnt
+zfs create -o mountpoint=none rpool/mnt
 zfs create -o mountpoint=/mnt/nextcloud rpool/mnt/nextcloud
 zfs create -o mountpoint=/mnt/media rpool/mnt/media
 ```
@@ -272,7 +273,7 @@ The certificate will be created at the `certificates` volume. You can check the 
 podman pod logs lets-encrypt
 ```
 
-With the path of the certificate, update the configuration of the **nginx** with the certitication path.
+Update the configuration of the **nginx** with the certitication path.
 
 `/opt/podman/ingress/conf/default_server.conf`
 
@@ -591,7 +592,74 @@ server {
 }
 ```
 
-### 3. Configure the resolver
+### 3, Create a configuration file for **unifi**
+
+As we have the **Unifi Network Application** already set on server, we can create a ingress for it.
+
+`/opt/podman/ingress/conf/unifi-network.conf`
+
+```conf
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  ''      close;
+}
+
+server {
+  listen 443 ssl;
+  server_name unifi.example.com;
+  set $upstream unifi-network:8443;
+
+  location / {
+    proxy_pass     https://$upstream;
+    proxy_redirect https://$upstream https://$server_name;
+
+    proxy_cache off;
+    proxy_store off;
+    proxy_buffering off;
+    proxy_http_version 1.1;
+    proxy_read_timeout 36000s;
+
+    proxy_set_header Host $http_host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Referer "";
+
+    client_max_body_size 0;
+  }
+}
+```
+
+You can optionally remove the `forward port` for `8443/tcp` from the pod's `yaml`. To do so, it's just removing the following lines:
+
+`/opt/podman/unifi-network/unifi-network.yaml`
+
+```yaml
+...
+spec:
+  enableServiceLinks: false
+  restartPolicy: Always
+  containers:
+  ...
+  ports:
+  ...
+  # Remove these lines below:
+  - containerPort: 8443
+      hostPort: 8443
+      hostIP: 10.1.1.1
+      protocol: TCP
+  ...
+```
+
+Redo the deployment of `unifi-network` pod with parameter `network=ingress-net`:
+
+```bash
+podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml` --network ingress-net
+```
+
+### 4. Configure the resolver
 
 To **NGINX** reach services, it's necessary to set a resolver. To do that, do as follows:
 
@@ -614,12 +682,36 @@ Gateway: 10.90.1.1
 resolver 10.90.1.1 valid=30s;
 ```
 
-### 4. Restart **ingress**
+### 5. Restart **ingress**
 
 Everything is set. Restart the **ingress** service.
 
 ```bash
 podman pod restart ingress
+```
+
+### 6. Configure `Unbound` to Resolve the hostsnames locally
+
+My domain set on **Cloudflare**. To resolve my local DNS's, I will need to retrieve the DNS entries from **Cloudflare** and access those services via my **Public IP** over the Internet. This isn't needed, as I able to resolve the addresses locally. To do so, let's update the configuration for **Unbound** for resolving those addresses locally by editing the `local.conf`
+
+`/opt/unbound/conf/local.conf`
+
+```conf
+server:
+  private-domain: "example.com."
+  local-zone: "example.com." static
+  local-data: "macmini.example.com. IN A 10.1.1.1"
+  local-data: "macmini.example.com. IN A 10.1.30.1"
+  local-data: "macmini.example.com. IN A 10.1.90.1"
+  local-data: "unifi.example.com. IN A 10.1.1.1"
+  local-data: "nextcloud.example.com. IN A 10.1.1.1"
+  local-data: "jellyfin.example.com. IN A 10.1.1.1"
+```
+
+Restart Unbound:
+
+```bash
+podman kube play --replace /opt/unbound/unbound.yaml
 ```
 
 ## Conclusion

@@ -16,7 +16,8 @@ This is the second part of a multipart series describing how to build your own L
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
-- Part 5: [Nextcloud and Jellyfin](/article/diy-linux-router-part-5-nextcloud-jellyfin)
+- Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
+- Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 
 In the first part, we covered the hardware setup and installed a basic Linux system using NixOS on top of a ZFS filesystem.
 In this part, we will configure VLANs and their networks, set up a PPPoE connection, configure the DHCP server, and implement basic firewall rules.
@@ -221,53 +222,52 @@ Do not replace the entire file, but just add the following lines.
 We have our **network configuration** on `modules/networking.nix`.
 As mentioned before, our Mac Mini only has one NIC, this setup relies on VLANs to split the network into the intended parts.VLANs, 1, 30, and 90.
 
+In the example, I'm using the Macmini's NIC `enp4s0f0`. Verify your NIC identification by running:
+
+```bash
+ip link
+```
+
+```txt
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: enp4s0f0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether c4:2c:90:65:50:13 brd ff:ff:ff:ff:ff:ff
+3: wlp3s0b1: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 60:34:4c:13:41:f0 brd ff:ff:ff:ff:ff:ff
+```
+
 `/etc/nixos/modules/networking.nix`
 
 ```nix
 { config, pkgs, ... }:
-let
-  nic = "enp1s0"; # Your main network adapter
-in
+let nic = "enp1s0"; # Your main network adapter
+
 {
+  kea.dhcp4.enable = true;
+  kea.dhcp4.configFile = ./dhcp_server.kea;
   networking = {
     useDHCP = false;
     hostName = "macmini";
+    nameservers = [ "1.1.1.1" "8.8.8.8" ];
    
-    # Define VLANs with proper interpolation
+    # Define VLANS
     vlans = {
       wan = { id = 2; interface = "${nic}"; };
       guest = { id = 30; interface = "${nic}"; };
       iot = { id = 90; interface = "${nic}"; };
     };
-
-    # Define the bridge with proper interpolation
+    #Lan será uma ponte de rede.
     bridges = {
       "lan" = { interfaces = [ "${nic}" ]; };
     };
-
     interfaces = {
-      # Handle IP addressing for bridge and VLAN interfaces
-      lan = {
-        ipv4.addresses = [{ address = "10.1.1.1"; prefixLength = 24; }];
-      };
-      wan = { # WAN VLAN
-        useDHCP = false;
-      };
-      guest = { # Guest VLAN
-        ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }];
-      };
-      iot = { # IoT VLAN
-        ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; }];
-      };
-    };
-
-    firewall.enable = false;
-    nameservers = [ "1.1.1.1" "8.8.8.8" ];
-    
-    nftables = {
-      enable = true;
-      rulesetFile = ./nftables.nft;
-      flattenRulesetFile = true;
+      "${nic}".useDHCP = false;
+      # Gerenciando as VLAns
+      wan.useDHCP = false;
+      lan = { ipv4.addresses = [{ address = "10.1.1.1";  prefixLength = 24; } ]; };
+      guest = { ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }]; };
+      iot = { ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; } ]; };
     };
   };
 }
@@ -321,14 +321,15 @@ The `flow offloading` rule. Which is aimed to improve network performance throug
 
 ```conf
 table inet filter {
-  # enable flow offloading for better throughput
-  #flowtable f {
-  #  hook ingress priority 0;
-  #  devices = { ppp0, lan };
-  #}
+  # Flow offloading for better throughput. Remove it you you have troubles with.
+  flowtable f {
+    hook ingress priority 0
+    devices = { ppp0, lan }
+  }
 
   chain input {
-    type filter hook input priority filter; policy drop;
+    type filter hook input priority filter 
+    policy drop
 
     # Allow trusted networks to access the router
     iifname {"lan","enp6s0"} counter accept
@@ -340,7 +341,7 @@ table inet filter {
 
   chain output {
     type filter hook output priority 100
-    policy accept;
+    policy accept
   }
 
   chain forward {
@@ -348,7 +349,7 @@ table inet filter {
     policy drop
 
     # enable flow offloading for better throughput
-    # ip protocol { tcp, udp } flow offload @f
+    ip protocol { tcp, udp } flow offload @f
 
     # Allow trusted network WAN access
     iifname { "lan",} oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
@@ -441,31 +442,22 @@ As a temporary measure, let's enable login SSH with user `root` with password au
 `/etc/nixos/modules/services.nix`
 
 ```nix
-{config, pkgs, ... }: {
-  # Enable SSH service
+{ config, pkgs, ... }:
+
+{
   services = {
-    kea.dhcp4 = {
-      enable = true;
-      configFile = ./dhcp_server.kea;
-    };
+    envfs.enable = true
+    # Enable SSH Service
     openssh = {
       enable = true;
-      settings = {
-        PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
-        PasswordAuthentication = true;  # Enable password authentication
-      };
+      settings.PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
+      settings.PasswordAuthentication = true; # Enable password authentication
     };
-  }
+  };
 }
 ```
 
 ### 8. Apply changes
-
-As initially we not have configured the boot partition, we need to mount the partitions first.
-
-```bash
-mount /dev/sda2 /boot
-```
 
 To changes take effect, is needed to apply the changes made so far executing the following command:
 
@@ -476,3 +468,5 @@ nixos-rebuild switch
 ## Conclusion
 
 That's all for now! In the next part, we'll focus on enhancing security by disabling root account login, enabling SSH access via key-based authentication, and further hardening the firewall with more granular rules and permissions.
+
+- Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)

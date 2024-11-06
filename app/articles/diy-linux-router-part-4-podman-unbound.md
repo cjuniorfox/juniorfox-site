@@ -16,7 +16,8 @@ This is the fourth part of a multipart series describing how to build your own L
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
-- Part 5: [Nextcloud and Jellyfin](/article/diy-linux-router-part-5-nextcloud-jellyfin)
+- Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
+- Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 
 In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, and made security adjustments by setting up authentication methods and configuring the firewall.
 
@@ -267,7 +268,7 @@ spec:
         path: /var/lib/kea/dhcp4.leases
     - name: unbound-conf-volume
       hostPath:
-        path: /opt/podman/unbound/volumes/unbound-conf/
+        path: /opt/podman/unbound/conf.d/
     - name: unbound-conf-d-pvc
       persistentVolumeClaim:
         claimName: unbound-conf
@@ -340,7 +341,7 @@ Start the **Unbound** pod on the `unbound-net` network with the fixed IP address
 
 ```bash
 podman kube play --replace \
-  /opt/podman/unbound/pod.yaml \
+  /opt/podman/unbound/unbound.yaml \
   --network unbound-net \
   --ip 10.89.1.250
 ```
@@ -403,7 +404,6 @@ Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember tha
 `/opt/podman/kea/volumes/kea-dhcp4.conf`
 
 ```json
-
   //Leave the rest of the configuration as it is
   "subnet4" : [
       {

@@ -16,6 +16,8 @@ Esta é a primeira parte de uma série de artigos descrevendo como construir seu
 - Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
 - Parte 3: [Usuários, segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
 - Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
+- Parte 5: [Wifi](/article/roteador-linux-parte-5-wifi)
+- Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
 
 Tendo este velho Mac Mini sem uso e transformá-lo em um servidor Linux daria uma nova vida a ele. É uma máquina capaz, estável e longe de ser feia. Então, vamos fazer isso.
 
@@ -160,15 +162,24 @@ Há uma série de comandos que usaremos para criar nosso zpool e datasets.
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
 zfs create -o mountpoint=none -o canmount=off rpool/root
 zfs create -o mountpoint=/ rpool/root/nixos
-zfs create -o mountpoint=/boot rpool/boot
 zfs create -o mountpoint=/home rpool/home
 ```
 
 ### 6. Montar os Sistemas de Arquivos
 
+#### UEFI
+
 ```bash
+zfs create -o mountpoint=/boot rpool/boot
 mkdir /mnt/boot/efi
 mount ${BOOT} /mnt/boot/efi
+```
+
+#### BIOS
+
+```bash
+mkdir /mnt/boot
+mount ${BOOT} /mnt/boot
 ```
 
 ### 7. Gerar a Configuração do NixOS
@@ -200,7 +211,11 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     supportedFilesystems = [ "zfs" ];
   };
 
-
+  fileSystems."/boot/efi" = {
+      device = "${BOOT}"; 
+      fsType = "vfat";
+      options = [ "noatime" "discard" ];
+  };
   fileSystems."/" = {
     device = "rpool/root/nixos";
     fsType = "zfs";
@@ -244,6 +259,11 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     supportedFilesystems = [ "zfs" ];
   };
 
+  fileSystems."/boot" = {
+      device = "${BOOT}"; 
+      fsType = "vfat";
+      options = [ "noatime" "discard" ];
+  };
   fileSystems."/" = {
     device = "rpool/root/nixos";
     fsType = "zfs";
@@ -297,6 +317,7 @@ Cada um desses serviços pode ser configurado no arquivo de configuração do Ni
 
 ## Conclusão
 
-Ao reutilizar um antigo Mac Mini e usar o NixOS, você criou um roteador Linux poderoso e flexível que pode gerenciar sua rede, fornecer armazenamento em nuvem, bloquear anúncios e muito mais. Esta configuração é altamente personalizável e pode ser expandida com serviços adicionais conforme necessário. Quer você esteja procurando melhorar sua rede doméstica ou apenas queira experimentar o NixOS, este projeto é uma ótima maneira de dar uma nova vida a um hardware antigo.
+Ao reutilizar um antigo Mac Mini e usar o NixOS, é possível ter um excelente roteador Linux, flexível que pode gerenciar sua rede, fornecer armazenamento em nuvem, bloquear anúncios e muito mais. Esta configuração é altamente personalizável e pode ser expandida com serviços adicionais conforme necessário. Quer você esteja procurando melhorar sua rede doméstica ou apenas queira experimentar o NixOS, este projeto é uma ótima maneira de dar uma nova vida a um hardware antigo.
 Isso encerra a primeira parte deste artigo. Na segunda parte, configuraremos nossa rede, incluindo a configuração de VLAN para dividir nossa rede em `privada`, `convidado` e `wan`, além de configurar uma conexão PPPoE e regras básicas de firewall usando `nftables`.
-Sinta-se à vontade para conferir o projeto completo no meu [GitHub](http://github.com/cjuniorfox) e compartilhar suas próprias experiências nos comentários!
+
+- Parte 2: [Rede e Internet](/article/roteador-linux-parte-2-rede-e-internet)
