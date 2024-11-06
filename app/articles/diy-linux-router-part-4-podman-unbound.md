@@ -253,21 +253,21 @@ spec:
           hostPort: 90
           hostIP: 10.1.90.1 # IoT network
       volumeMounts:
-        - name: dhcp-volume
+        - name: var-lib-kea-dhcp4.leases-host
           mountPath: /dhcp.leases
         - name: opt-podman-unbound-confd-host
           mountPath: /unbound-conf
-        - name: unbound-conf-d-pvc
+        - name: opt-podman-unbound-confd
           mountPath: /etc/unbound/unbound.conf.d
   restartPolicy: Always
   volumes:
-    - name: dhcp-volume
+    - name: var-lib-kea-dhcp4.leases-host
       hostPath:
         path: /var/lib/kea/dhcp4.leases
     - name: opt-podman-unbound-confd-host
       hostPath:
         path: /opt/podman/unbound/conf.d/
-    - name: unbound-conf-d-pvc
+    - name: opt-podman-unbound-confd
       persistentVolumeClaim:
         claimName: unbound-conf
 ```
