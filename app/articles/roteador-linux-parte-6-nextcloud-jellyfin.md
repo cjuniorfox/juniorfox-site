@@ -295,8 +295,6 @@ server {
 podman pod restart ingress
 ```
 
-Você pode acessar `nextcloud.example.com` e `jellyfin.example.com`. Se tudo correr bem, você verá o **erro 404** com **criação SSL**.
-
 ## Nextcloud
 
 Agora que temos o **Ingress** pronto, podemos começar a criar o serviço **Nextcloud**.
