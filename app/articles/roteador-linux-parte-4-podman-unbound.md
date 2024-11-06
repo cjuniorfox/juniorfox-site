@@ -256,7 +256,7 @@ spec:
           mountPath: /dhcp.leases
         - name: opt-podman-unbound-confd-host
           mountPath: /unbound-conf
-        - name: opt-podman-unbound-confd
+        - name: unbound-conf-pvc          
           mountPath: /etc/unbound/unbound.conf.d
   restartPolicy: Always
   volumes:
@@ -266,7 +266,7 @@ spec:
     - name: opt-podman-unbound-confd-host
       hostPath:
         path: /opt/podman/unbound/conf.d
-    - name: opt-podman-unbound-confd
+    - name: unbound-conf-pvc      
       persistentVolumeClaim:
         claimName: unbound-conf
 ```
