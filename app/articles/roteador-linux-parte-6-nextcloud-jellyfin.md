@@ -692,7 +692,7 @@ podman pod restart ingress
 
 Meu domínio está configurado no **Cloudflare**. Para resolver os DNSs  locais, terei que recuperar as entradas DNS no **Clouflare** e acessar esses serviços via **IP público** pela **Internet**. Isso não é necessário, pois consigo resolver os endereços localmente. Para fazer isso, vamos atualizar a configuração do **Unbound** para resolver esses endereços localmente, editando o arquivo `local.conf`.
 
-`/opt/unbound/conf/local.conf`
+`/opt/podman/unbound/conf.d/local.conf`
 
 ```conf
 server:
