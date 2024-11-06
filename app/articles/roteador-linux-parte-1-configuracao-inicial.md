@@ -139,7 +139,7 @@ parted ${DISK} set 1 bios_grub on
 parted ${DISK} mkpart EFI 2MiB 514MiB
 parted ${DISK} set 2 esp on
 parted ${DISK} mkpart ZFS 514MiB 100%
-mkfs.msdos -F 32 -n EFI ${BOOT}
+mkfs.msdos -F 32 -n EFI ${DISK}-part2
 ```
 
 Obtenha o `UUID` das partições
