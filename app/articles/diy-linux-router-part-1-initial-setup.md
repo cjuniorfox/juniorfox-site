@@ -118,11 +118,6 @@ Select the disk. You can check your disk by `ls /dev/disk/by-id/`
 DISK=/dev/disk/by-id/scsi-SATA_disk1
 ```
 
-```bash
-BOOT=${DISK}-part2
-ROOT=${DISK}-part3
-```
-
 Wipe the disk entirely. Be aware that will erase all existing data.
 
 ```bash
@@ -145,6 +140,13 @@ parted ${DISK} mkpart EFI 2MiB 514MiB
 parted ${DISK} set 2 esp on
 parted ${DISK} mkpart ZFS 514MiB 100%
 mkfs.msdos -F 32 -n EFI ${BOOT}
+```
+
+Get the `UUID` for partitions
+
+```bash
+BOOT="/dev/disk/by-uuid/"$(blkid -s UUID -o value ${DISK}-part2)
+ROOT="/dev/disk/by-uuid/"$(blkid -s UUID -o value ${DISK}-part3)
 ```
 
 ### 5. Create ZFS Datasets
@@ -215,7 +217,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   fileSystems."/boot/efi" = {
       device = "${BOOT}"; 
       fsType = "vfat";
-      options = [ "noatime" "discard" ];
+      options = [ "umask=0077" "shortname=winnt" ];
   };
   fileSystems."/" = {
     device = "rpool/root/nixos";
@@ -263,7 +265,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   fileSystems."/boot" = {
       device = "${BOOT}"; 
       fsType = "vfat";
-      options = [ "noatime" "discard" ];
+      options = [ "umask=0077" "shortname=winnt" ];
   };
   fileSystems."/" = {
     device = "rpool/root/nixos";

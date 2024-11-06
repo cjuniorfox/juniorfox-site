@@ -244,8 +244,6 @@ ip link
 let nic = "enp1s0"; # Your main network adapter
 
 {
-  kea.dhcp4.enable = true;
-  kea.dhcp4.configFile = ./dhcp_server.kea;
   networking = {
     useDHCP = false;
     hostName = "macmini";
@@ -359,10 +357,10 @@ table inet filter {
     ip protocol { tcp, udp } flow offload @f
 
     # Allow trusted network WAN access
-    iifname { "lan",} oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
+    iifname "lan" oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
 
     # Allow established WAN to return
-    iifname "ppp0" oifname {"lan",} ct state established,related counter accept comment "Allow established back to LANs"
+    iifname "ppp0" oifname "lan" ct state established,related counter accept comment "Allow established back to LANs"
     # https://samuel.kadolph.com/2015/02/mtu-and-tcp-mss-when-using-pppoe-2/
     # Clamp MSS to PMTU for TCP SYN packets
     oifname "ppp0" tcp flags syn tcp option maxseg size set rt mtu
@@ -460,6 +458,8 @@ As a temporary measure, let's enable login SSH with user `root` with password au
       settings.PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
       settings.PasswordAuthentication = true; # Enable password authentication
     };
+    kea.dhcp4.enable = true;
+    kea.dhcp4.configFile = ./dhcp_server.kea;
   };
 }
 ```

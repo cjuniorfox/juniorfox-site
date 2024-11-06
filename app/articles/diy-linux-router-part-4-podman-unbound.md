@@ -93,16 +93,6 @@ Create `modules/podman.nix` file
 ```nix
 { pkgs, config, ... }:
 {
-  systemd.services.podman-restart = {
-    description = "Podman Start All Containers With Restart Policy Set To Always";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" "podman.socket" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.podman}/bin/podman start --all --filter restart-policy=always";
-    };
-  };
   virtualisation.containers.enable = true;
   virtualisation = {
     podman = {
@@ -129,9 +119,12 @@ Since we are using `nftables`, Podman does not automatically apply firewall rule
 
 ```bash
 podman network ls
-# NETWORK ID    NAME                         DRIVER
-# 000000000000  podman                       bridge
-# 6b3beeb78ea9  podman-default-kube-network  bridge
+```
+
+```txt
+ NETWORK ID    NAME                         DRIVER
+ 000000000000  podman                       bridge
+ 6b3beeb78ea9  podman-default-kube-network  bridge
 ```
 
 Currently, there are two networks: `podman`, which is the default network for any container created without specifying a network, and `podman-default-kube-network`, which is the default for pods created with `podman kube play`.
@@ -139,12 +132,19 @@ Currently, there are two networks: `podman`, which is the default network for an
 Now let's check the network ranges for those networks.
 
 ```bash
-
 podman network inspect podman --format '{{range .Subnets}}{{.Subnet}}{{end}}'
-# 10.88.0.0/16
+```
 
+```txt
+10.88.0.0/16
+```
+
+```bash
 podman network inspect podman-default-kube-network --format '{{range .Subnets}}{{.Subnet}}{{end}}'
-# 10.89.0.0/24
+```
+
+```txt
+10.89.0.0/24
 ```
 
 With the network ranges, it's time to configure our `nftables.nft`.
@@ -170,7 +170,7 @@ table inet filter {
   chain input {
     type filter hook input priority filter 
     policy drop
-    
+    ...
     jump podman_networks_input
     ...
   }
@@ -376,35 +376,7 @@ dig @10.1.1.1 google.com
 
 However, there are devices tending to use other DNS servers than Unbound, which I don't want to. So, I made a rule that redirects every DNS request on network **LAN** to **Unbound**. The client has no idea what happens.
 
-### 1. Remove the `Port Forward` from Unbound's `yaml`
-
-To avoid conflicts on firewall rules, we have to remove the `port forward` rule to LAN. It's just a matter of removing or comment out these lines:
-
-```yaml
-specs:
-...
-  containers:
-  ...
-      ports:
-        - containerPort: 853 # DNS over TLS for all networks
-          protocol: TCP
-          hostPort: 853
-    ## Comment out or delete these lines. Leave the rest as is.
-    #   - containerPort: 53
-    #     protocol: UDP
-    #     hostPort: 53
-    #     hostIP: 10.1.1.1 # LAN network
-        - containerPort: 53
-          protocol: UDP
-          hostPort: 53
-        hostIP: 10.1.30.1 # Guest network
-        - containerPort: 90
-          protocol: UDP
-          hostPort: 90
-          hostIP: 10.1.90.1 # IoT network
-```
-
-### 2. Update Firewall Configuration
+### Update Firewall Configuration
 
 Edit the `nftables.nft` file by adding the following:
 
@@ -429,10 +401,12 @@ table nat {
 
 Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember that at `lan` network, every DNS server used for any client will be redirected to the local **Unbound server**.
 
+**Leave the rest of the configuration as it is.**
+
 `/opt/podman/kea/volumes/kea-dhcp4.conf`
 
 ```json
-  //Leave the rest of the configuration as it is
+  
   "subnet4" : [
       {
         "interface" : "lan",

@@ -241,8 +241,6 @@ ip link
 let nic = "enp4s0f0"; # Seu adaptador de rede
 in
 {
-  kea.dhcp4.enable = true;
-  kea.dhcp4.configFile = ./dhcp_server.kea;
   networking = {
     useDHCP = false;
     hostName = "macmini";
@@ -335,7 +333,7 @@ table inet filter {
     policy drop
 
     # Permite todo o tráfego na rede local
-    iifname {"lan", } counter accept
+    iifname "lan" counter accept
 
     # Permite conexões de retorno e bloqueia todo o resto
     iifname "ppp0" ct state { established, related } counter accept
@@ -355,7 +353,7 @@ table inet filter {
     ip protocol { tcp, udp } flow offload @f
 
     # Permite acesso a rede local a intenret
-    iifname { "lan",} oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
+    iifname "lan" oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
 
     # Permite conexões de retorno da wan
     iifname "ppp0" oifname {"lan",} ct state established,related counter accept comment "Allow established back to LANs"

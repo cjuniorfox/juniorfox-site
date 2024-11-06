@@ -92,16 +92,6 @@ Crie o arquivo `modules/podman.nix`
 ```nix
 { pkgs, config, ... }:
 {
-  systemd.services.podman-restart = {
-    description = "Podman Start All Containers With Restart Policy Set To Always";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" "podman.socket" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.podman}/bin/podman start --all --filter restart-policy=always";
-    };
-  };
   virtualisation.containers.enable = true;
   virtualisation = {
     podman = {
@@ -128,9 +118,12 @@ Como utilizamos o `nftables`, o Podman não aplica automaticamente regras de fir
 
 ```bash
 podman network ls
-# NETWORK ID    NAME                         DRIVER
-# 000000000000  podman                       bridge
-# 6b3beeb78ea9  podman-default-kube-network  bridge
+```
+
+```txt
+ NETWORK ID    NAME                         DRIVER
+ 000000000000  podman                       bridge
+ 6b3beeb78ea9  podman-default-kube-network  bridge
 ```
 
 Atualmente, existem duas redes: `podman`, que é a rede padrão para qualquer container criado sem especificar uma rede, e `podman-default-kube-network`, que é a rede padrão para pods criados com `podman kube play`.
@@ -138,12 +131,19 @@ Atualmente, existem duas redes: `podman`, que é a rede padrão para qualquer co
 Vamos agora verificar os intervalos de rede.
 
 ```bash
-
 podman network inspect podman --format '{{range .Subnets}}{{.Subnet}}{{end}}'
-# 10.88.0.0/16
+```
 
+```txt
+10.88.0.0/16
+```
+
+```bash
 podman network inspect podman-default-kube-network --format '{{range .Subnets}}{{.Subnet}}{{end}}'
-# 10.89.0.0/24
+```
+
+```txt
+10.89.0.0/24
 ```
 
 Tendo os intervalos de rede, é hora de configurar nosso `nftables.nft`.
@@ -375,35 +375,7 @@ dig @10.1.1.1 google.com
 
 No entanto, há dispositivos que tendem a usar outros servidores DNS que não o Unbound, o que eu não quero. Então, criei uma regra que redireciona todas as solicitações DNS na rede **LAN** para o **Unbound**. O cliente nem percebe o que acontece.
 
-### 1. Remova o `Port Forward` do arquivo `yaml` do Unbound
-
-Para evitar conflitos nas regras de firewall, precisamos remover a regra de `port forward` para a LAN. Basta remover ou comentar essas linhas:
-
-```yaml
-specs:
-...
-  containers:
-  ...
-      ports:
-        - containerPort: 853 # DNS sobre TLS para todas as redes
-          protocol: TCP
-          hostPort: 853
-    ## Comente ou exclua estas linhas. Mantenha o restante como está.
-    #   - containerPort: 53
-    #     protocol: UDP
-    #     hostPort: 53
-    #     hostIP: 10.1.1.1 # Rede LAN
-        - containerPort: 53
-          protocol: UDP
-          hostPort: 53
-          hostIP: 10.1.30.1 # Rede Guest
-        - containerPort: 90
-          protocol: UDP
-          hostPort: 90
-          hostIP: 10.1.90.1 # Rede IoT
-```
-
-### 2. Atualize a configuração do firewall
+### Atualize a configuração de Firewall
 
 Edite o arquivo `nftables.nft` adicionando o seguinte:
 
@@ -412,14 +384,11 @@ Edite o arquivo `nftables.nft` adicionando o seguinte:
 ```conf
 ...
 table nat {
-  chain unbound_prerouting {
-    iifname {"lan", } ip daddr != 10.89.1.250 udp dport 53 dnat to 10.89.1.250:53
-  }
   ...
   chain prerouting {
     type nat hook prerouting priority filter
     policy accept
-    jump unbound_prerouting
+    iifname {"lan", } ip daddr != 10.89.1.250 udp dport 53 dnat to 10.89.1.250:53
   }
 }
 ```
@@ -428,10 +397,11 @@ table nat {
 
 Configure o `servidor DHCP` para anunciar o servidor `DNS`. Lembre-se de que na rede `lan`, todos os servidores DNS usados para qualquer cliente serão redirecionados para o **servidor Unbound local**.
 
+**Deixe o resto do arquivo como está.**
+
 `/opt/podman/kea/volumes/kea-dhcp4.conf`
 
 ```json
-  //Leave the rest of the configuration as it is
   "subnet4" : [
       {
         "interface" : "lan",
