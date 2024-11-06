@@ -104,7 +104,7 @@ Atribua ao script a flag de execução (`-x`) e o rode:
 
 ```bash
 chmod +x /opt/podman/unifi-network/create_secret.sh
-/opt/podman/unifi-network/
+cd /opt/podman/unifi-network/
 ./create_secret.sh
 ```
 
