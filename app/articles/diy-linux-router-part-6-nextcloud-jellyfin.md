@@ -273,7 +273,7 @@ The certificate will be created at the `certificates` volume. You can check the 
 podman pod logs lets-encrypt
 ```
 
-With the path of the certificate, update the configuration of the **nginx** with the certitication path.
+Update the configuration of the **nginx** with the certitication path.
 
 `/opt/podman/ingress/conf/default_server.conf`
 
@@ -594,7 +594,7 @@ server {
 
 ### 3, Create a configuration file for **unifi**
 
-As far as we have the **Unifi Network Application** already configured on the server, we can create a ingress for it.
+As we have the **Unifi Network Application** already set on server, we can create a ingress for it.
 
 `/opt/podman/ingress/conf/unifi-network.conf`
 
@@ -653,7 +653,7 @@ spec:
   ...
 ```
 
-Redo the deployment for the pod using the network `ingress-net`:
+Redo the deployment of `unifi-network` pod with parameter `network=ingress-net`:
 
 ```bash
 podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml` --network ingress-net
@@ -692,11 +692,10 @@ podman pod restart ingress
 
 ### 6. Configure `Unbound` to Resolve the hostsnames locally
 
-My domain set on **Cloudflare**. To resolve my home DNS's, I will need to retrieve the DNS entries and access those services via **Public IP**. This isn't needed, as I able to resolve the addresses at home. To do so, let's update the configuration for Unbound for resolving those addresses locally by editing the `local.conf`
+My domain set on **Cloudflare**. To resolve my local DNS's, I will need to retrieve the DNS entries from **Cloudflare** and access those services via my **Public IP** over the Internet. This isn't needed, as I able to resolve the addresses locally. To do so, let's update the configuration for **Unbound** for resolving those addresses locally by editing the `local.conf`
 
 `/opt/unbound/conf/local.conf`
 
-```conf
 ```conf
 server:
   private-domain: "example.com."
