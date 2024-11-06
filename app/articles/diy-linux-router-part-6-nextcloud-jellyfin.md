@@ -324,7 +324,7 @@ We will need to create a **secret** for the **Nextcloud** service. This secret w
 export MARIADB_ROOT_PASSWORD="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
 export MYSQL_PASSWORD="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
 
-cat << EOF > secrets.yaml
+cat << EOF > secret.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -334,7 +334,7 @@ data:
   mysqlPassword: $(echo -n ${MYSQL_PASSWORD} | base64)
 EOF
 
-echo "Secret file created with the name secrets.yaml"
+echo "Secret file created with the name secret.yaml"
 ```
 
 ```bash
@@ -344,7 +344,7 @@ cd /opt/podman/nextcloud
 ```
 
 ```txt
-Secret file created with the name secrets.yaml
+Secret file created with the name secret.yaml
 ```
 
 </details> <!-- markdownlint-enable MD033 -->
@@ -352,7 +352,7 @@ Secret file created with the name secrets.yaml
 #### 2. Deploy the secret file created
 
 ```bash
-podman kube play /opt/podman/nextcloud/secrets.yaml
+podman kube play /opt/podman/nextcloud/secret.yaml
 ```
 
 #### 3. Check for the newly created secret
@@ -368,12 +368,12 @@ ID                         NAME               DRIVER      CREATED             UP
 b22f3338bbdcec1ecd2044933  nextcloud-secrets  file        About a minute ago  About a minute ago
 ```
 
-#### 4. Delete the `secrets.yaml` file
+#### 4. Delete the `secret.yaml` file
 
 Maintaining the secret file can be a security flaw. It's a good practice to delete the secret file after deployment. Be aware that you cannot retrieve it's secret contents again in the future.
 
 ```bash
-rm -f /opt/podman/nextcloud/secrets.yaml
+rm -f /opt/podman/nextcloud/secret.yaml
 ```
 
 ### YAML for Nextcloud

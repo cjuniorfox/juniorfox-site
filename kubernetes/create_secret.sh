@@ -16,7 +16,7 @@ EOF
 
 echo "Secrets generated and saved to secrets.json"
 
-cat << EOF > secrets.yaml
+cat << EOF > secret.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -28,4 +28,4 @@ data:
   mongoPassword: $(echo -n ${MONGO_PASS} | base64 -w 0)
 EOF
 
-echo "Secret file created with the name secrets.yaml"
+echo "Secret file created with the name secret.yaml"

@@ -334,7 +334,7 @@ data:
   mysqlPassword: $(echo -n ${MYSQL_PASSWORD} | base64)
 EOF
 
-echo "Arquivo de segredo criado com o nome secrets.yaml"
+echo "Arquivo de segredo criado com o nome secret.yaml"
 ```
 
 ```bash
@@ -352,7 +352,7 @@ Arquivo de segredo criado com o nome secret.yaml
 #### 2. Implante o arquivo de segredo criado
 
 ```bash
-podman kube play /opt/podman/nextcloud/secrets.yaml
+podman kube play /opt/podman/nextcloud/secret.yaml
 ```
 
 #### 3. Verifique se o segredo foi corretamente criado
@@ -368,12 +368,12 @@ ID                         NAME               DRIVER      CREATED             UP
 b22f3338bbdcec1ecd2044933  nextcloud-secret  file        About a minute ago  About a minute ago
 ```
 
-#### 4. Delete o arquivo `secrets.yaml`
+#### 4. Delete o arquivo `secret.yaml`
 
 Manter o arquivo de segredo pode ser uma falha de segurança. É uma boa prática excluir o arquivo de segredo após o deployment. Esteja ciente de que você não poderá recuperar seu conteúdo secreto no futuro.
 
 ```bash
-rm -f /opt/podman/nextcloud/secrets.yaml
+rm -f /opt/podman/nextcloud/secret.yaml
 ```
 
 ### YAML para Nextcloud

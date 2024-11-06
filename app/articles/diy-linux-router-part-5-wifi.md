@@ -68,7 +68,7 @@ Create a directory to contain all the files to manage this pod.
 mkdir -p /opt/podman/unifi-network
 ```
 
-### 2. Create the `secrets.yaml` file
+### 2. Create the `secret.yaml` file
 
 The **Unifi Network Application** uses a **MongoDB Database** to persist information, which demands setting up **usernames** and **passwords**. We could create a generic password as plain text, but this would be a security risk. It is better to use a complex password and store it securely. **Podman** offers a functionality of this which is the `secrets repository`. I made a simple script that generates the intended passwords randomly and then creates the `secret.yaml` file with it file for deployment.
 
@@ -92,7 +92,7 @@ data:
   mongoPassword: $(echo -n ${MONGO_PASS} | base64)
 EOF
 
-echo "Secret file created with the name secrets.yaml"
+echo "Secret file created with the name secret.yaml"
 ```
 
 Attribute to script the execution flag (`-x`) and run it.
