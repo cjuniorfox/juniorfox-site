@@ -299,39 +299,6 @@ Se estiver tendo problemas com a adoção automática, você pode checar novamen
 - As portas `8080/tcp` e `3478/udp` estarem abertas e acessíveis;
 - Alterado o **inform host** conforme mecionado [acima](#adoção-do-dispositivo);
 
-Se após as verificações, ainda esteja tendo problemas em adotar seu dispositivo, você pode realizar um novo deploy do **Unifi Network Application** usando o parâmetro `--network=host`. Mas antes, é preciso remover todos os redirecionamentos de portas configurados no arquivo `unifi-network.yaml`, basta deletar ou comentar com um `#` todas as linhas contendo:
-
-- `ports:`
-- `containerPort:`
-- `hostPort:`
-- `hostIP:`
-
-Realize um novo deploy do `unifi-network.yaml`
-
-```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml --network=host
-```
-
-Executando o **pod** dessa forma, as portas `8080/tcp` e `3478/udp` precisam ser abertas manualmente no **NFTables**:
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-table inet filter {
-  ...
-  chain unifi_input {
-    iifname "lan" tcp dport 8080 ct state { new, established } counter accept comment "Allow Unifi HTTP"
-    iifname "lan" udp dport 3478 ct state { new, established } counter accept comment "Allow Unifi STUN port"
-  }
-  ...
-  chain input {
-    ...
-    jump unifi_input
-  }
-...
-}
-```
-
 ### Adoção manual
 
 Se todos os ajustes realizados não fizeram seu dispositivo **Unifi** ser adotado, talvez seu dispositivo já tenha sido adotado por outro painel e precisa ser adotado manualmente. É possível faze-lo conforme abaixo:

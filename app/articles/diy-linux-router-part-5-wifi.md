@@ -301,39 +301,6 @@ You you are having trouble with automatic adoption, you can double check if the 
 - Ports `8080/tcp` and `3478/udp` being open and accessible.
 - Changed the **inform host** mentioned [above](#device-adoption).
 
-If you checked and and still having trouble with adopting your device, you can redeploy the **Unifi Network Application** using the `--network=host` option, but first you need to remove all forward ports on the `unifi-network.yaml`, it's just a matter of commenting out with `#` or remove all lines containing:
-
-- `ports:`
-- `containerPort:`
-- `hostPort:`
-- `hostIP:`
-
-Do a new deployment of `unifi-network.yaml`:
-
-```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml --network=host
-```
-
-Running as `network=host` the ports `8080/tcp` and `3478/udp` has to be manually opened on **NFTables**.
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-table inet filter {
-  ...
-  chain unifi_input {
-    iifname "lan" tcp dport 8080 ct state { new, established } counter accept comment "Allow Unifi HTTP"
-    iifname "lan" udp dport 3478 ct state { new, established } counter accept comment "Allow Unifi STUN port"
-  }
-  ...
-  chain input {
-    ...
-    jump unifi_input
-  }
-...
-}
-```
-
 ### Manual Adotion
 
 If all the adjustaments did not made your **Unifi** device being adopted, maybe your device was adopted by other painel and needs to be manually adopted. You can do this by doing the following:
