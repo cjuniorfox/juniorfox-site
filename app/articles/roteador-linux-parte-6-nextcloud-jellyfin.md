@@ -643,7 +643,7 @@ spec:
   ...
   ports:
   ...
-  # Remov as linhas abaixo:
+  # Remova as linhas abaixo:
   - containerPort: 8443
       hostPort: 8443
       hostIP: 10.1.1.1
