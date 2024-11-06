@@ -32,6 +32,7 @@ Agora, instalaremos o **Podman**, um substituto direto para o **Docker** com alg
   - [Por que Podman em vez de Docker?](#por-que-podman-em-vez-de-docker)
 - [Sobre o Unbound](#sobre-o-unbound)
 - [Configuração do Podman](#configuração-do-podman)
+- [Configuração do Unbound](#configuração-do-unbound)
 - [Regras de Firewall](#regras-de-firewall)
 - [Atualizar configuração de DHCP](#atualizar-configuração-de-dhcp)
 - [Conclusão](#conclusão)
