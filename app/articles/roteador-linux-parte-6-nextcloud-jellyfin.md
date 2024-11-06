@@ -4,7 +4,7 @@ articleId: "roteador-linux-parte-6-nextcloud-jellyfin"
 date: "2024-11-05"
 author: "Carlos Junior"
 category: "Linux"
-brief: "Na quinta parte desta série, vamos instalar o Jellyfin, um servidor de mídia privado para uso doméstico, e o Nextcloud, uma solução de armazenamento em nuvem privada."
+brief: "Na sexta parte desta série, vamos instalar o Jellyfin, um servidor de mídia privado para uso doméstico, e o Nextcloud, uma solução de armazenamento em nuvem privada."
 image: "/assets/images/diy-linux-router/nextcloud-jellyfin.webp"
 keywords : ["macmini","roteador", "linux", "nixos", "pppoe", "unbound", "podman", "docker"]
 lang : "pt"

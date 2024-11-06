@@ -4,7 +4,7 @@ articleId: "diy-linux-router-part-6-nextcloud-jellyfin"
 date: "2024-11-05"
 author: "Carlos Junior"
 category: "Linux"
-brief: "In the fifth part of this series, we will install Jellyfin, a private media server for home use, and Nextcloud, a private cloud storage solution."
+brief: "In the sixth part of this series, we will install Jellyfin, a private media server for home use, and Nextcloud, a private cloud storage solution."
 image: "/assets/images/diy-linux-router/nextcloud-jellyfin.webp"
 keywords : ["macmini","router", "linux", "nixos", "pppoe", "unbound", "podman", "docker"]
 lang : "en"
