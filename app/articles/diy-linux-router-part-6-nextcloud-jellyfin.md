@@ -488,6 +488,7 @@ The **Jellyfin** service will be deployed on **Podman**. To do this, we will nee
 <!-- markdownlint-disable MD033 -->
 <details>
   <summary>Click to expand the <b>jellyfin.yaml</b>.</summary>
+  
   `/opt/podman/jellyfin/jellyfin.yaml`
 
   ```yaml

@@ -488,6 +488,7 @@ O serviço **Jellyfin** será implantado no **Podman**. Para isso, precisaremos 
 <!-- markdownlint-disable MD033 -->
 <details>
   <summary>Clique para expandir o arquivo <b>jellyfin.yaml</b>.</summary>
+  
   `/opt/podman/jellyfin/jellyfin.yaml`
 
   ```yaml
