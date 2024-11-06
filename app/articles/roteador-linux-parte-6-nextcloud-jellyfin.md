@@ -709,7 +709,7 @@ server:
 Reinicie Unbound:
 
 ```bash
-podman kube play --replace /opt/unbound/unbound.yaml
+podman kube play --replace /opt/podman/unbound/unbound.yaml
 ```
 
 ## Conclusão
