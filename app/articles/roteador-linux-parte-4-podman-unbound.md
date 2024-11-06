@@ -199,7 +199,7 @@ Agora que o **Podman** está instalado, é hora de configurar o **Unbound**. Usa
 Crie um diretório para armazenar o arquivo de implantação `yaml` do Podman e os volumes. Neste exemplo, criarei o diretório `/opt/podman` e colocarei a pasta `unbound` dentro dele. Além disso, vamos criar o diretório `volumes/unbound-conf/` para armazenar arquivos de configuração adicionais.
 
 ```sh
-mkdir -p /opt/podman/unbound/volumes/unbound-conf/
+mkdir -p /opt/podman/unbound/conf.d/
 ```
 
 ### 2. Construir o arquivo de implantação YAML
@@ -267,7 +267,7 @@ spec:
         path: /var/lib/kea/dhcp4.leases
     - name: unbound-conf-volume
       hostPath:
-        path: /opt/podman/unbound/volumes/unbound-conf/
+        path: /opt/podman/unbound/conf.d
     - name: unbound-conf-d-pvc
       persistentVolumeClaim:
         claimName: unbound-conf

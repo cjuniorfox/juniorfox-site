@@ -200,7 +200,7 @@ Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using
 First, create a directory to store Podman's deployment `yaml` file and volumes. In this example, I'll create the directory under `/opt/podman` and place an `unbound` folder inside it. Additionally, create the `volumes/unbound-conf/` directory to store extra configuration files.
 
 ```sh
-mkdir -p /opt/podman/unbound/volumes/unbound-conf/
+mkdir -p /opt/podman/unbound/conf.d/
 ```
 
 ### 2. Build the YAML Deployment File

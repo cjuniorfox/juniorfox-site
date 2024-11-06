@@ -242,7 +242,7 @@ ip link
 ```nix
 { config, pkgs, ... }:
 let nic = "enp1s0"; # Your main network adapter
-
+in
 {
   networking = {
     useDHCP = false;
@@ -255,19 +255,18 @@ let nic = "enp1s0"; # Your main network adapter
       guest = { id = 30; interface = "${nic}"; };
       iot = { id = 90; interface = "${nic}"; };
     };
-    #Lan será uma ponte de rede.
+    #Lan will be a bridge to the main adapter.
     bridges = {
       "lan" = { interfaces = [ "${nic}" ]; };
     };
     interfaces = {
       "${nic}".useDHCP = false;
-      # Gerenciando as VLAns
+      # Handle VLANs
       wan.useDHCP = false;
       lan = { ipv4.addresses = [{ address = "10.1.1.1";  prefixLength = 24; } ]; };
       guest = { ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }]; };
       iot = { ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; } ]; };
     };
-
     firewall.enable = false;
     nftables = {
       enable = true;
@@ -451,7 +450,7 @@ As a temporary measure, let's enable login SSH with user `root` with password au
 
 {
   services = {
-    envfs.enable = true
+    envfs.enable = true;
     # Enable SSH Service
     openssh = {
       enable = true;

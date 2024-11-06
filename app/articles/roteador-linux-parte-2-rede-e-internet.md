@@ -449,7 +449,7 @@ Como uma medida temporária, permitiremos o acesso do usuário `root` via SSH us
 
 {
   services = {
-    envfs.enable = true
+    envfs.enable = true;
     # Habilitar serviço SSH
     openssh = {
       enable = true;
