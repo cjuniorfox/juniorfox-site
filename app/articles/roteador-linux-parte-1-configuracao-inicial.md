@@ -163,7 +163,7 @@ Há uma série de comandos que usaremos para criar nosso zpool e datasets.
 ```bash
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
 zfs create -o mountpoint=none -o canmount=off rpool/root
-zfs create -o mountpoint=/ rpool/root/nixos
+zfs create -o mountpoint=/ -o canmount=noauto rpool/root/nixos
 zfs create -o mountpoint=/home rpool/home
 ```
 
