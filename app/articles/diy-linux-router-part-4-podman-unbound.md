@@ -95,6 +95,7 @@ Create `modules/podman.nix` file
 { pkgs, config, ... }:
 {
   virtualisation.containers.enable = true;
+  virtualisation.containers.storage.settings.storage.driver="zfs";
   virtualisation = {
     podman = {
       enable = true;
