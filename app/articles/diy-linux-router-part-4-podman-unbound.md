@@ -94,9 +94,9 @@ Create `modules/podman.nix` file
 ```nix
 { pkgs, config, ... }:
 {
-  virtualisation.containers.enable = true;
-  virtualisation.containers.storage.settings.storage.driver="zfs";
   virtualisation = {
+    containers.enable = true;
+    containers.storage.settings.storage.driver="zfs";
     podman = {
       enable = true;
       defaultNetwork.settings.dns_enabled = true;
@@ -106,6 +106,20 @@ Create `modules/podman.nix` file
     dive # look into docker image layers
     podman-tui # status of containers in the terminal
   ];
+  systemd.services.podman-autostart = {
+    enable = true;
+    after = [ "podman.service" ];
+    wantedBy = [ "multi-user.target" ];
+    description = "Automatically start containers with --restart=always tag";
+    serviceConfig = {
+      Type = "idle";
+      Environment=''LOGGING="--log-level=info"'';
+      ExecStartPre = ''${pkgs.coreutils}/bin/sleep 1'';
+      ExecStart = ''/run/current-system/sw/bin/podman $LOGGING start --all --filter restart-policy=always'';
+      ExecStop="/bin/sh -c '/run/current-system/sw/bin/podman $LOGGING stop $(/run/current-system/bin/podman container ls --filter restart-policy=always -q)'";
+      # User = "<user-name>"; Only in case of rootless https://discourse.nixos.org/t/rootless-podman-compose-configuration/52523/4
+    };
+  };
 }
 ```
 
