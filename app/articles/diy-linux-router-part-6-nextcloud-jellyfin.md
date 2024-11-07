@@ -58,7 +58,7 @@ Both Jellyfin and Nextcloud store and access files. We could just create folders
 ```bash
 zfs create -o mountpoint=none rpool/mnt
 zfs create -o mountpoint=/mnt/container-volumes/nextcloud rpool/mnt/container-volumes/nextcloud
-zfs create -o mountpoint=/mnt/container-volumes/media rpool/mnt/container-volumes/media
+zfs create -o mountpoint=/mnt/shares/media rpool/mnt/shares/media
 ```
 
 ## Ingress
@@ -516,7 +516,7 @@ spec:
         - mountPath: /cache
           name: jellyfin-cache-pvc
         - mountPath: /media
-          name: mnt-container-volumes-media-host
+          name: mnt-shares-media-host
   volumes:
     - name: jellyfin-config-pvc
       persistentVolumeClaim:
@@ -524,9 +524,9 @@ spec:
     - name: jellyfin-cache-pvc
       persistentVolumeClaim:
         claimName: jellyfin_cache
-    - name: mnt-container-volumes-media-host
+    - name: mnt-shares-media-host
       hostPath:
-        path: /mnt/container-volumes/media
+        path: /mnt/shares/media
 ```
 
 </details> <!-- markdownlint-enable MD033 -->
