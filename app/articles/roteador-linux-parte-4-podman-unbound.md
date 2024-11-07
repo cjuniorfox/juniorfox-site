@@ -113,6 +113,17 @@ Vamos aplicar essas mudanças para ter o **Podman** instalado e funcionando.
 nixos-rebuild switch
 ```
 
+### 2. Crie os datasets para o Podman
+
+Create um dataset para o **Podman** em `/var/lib/containers/storage` com a opção `acltype=posixacl`.
+
+```bash
+zfs create -o mountpoint=/var -o canmount=off rpool/var
+zfs create -o mountpoint=/var/lib -o canmount=off rpool/var/lib
+zfs create -o mountpoint=/var/lib/containers -o canmount=off rpool/var/lib/containers
+zfs create -o mountpoint=/var/lib/containers/storage -o acltype=posixacl rpool/var/lib/containers/storage
+```
+
 ### 2. Configurar o firewall para a rede padrão do Podman
 
 Como utilizamos o `nftables`, o Podman não aplica automaticamente regras de firewall. Para habilitar o acesso de rede aos containers, como a conectividade com a internet, para redes criadas pelo **Podman**, é necessário adicionar manualmente regras de firewall no arquivo `nftables.nft`. Mas primeiro, vamos verificar quais redes o **Podman** configurou por padrão.
