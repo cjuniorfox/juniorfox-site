@@ -456,8 +456,6 @@ spec:
     hostPath:
       path: /mnt/container-volumes/nextcloud/html
       type: Directory
-
-
   - name: nextcloud-db-pvc
     persistentVolumeClaim:
       claimName: nextcloud_db
