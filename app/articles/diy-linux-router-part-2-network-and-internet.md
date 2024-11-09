@@ -156,11 +156,11 @@ Let's configure our server by editing the `.nix` files accordingly. To maintain 
 /etc/nixos
 ├── configuration.nix 
 └── modules/ 
-      ├── networking.nix  # Network settings/ enables NFTables
-      ├── pppoe.nix       # PPPoE connection setup
-      ├── services.nix    # Other services
-      ├── nftables.nft    # NFT Rules
-      └── dhcp_server.kea # DHCP Server Configuration
+      ├── kea_dhcp4_server.nix # DHCP Server Configuration
+      ├── networking.nix       # Network settings/ enables NFTables
+      ├── pppoe.nix            # PPPoE connection setup
+      ├── services.nix         # Other services
+      └── nftables.nft         # NFT Rules
 ```
 
 ### 1. Configuration files and folders
@@ -169,7 +169,7 @@ Create all the necessary folders and files:
 
 ```bash
 mkdir -p /etc/nixos/modules
-touch /etc/nixos/modules/{{networking,pppoe,services}.nix,nftables.nft,dhcp_server.kea}
+touch /etc/nixos/modules/{{kea_dhcp4_server,networking,pppoe,services}.nix,nftables.nft}
 ```
 
 ### 2. Basic config
@@ -177,7 +177,7 @@ touch /etc/nixos/modules/{{networking,pppoe,services}.nix,nftables.nft,dhcp_serv
 Let's split our `configuration.nix` file into parts for better organization and maintainability.
 Do not replace the entire file, but just add the following lines.
 
-`/etc/nixos/configuration.nix`
+As will act as a router, add **forwarding** instruction to the kernel as well.
 
 `/etc/nixos/configuration.nix`
 
@@ -185,21 +185,22 @@ Do not replace the entire file, but just add the following lines.
 { config, pkgs, ... }:
 {
   ...
-  boot = {
     ...
-    kernel.sysctl = {
-      "net.ipv4.conf.all.forwarding" = true;
-      "net.ipv6.conf.all.forwarding" = false;
-    };
+    [ 
+      <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
+      ./hardware-configuration.nix
+      ./modules/kea_dhcp4_server.nix
+      ./modules/networking.nix
+      ./modules/services.nix
+      ./modules/pppoe.nix
+    ];
+  
+  # Add  ipv4 and ipv6 forwarding to act as a router
+  boot.kernel.sysctl = {
+    "net.ipv4.conf.all.forwarding" = true;
+    "net.ipv6.conf.all.forwarding" = true;
   };
-
   ...
-
-  imports = [
-    ./modules/networking.nix
-    ./modules/services.nix
-    ./modules/pppoe.nix
-  ];
 
   environment.systemPackages = with pkgs; [
     bind
@@ -272,7 +273,6 @@ in
       enable = true;
       rulesetFile = ./nftables.nft;
       flattenRulesetFile = true;
-      preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
     };
   };
 }
@@ -329,14 +329,14 @@ table inet filter {
   # Flow offloading for better throughput. Remove it you you have troubles with.
   flowtable ftable {
     hook ingress priority filter
-    devices = { "lan" "ppp0" }
+    devices = { "lan", "ppp0" }
   }
 
   chain input {
     type filter hook input priority filter; policy drop;
 
     # Allow trusted networks to access the router
-    iifname {"lan","enp6s0"} counter accept
+    iifname "lan" counter accept
 
     # Allow returning traffic from ppp0 and drop everything else
     iifname "ppp0" ct state { established, related } counter accept
@@ -355,7 +355,6 @@ table inet filter {
 
     # Allow trusted network WAN access
     iifname "lan" oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
-
     # Allow established WAN to return
     iifname "ppp0" oifname "lan" ct state established,related counter accept comment "Allow established back to LANs"
     # https://samuel.kadolph.com/2015/02/mtu-and-tcp-mss-when-using-pppoe-2/
@@ -367,6 +366,7 @@ table inet filter {
 table ip nat {
   chain prerouting {
     type nat hook prerouting priority filter; policy accept;
+    tcp flags syn tcp option maxseg size set 1452
   }
   # Setup NAT masquerading on the ppp0 interface
   chain postrouting {
@@ -380,59 +380,56 @@ table ip nat {
 
 Our **DHCP Server** configuration wil be done by `kea.dhcp4`
 
-`/etc/nixos/modules/dhcp_server.kea`
+`/etc/nixos/modules/kea_dhcp4_server.nix`
 
-```json
-{
-  "Dhcp4": {
-    "valid-lifetime": 4000,
-    "renew-timer" : 1000,
-    "rebind-timer": 200,
-
-    "interfaces-config" : { 
-      "interfaces": [ "lan", "guest", "iot" ]
-    },
-
-    "lease-database": {
-      "type": "memfile",
-      "persist": true,
-      "name": "/var/lib/kea/dhcp4.leases"
-    },
-    
-    "subnet4" : [
+```nix
+{ config, pkgs, ... }:
+{ 
+  services.kea.dhcp4.enable=true;
+  services.kea.dhcp4.settings = {
+    interfaces-config = {
+      interfaces = ["lan" "guest" "iot"];
+      dhcp-socket-type= "raw";
+    };
+    lease-database = {
+      name = "/var/lib/kea/dhcp4leases.csv";
+      persist = true;
+      type = "memfile";
+    };
+    rebind-timer = 2000;
+    renew-timer = 1000;
+    valid-lifetime = 4000;
+    subnet4 = [
       {
-        "id": 1,
-        "interface" : "lan",
-        "subnet": "10.1.1.0/24",
-        "pools": [ { "pool": "10.1.1.100 - 10.1.1.200" } ],
-        "option-data": [
-          { "name": "routers", "data": "10.1.1.1" },
-          { "name": "domain-name-servers", "data": "8.8.8.8" },
-          { "name": "domain-search", "data": "example.com" }
-        ]
-      },
-      {
-        "id": 2,
-        "interface" : "guest",
-        "subnet": "10.1.30.0/24",
-        "pools": [ { "pool": "10.1.30.100 - 10.1.30.200" } ],
-        "option-data": [
-          { "name": "routers", "data": "10.1.30.1" },
-          { "name": "domain-name-servers", "data": "8.8.8.8" },
-        ]
-      },
-      {
-        "id": 3,
-        "interface" : "iot",
-        "subnet": "10.1.90.0/24",
-        "pools": [ { "pool": "10.1.90.100 - 10.1.90.200" } ],
-        "option-data": [
-          { "name": "routers", "data": "10.1.90.1" },
-          { "name": "domain-name-servers", "data": "8.8.8.8" },
-        ]
+        subnet = "10.1.1.0/24";
+        interface = "lan";
+        pools = [ { pool = "10.1.1.100 - 10.1.1.200"; } ]; 
+        option-data = [
+          { name = "routers"; data = "10.1.1.1"; }
+          { name = "domain-name-servers"; data = "8.8.8.8"; } 
+          { name = "domain-search"; data = "example.com"; } 
+        ];
       }
-    ]
-  }
+      {
+        subnet = "10.1.30.0/24";
+        interface = "guest";
+        pools = [ { pool = "10.1.30.100 - 10.1.30.200"; } ];
+        option-data = [
+          { name = "routers"; data = "10.1.30.1"; }
+          { name = "domain-name-servers"; data = "8.8.8.8"; } 
+        ];
+      }
+      {
+        subnet = "10.1.90.0/24";
+        interface = "iot";
+        pools = [ { pool = "10.1.90.100 - 10.1.90.200"; } ]; 
+        option-data = [
+          { name = "routers"; data = "10.1.90.1"; }
+          { name = "domain-name-servers"; data = "8.8.8.8"; } 
+        ];
+      }
+    ];
+  };
 }
 ```
 
@@ -455,13 +452,18 @@ As a temporary measure, let's enable login SSH with user `root` with password au
       settings.PermitRootLogin = "yes"; # Allow root login (optional, for security reasons you may want to disable this)
       settings.PasswordAuthentication = true; # Enable password authentication
     };
-    kea.dhcp4.enable = true;
-    kea.dhcp4.configFile = ./dhcp_server.kea;
   };
 }
 ```
 
 ### 8. Apply changes
+
+In case of having **hardware-configuration** set, as is the first time we rebuild the configuration, is needed to add the channels as did during the installation.
+
+```bash
+sudo nix-channel --add https://github.com/NixOS/nixos-hardware/archive/master.tar.gz nixos-hardware
+sudo nix-channel --update
+```
 
 To changes take effect, is needed to apply the changes made so far executing the following command:
 

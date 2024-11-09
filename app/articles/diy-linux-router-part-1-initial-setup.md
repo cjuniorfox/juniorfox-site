@@ -118,6 +118,12 @@ Select the disk. You can check your disk by `ls /dev/disk/by-id/`
 DISK=/dev/disk/by-id/scsi-SATA_disk1
 ```
 
+Define your tank name. For this tutorial, I will use the name `rpool`.
+
+```bash
+ZTANK=rpool
+```
+
 Wipe the disk entirely. Be aware that will erase all existing data.
 
 ```bash
@@ -130,7 +136,7 @@ For flash-based storage, if the disk was previously used, you may want to do a f
 blkdiscard -f ${DISK}
 ```
 
-Create the partition schema.
+Create the partition schema. On this example, I'm creating a partition of `32G` to be the rpool ZFS pool. 32Gb is more than NixOS will ever need. I prefer to have a discrete pool for root to ease the maintability, but if you prefer to keep everything at the same pool, just replace the `32G` to `100%`. For now I'll just create the `rpool` ZFS pool.
 
 ```bash
 parted ${DISK} mklabel gpt
@@ -138,7 +144,8 @@ parted ${DISK} mkpart primary 1MiB 2MiB
 parted ${DISK} set 1 bios_grub on
 parted ${DISK} mkpart EFI 2MiB 514MiB
 parted ${DISK} set 2 esp on
-parted ${DISK} mkpart ZFS 514MiB 100%
+parted ${DISK} mkpart ZFS 514MiB 32G
+sleep 1
 mkfs.msdos -F 32 -n EFI ${DISK}-part2
 ```
 
@@ -161,10 +168,33 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 - **acltype=posixacl**: Requirement for installing Linux on a ZFS formatted system.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl rpool ${ROOT} -R /mnt
-zfs create -o mountpoint=none -o canmount=off rpool/root
-zfs create -o mountpoint=/ -o canmount=noauto rpool/root/nixos
-zfs create -o mountpoint=/home rpool/home
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl ${ZTANK} ${ROOT} -R /mnt
+zfs create -o mountpoint=none -o canmount=off ${ZTANK}/root
+zfs create -o mountpoint=/ -o canmount=noauto ${ZTANK}/root/nixos
+zfs mount ${ZTANK}/root/nixos
+zfs create -o mountpoint=/home ${ZTANK}/home
+zfs create -o mountpoint=legacy -o canmount=noauto ${ZTANK}/nix
+mkdir /mnt/nix
+mount -t zfs ${ZTANK}/nix /mnt/nix
+```
+
+#### Swap dataset
+
+Using swap on a **SSD** can reduce the lifespan of the drive, but in some cases is absolutely necessary.
+
+```bash
+zfs create -V 8G \
+  -o compression=zle \
+  -o logbias=throughput -o sync=always \
+  -o primarycache=metadata -o secondarycache=none \
+  -o com.sun:auto-snapshot=false ${ZTANK}/swap
+```
+
+Create the swap and start using it.
+
+```bash
+mkswap -f /dev/zvol/${ZTANK}/swap
+swapon /dev/zvol/${ZTANK}/swap
 ```
 
 ### 6. Mount Boot filesystem
@@ -172,7 +202,7 @@ zfs create -o mountpoint=/home rpool/home
 #### UEFI
 
 ```bash
-zfs create -o mountpoint=/boot rpool/boot
+zfs create -o mountpoint=/boot ${ZTANK}/boot
 mkdir /mnt/boot/efi
 mount ${BOOT} /mnt/boot/efi
 ```
@@ -194,37 +224,43 @@ nixos-generate-config --root /mnt
 
 Open the `/mnt/etc/nixos/configuration.nix` file and make sure to enable ZFS support. There's two versions for this configuration file, one for `BIOS` and other `UEFI`.
 
+Is valuable mention that for the **2010 Mac Mini** there's some hardware issues thatt needs to be addressed. Fortunely NixOS provides **hardware configuration** schemas, which helps to address those issues easly. On **UEFI** file, there's a reference on imports for importing the profile for my machine. But first I have to add these channels. More detail on [github.com/NixOS/nixos-hardware](https://github.com/NixOS/nixos-hardware).
+
+Do this step only if you has de intention to use the **hardware configuration** scheme.
+
+```bash
+sudo nix-channel --add https://github.com/NixOS/nixos-hardware/archive/master.tar.gz nixos-hardware
+sudo nix-channel --update
+```
+
 <!-- markdownlint-disable MD033 -->
 <details>
   <summary>UEFI <b>configuration.nix</b>.</summary>
 
 ```bash
 cat << EOF > /mnt/etc/nixos/configuration.nix
-{ config, pkgs, ... }:
+
+{ config, lib, pkgs, ... }:
 
 {
-  system.stateVersion = "24.05";
-  boot= {
-    loader = {
-      systemd-boot.enable = true;  
-      efi.canTouchEfiVariables = true;
-      efi.efiSysMountPoint = "/boot/efi"; 
-    };
-    supportedFilesystems = [ "zfs" ];
-  };
+  imports =
+    [ 
+      <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
+      ./hardware-configuration.nix
+    ];
 
-  fileSystems."/boot/efi" = {
-      device = "${BOOT}"; 
-      fsType = "vfat";
-      options = [ "umask=0077" "shortname=winnt" ];
-  };
-  fileSystems."/" = {
-    device = "rpool/root/nixos";
-    fsType = "zfs";
-  };
+  # Use the systemd-boot EFI boot loader.
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.efi.efiSysMountPoint = "/boot/efi"; 
 
-  time.timeZone = "America/Sao_Paulo";
-
+  i18n.defaultLocale = "en_US.UTF-8";
+   console = {
+     font = "Lat2-Terminus16";
+     useXkbConfig = true; # use xkb.options in tty.
+   };
+  
+  system.stateVersion = "24.05"; # Did you read the comment?
   services.openssh = {
     enable = true;
     settings = {
@@ -232,11 +268,11 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
       PasswordAuthentication = true;
     };
   };
-
+  nixpkgs.config.allowUnfree = true; 
   environment.systemPackages = with pkgs; [ vim ];
 
   # Set the hostId for ZFS
-  networking.hostId = "$(head -c 8 /etc/machine-id)";
+ networking.hostId = "$(head -c 8 /etc/machine-id)";
 }
 EOF
 ```
@@ -261,18 +297,13 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     supportedFilesystems = [ "zfs" ];
   };
 
-  fileSystems."/boot" = {
-      device = "${BOOT}"; 
-      fsType = "vfat";
-      options = [ "umask=0077" "shortname=winnt" ];
-  };
-  fileSystems."/" = {
-    device = "rpool/root/nixos";
-    fsType = "zfs";
-  };
-
-  time.timeZone = "America/Sao_Paulo";
-
+  i18n.defaultLocale = "en_US.UTF-8";
+   console = {
+     font = "Lat2-Terminus16";
+     useXkbConfig = true; # use xkb.options in tty.
+   };
+  
+  system.stateVersion = "24.05"; # Did you read the comment?
   services.openssh = {
     enable = true;
     settings = {
@@ -280,16 +311,46 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
       PasswordAuthentication = true;
     };
   };
-
+  nixpkgs.config.allowUnfree = true; 
   environment.systemPackages = with pkgs; [ vim ];
 
   # Set the hostId for ZFS
-  networking.hostId = "$(head -c 8 /etc/machine-id)";
+ networking.hostId = "$(head -c 8 /etc/machine-id)";
 }
 EOF
 ```
 
 </details><!-- markdownlint-enable MD033 -->
+
+#### Hardware Configuration
+
+The command `nixos-generate-config` scans your hardware and create all the mountpoints needed to your system, but there's an issue with the `root` filesystem. You can check if is everything ok with it.
+Also, It creates all mounpoints created by `zfs`. Maintain mountpoints `/`, `/nix` `/boot/efi` (or `/boot` if you took the **BIOS** path) and delete the mountpoints `/home` and (**UEFI** installation) `/boot`.
+
+You can check the hardware-configuration file at the following path: `/mnt/etc/nixos/hardware-configuration.nix`
+
+```nix
+{
+...boot
+
+  fileSystems."/" =
+    { device = "zroot/root/nixos";
+      fsType = "zfs";
+    };
+  fileSystems."/nix" =
+    { device = "zroot/nix";
+      fsType = "zfs";
+    };
+
+  fileSystems."/boot/efi" =
+    { device = "/dev/disk/by-uuid/3E83-253D";
+      fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" ];
+    };
+
+...
+}
+```
 
 ### 9. Install NixOS
 
@@ -303,8 +364,16 @@ nixos-install
 
 ```bash
 cd /
+swapoff /dev/zvol/${ZTANK}/swap
+umount /boot/efi
 umount -Rl /mnt
 zpool export -a
+```
+
+After checking if everything was sucessfully disconnected, you can restart your system:
+
+```bash
+reboot
 ```
 
 ### 11. Post-Installation Configuration
