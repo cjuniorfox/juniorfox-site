@@ -33,7 +33,7 @@ In this part, we will increase security by creating users, changing SSH authenti
 
 ## Users
 
-Let's create our intended users. You can create wherever user you need. In my case, I will have two: one to act as an administrator user named `admin` and another named `git` to have a personal and private **Git** repository.
+Create intended users. You can create wherever user you need. In my case, I will have three: one to act as an administrator user named `admin`, other for rootless containers as `podman` and another named `git` to have a personal and private **Git** repository.
 
 ### 1. Generate Hashed Password (optional)
 
@@ -100,10 +100,20 @@ Create your users. Replace the `authorization.keys` with the one generated above
       ];
     };
 
+    # Podman User for rootless pods
+    podman = {
+      isNormalUser = true;
+      description = "Podman Rootless";
+      home = "/home/podman";
+      openssh.authorizedKeys.keys = [
+        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."  # Replace with the actual public key
+      ];
+    };
+
     # Git user
     git = {
       isNormalUser = true;
-      description = "Git User";
+      description = "Git";
       home = "/home/git";
       openssh.authorizedKeys.keys = [
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."  # Replace with the actual public key
@@ -169,21 +179,26 @@ ssh -i ~/.ssh/router-admin admin@10.1.1.1
 If you do not want to type `ssh -i ~/.ssh/router-admin admin@10.1.1.1` everytime to authenticate into the serverm, configure the file `~/.ssh/config` as following:
 
 ```yaml
-Host macmini
+Host admin-macmini
   Hostname 10.1.1.1
   user admin
   IdentityFile ~/.ssh/router-admin
 
-Host macmini
+Host podman-macmini
   Hostname 10.1.1.1
-  user admin
+  user podman
+  IdentityFile ~/.ssh/router-podman
+
+Host git-macmini
+  Hostname 10.1.1.1
+  user git
   IdentityFile ~/.ssh/router-git
 ```
 
 Teste o acesso **SSH** sem informar o arquivo de chaves.
 
 ```bash
-ssh admin@macmini
+ssh admin-macmini
 ```
 
 ### 7. Lock the root Account (optional)
@@ -211,7 +226,7 @@ The server is quite secure this way, but a more granular control over traffic is
 
 ```conf
 table inet filter {
-  # Keep `flowtable` and all existing firewall rules.
+  # Keep rest of the rules as is.
 
   # Add the following chains to `inet filter` table.
   chain ssh_input {
@@ -223,13 +238,15 @@ table inet filter {
     iifname { "lan", "guest", "iot" } udp dport 67 ct state { new, established } counter accept comment "Allow DHCP on LAN, Guest and IoT networks"
   }
 
-  # Replace `chain input` to this one.
   chain input {
     type filter hook input priority filter; policy drop;
-
+    
     jump ssh_input
     jump dhcp_input
-
+    
+    # Remove the following rule:
+    # iifname "lan" counter accept
+     
     iifname "ppp0" ct state { established, related } counter accept
     iifname "ppp0" counter drop
   }

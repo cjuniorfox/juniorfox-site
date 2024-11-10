@@ -121,7 +121,7 @@ DISK=/dev/disk/by-id/scsi-SATA_disk1
 Define your tank name. For this tutorial, I will use the name `rpool`.
 
 ```bash
-ZTANK=rpool
+ZROOT=zroot
 ```
 
 Wipe the disk entirely. Be aware that will erase all existing data.
@@ -168,14 +168,14 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 - **acltype=posixacl**: Requirement for installing Linux on a ZFS formatted system.
 
 ```bash
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl ${ZTANK} ${ROOT} -R /mnt
-zfs create -o mountpoint=none -o canmount=off ${ZTANK}/root
-zfs create -o mountpoint=/ -o canmount=noauto ${ZTANK}/root/nixos
-zfs mount ${ZTANK}/root/nixos
-zfs create -o mountpoint=/home ${ZTANK}/home
-zfs create -o mountpoint=legacy -o canmount=noauto ${ZTANK}/nix
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl ${ZROOT} ${ROOT} -R /mnt
+zfs create -o mountpoint=none -o canmount=off ${ZROOT}/root
+zfs create -o mountpoint=/ -o canmount=noauto ${ZROOT}/root/nixos
+zfs mount ${ZROOT}/root/nixos
+zfs create -o mountpoint=/home ${ZROOT}/home
+zfs create -o mountpoint=legacy -o canmount=noauto ${ZROOT}/nix
 mkdir /mnt/nix
-mount -t zfs ${ZTANK}/nix /mnt/nix
+mount -t zfs ${ZROOT}/nix /mnt/nix
 ```
 
 #### Swap dataset
@@ -187,14 +187,14 @@ zfs create -V 8G \
   -o compression=zle \
   -o logbias=throughput -o sync=always \
   -o primarycache=metadata -o secondarycache=none \
-  -o com.sun:auto-snapshot=false ${ZTANK}/swap
+  -o com.sun:auto-snapshot=false ${ZROOT}/swap
 ```
 
 Create the swap and start using it.
 
 ```bash
-mkswap -f /dev/zvol/${ZTANK}/swap
-swapon /dev/zvol/${ZTANK}/swap
+mkswap -f /dev/zvol/${ZROOT}/swap
+swapon /dev/zvol/${ZROOT}/swap
 ```
 
 ### 6. Mount Boot filesystem
@@ -202,7 +202,7 @@ swapon /dev/zvol/${ZTANK}/swap
 #### UEFI
 
 ```bash
-zfs create -o mountpoint=/boot ${ZTANK}/boot
+zfs create -o mountpoint=/boot ${ZROOT}/boot
 mkdir /mnt/boot/efi
 mount ${BOOT} /mnt/boot/efi
 ```
@@ -364,7 +364,7 @@ nixos-install
 
 ```bash
 cd /
-swapoff /dev/zvol/${ZTANK}/swap
+swapoff /dev/zvol/${ZROOT}/swap
 umount /boot/efi
 umount -Rl /mnt
 zpool export -a

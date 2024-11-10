@@ -63,9 +63,37 @@ For this project, I'll use a Docker image of **Unbound** that I created some tim
 
 ## Podman Setup
 
+### 1. Create pool and a dataset for Podman
+
+If you choose to create a separate **ZFS pool**, it's time to create a partition for it, the **ZFS Pool** and a intended dataset for **Podman**.
+
+As we don't have `parted` installed on our system, we can just open a `nix-shell` containing `parted` utility to use it for now.
+
+```bash
+nix-shell parted
+```
+
+```bash
+DISK=/dev/disk/by-id/scsi-SATA_disk1
+ZDATA=zdata
+```
+
+```bash
+parted ${DISK} mkpart ZFS 32G 100%
+#Assuming the data partition is the partition 4.
+DATA_PART="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
+zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl ${ZDATA} ${DATA_PART}
+```
+
+Assuming the new pool is **zdata** let's create mountpoints considering `/zdata/containers` as default container path.
+
+```bash
+zfs create zdata/containers
+```
+
 Let's begin by installing **Podman** on our **NixOS** system.
 
-### 1. Update NixOS Configuration File
+### 2. Update NixOS Configuration File
 
 *Note: Only update the relevant parts of the file. Do not replace the entire file with the content below.*
 
@@ -75,10 +103,7 @@ Edit the `/etc/nixos/configuration.nix` file:
 { config, pkgs, ... }:
 {
   ...
-  boot = {
-    kernelParams = [ "systemd.unified_cgroup_hierarchy=1" ];
-    ...
-  };
+  boot.kernelParams = [ "systemd.unified_cgroup_hierarchy=1" ];  
   ...
   imports = [
     ...
@@ -96,16 +121,25 @@ Create `modules/podman.nix` file
 {
   virtualisation = {
     containers.enable = true;
-    containers.storage.settings.storage.driver="zfs";
+    containers.storage.settings = {
+      storage = {
+        driver = "zfs";
+        graphroot = "/zdata/containers";
+        runroot = "/run/containers/storage";
+      };
+  };
+
     podman = {
       enable = true;
       defaultNetwork.settings.dns_enabled = true;
     };
   };
+
   environment.systemPackages = with pkgs; [
     dive # look into docker image layers
     podman-tui # status of containers in the terminal
   ];
+
   systemd.services.podman-autostart = {
     enable = true;
     after = [ "podman.service" ];
@@ -113,11 +147,9 @@ Create `modules/podman.nix` file
     description = "Automatically start containers with --restart=always tag";
     serviceConfig = {
       Type = "idle";
-      Environment=''LOGGING="--log-level=info"'';
       ExecStartPre = ''${pkgs.coreutils}/bin/sleep 1'';
-      ExecStart = ''/run/current-system/sw/bin/podman $LOGGING start --all --filter restart-policy=always'';
-      ExecStop="/bin/sh -c '/run/current-system/sw/bin/podman $LOGGING stop $(/run/current-system/bin/podman container ls --filter restart-policy=always -q)'";
-      # User = "<user-name>"; Only in case of rootless https://discourse.nixos.org/t/rootless-podman-compose-configuration/52523/4
+      ExecStart = ''/run/current-system/sw/bin/podman --all --filter restart-policy=always'';
+      User = "podman"; # In case of rootless https://discourse.nixos.org/t/rootless-podman-compose-configuration/52523/4
     };
   };
 }
@@ -129,103 +161,20 @@ Let's apply those changes to have **Podman** up and running.
 nixos-rebuild switch
 ```
 
-### 2. Create datasets for Podman
-
-Create a dataset for **Podman** on `/var/lib/containers/storage` with `acltype=posixacl` option.
-
-```bash
-zfs create -o mountpoint=/var -o canmount=off rpool/var
-zfs create -o mountpoint=/var/lib -o canmount=off rpool/var/lib
-zfs create -o mountpoint=/var/lib/containers -o canmount=off rpool/var/lib/containers
-zfs create -o mountpoint=/var/lib/containers/storage -o acltype=posixacl rpool/var/lib/containers/storage
-```
-
-### 3. Setup Firewall for Podman Default Network
-
-Since we are using `nftables`, Podman does not automatically apply firewall rules. Therefore, to enable access, such as internet connectivity, for networks created by **Podman**, it is necessary to manually add entries to the `nftables.nft` file. But first, let's check which networks **Podman** has configured.
-
-```bash
-podman network ls
-```
-
-```txt
- NETWORK ID    NAME                         DRIVER
- 000000000000  podman                       bridge
- 6b3beeb78ea9  podman-default-kube-network  bridge
-```
-
-Currently, there are two networks: `podman`, which is the default network for any container created without specifying a network, and `podman-default-kube-network`, which is the default for pods created with `podman kube play`.
-
-Now let's check the network ranges for those networks.
-
-```bash
-podman network inspect podman --format '{{range .Subnets}}{{.Subnet}}{{end}}'
-```
-
-```txt
-10.88.0.0/16
-```
-
-```bash
-podman network inspect podman-default-kube-network --format '{{range .Subnets}}{{.Subnet}}{{end}}'
-```
-
-```txt
-10.89.0.0/24
-```
-
-With the network ranges, it's time to configure our `nftables.nft`.
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-table inet filter {
-  ...
-  chain podman_networks_input {
-    ip saddr 10.88.0.0/16 accept comment "Podman default network"
-    ip saddr 10.89.0.0/24 accept comment "Podman default Kube network"
-  }
-
-  chain podman_networks_forward {
-    ip saddr 10.88.0.0/16 accept comment "Podman default network"
-    ip daddr 10.88.0.0/16 accept comment "Podman default network"
-    
-    ip saddr 10.89.0.0/24 accept comment "Podman default Kube network"
-    ip daddr 10.89.0.0/24 accept comment "Podman default Kube network"
-  }
-
-  chain input {
-    type filter hook input priority filter; policy drop;
-    ...
-    jump podman_networks_input
-    ...
-  }
-
-  chain forward {
-    type filter hook forward priority filter; policy drop;
-    ...
-    jump podman_networks_forward
-    ...
-  }
-}
-```
-
-Rebuild NixOS configuration
-
-```sh
-nixos-rebuild switch
-```
-
 ## Unbound Setup
 
-Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using the **Docker** image [docker.io/cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). Since **Podman** supports **Kubernetes-like** `yaml` deployment files, we'll create our own based on the example provided in the [GitHub repository](https://github.com/cjuniorfox/unbound/) for this image, specifically in the [kubernetes](https://github.com/cjuniorfox/unbound/tree/main/kubernetes) folder.
+Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using the **Docker** image [docker.io/cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). Since **Podman** supports **Kubernetes-like** `yaml` deployment files, we'll create our own based on the example provided in the [GitHub repository](https://github.com/cjuniorfox/unbound/) for this image, specifically in the [kubernetes](https://github.com/cjuniorfox/unbound/tree/main/kubernetes) folder. We'll also setup as rootless for security reasons. Log out from the server and log as `podman` user. If you setup your `~/.ssh/config` as I did, it's just:
+
+```bash
+ssh podman-admin
+```
 
 ### 1. Create Directories and Volumes for Unbound
 
-First, create a directory to store Podman's deployment `yaml` file and volumes. In this example, I'll create the directory under `/opt/podman` and place an `unbound` folder inside it. Additionally, create the `volumes/unbound-conf/` directory to store extra configuration files.
+First, create a directory to store Podman's deployment `yaml` file and volumes. In this example, I'll create the directory under `/home/podman/deployments` and place an `unbound` folder inside it. Additionally, create the `volumes/unbound-conf/` directory to store extra configuration files.
 
 ```sh
-mkdir -p /opt/podman/unbound/conf.d/
+mkdir -p /home/podman/deployments/unbound/
 ```
 
 ### 2. Build the YAML Deployment File
