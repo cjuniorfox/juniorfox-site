@@ -392,7 +392,7 @@ Our **DHCP Server** configuration wil be done by `kea.dhcp4`
       dhcp-socket-type= "raw";
     };
     lease-database = {
-      name = "/var/lib/kea/dhcp4leases.csv";
+      name = "/var/lib/kea/kea-leases4.csv";
       persist = true;
       type = "memfile";
     };
