@@ -85,11 +85,24 @@ DATA_PART="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
 zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl ${ZDATA} ${DATA_PART}
 ```
 
-Assuming the new pool is **zdata** let's create mountpoints considering `/zdata/containers` as default container path.
+Assuming the new pool is **zdata** let's create mountpoints considering `/zdata/containers` as default container path. The idea is storing the rootfull containers on /zdata/containers/root and for rootless, store at /zdata/containers/podman
 
 ```bash
-zfs create zdata/containers
+zfs create -o canmount=off zdata/containers
+zfs create zdata/containers/root
+zfs create zdata/containers/podman
+chown podman:podman /zdata/containers/podman
 ```
+
+To make new new pool available during boot, you have to add a boot entry into `configuration.nix`
+
+`/etc/nixos/configuration.nix`
+
+ ```nix
+ ...
+   boot.zfs.extraPools = [ "zdata" ];
+ ...
+ ```
 
 Let's begin by installing **Podman** on our **NixOS** system.
 
@@ -124,11 +137,11 @@ Create `modules/podman.nix` file
     containers.storage.settings = {
       storage = {
         driver = "zfs";
-        graphroot = "/zdata/containers";
+        graphroot = "/zdata/containers/root";
         runroot = "/run/containers/storage";
+        rootless_storage_path = "/zdata/containers/$USER";
       };
-  };
-
+    };
     podman = {
       enable = true;
       defaultNetwork.settings.dns_enabled = true;
@@ -148,11 +161,76 @@ Create `modules/podman.nix` file
     serviceConfig = {
       Type = "idle";
       ExecStartPre = ''${pkgs.coreutils}/bin/sleep 1'';
-      ExecStart = ''/run/current-system/sw/bin/podman --all --filter restart-policy=always'';
+      ExecStart = ''/run/current-system/sw/bin/podman start --all --filter restart-policy=always'';
       User = "podman"; # In case of rootless https://discourse.nixos.org/t/rootless-podman-compose-configuration/52523/4
     };
   };
 }
+```
+
+## Kea Watcher
+
+Rootless pods by default are unable to read Kea leases file. Unbound needs to read this file to make available resources into the network, but because our pod will run on a rootless environment. It will not able to do. To overcome this, let's create a single service to copy **leases file** contents to another place.
+
+`/etc/nixos/modules/what_kea_leases.nix`
+
+```nix
+{ config, pkgs, ... }:
+
+let
+  # The destination directory for the copied leases file
+  destinationDir = "/tmp/";
+  # Path to the watcher script
+  watcherScript = pkgs.writeShellScript "watch_kea_leases.sh" ''
+    #!/bin/bash
+    # Source and destination
+    SOURCE_FILE="/var/lib/kea/kea-leases4.csv"
+    DEST_DIR="${destinationDir}"
+    
+    # Ensure the destination directory exists
+    mkdir -p "$DEST_DIR"
+    if [ -f "$SOURCE_FILE" ]; then
+       cat "$SOURCE_FILE" > "$DEST_DIR/kea-leases4.csv"
+    fi
+    # Watch the source file for modifications
+    /run/current-system/sw/bin/inotifywait -m -e modify "$SOURCE_FILE" | while read path action file; do
+      # When the file changes, copy its contents to the destination directory
+      cat "$SOURCE_FILE" > "$DEST_DIR/kea-leases4.csv"
+      echo "Leases file updated and copied to $DEST_DIR"
+    done
+  '';
+  
+in {
+  systemd.services.watch_kea_leases = {
+    enable = true;
+    description = "Watch Kea Leases and Copy to Destination";
+    after = [ "network.target" ];
+    serviceConfig.ExecStart = "${watcherScript}";
+    serviceConfig.Restart = "always";
+    serviceConfig.User = "root";
+  };
+  users.users.root.extraGroups = [ "podman" ];
+  environment.systemPackages = [
+    pkgs.coreutils
+  ];
+
+  systemd.tmpfiles.rules = [
+    "d ${destinationDir} 0755 root root"
+  ];
+  #Make destination directory readable from user podman
+}
+```
+
+Also, edit `configuration.nix` and add to it `inotify-tools`. The tool used to watch the leases file for any change.
+
+`/etc/nixos/configuration.nix`
+
+```nix
+environment.systemPackages = with pkgs; [
+    ...
+    inotify-tools #To unbound watcher
+    ...
+  ];
 ```
 
 Let's apply those changes to have **Podman** up and running.
@@ -166,7 +244,7 @@ nixos-rebuild switch
 Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using the **Docker** image [docker.io/cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). Since **Podman** supports **Kubernetes-like** `yaml` deployment files, we'll create our own based on the example provided in the [GitHub repository](https://github.com/cjuniorfox/unbound/) for this image, specifically in the [kubernetes](https://github.com/cjuniorfox/unbound/tree/main/kubernetes) folder. We'll also setup as rootless for security reasons. Log out from the server and log as `podman` user. If you setup your `~/.ssh/config` as I did, it's just:
 
 ```bash
-ssh podman-admin
+ssh podman-macmini
 ```
 
 ### 1. Create Directories and Volumes for Unbound
@@ -174,18 +252,14 @@ ssh podman-admin
 First, create a directory to store Podman's deployment `yaml` file and volumes. In this example, I'll create the directory under `/home/podman/deployments` and place an `unbound` folder inside it. Additionally, create the `volumes/unbound-conf/` directory to store extra configuration files.
 
 ```sh
-mkdir -p /home/podman/deployments/unbound/
+mkdir -p /home/podman/deployments/unbound/conf.d/
 ```
 
 ### 2. Build the YAML Deployment File
 
-Next, create a `unbound.yaml` file in `/opt/podman/unbound/`. This file is based on the example provided in the **Docker** image repository [cjuniorfox/unbound](https://github.com/cjuniorfox/unbound/).
+Next, create a `unbound.yaml` file in `/home/podman/deployments/unbound/`. This file is based on the example provided in the **Docker** image repository [cjuniorfox/unbound](https://github.com/cjuniorfox/unbound/).
 
-<!-- markdownlint-disable MD033 -->
-<details>
-  <summary>Click to expand the <b>unbound.yaml</b> file.</summary>
-
-`/opt/podman/unbound/unbound.yaml`
+`/home/podman/deployments/unbound/unbound.yaml`
 
 ```yaml
 apiVersion: v1
@@ -213,48 +287,37 @@ spec:
         - name: DHCPSERVER
           value: "kea" # DHCP server used on our server
       ports:
-        - containerPort: 853 # DNS over TLS for all networks
+        - containerPort: 1853 # DNS over TLS for all networks
           protocol: TCP
-          hostPort: 853
-        - containerPort: 53
+          hostPort: 1853
+        - containerPort: 1053
           protocol: UDP
-          hostPort: 53
-          hostIP: 10.1.1.1 # LAN network
-        - containerPort: 53
-          protocol: UDP
-          hostPort: 53
-          hostIP: 10.1.30.1 # Guest network
-        - containerPort: 90
-          protocol: UDP
-          hostPort: 90
-          hostIP: 10.1.90.1 # IoT network
+          hostPort: 1053
       volumeMounts:
-        - name: var-lib-kea-dhcp4.leases-host
+        - name: tmp-kealeases4-host
           mountPath: /dhcp.leases
-        - name: opt-podman-unbound-confd-host
+        - name: home-podman-deployments-unbound-confd-host
           mountPath: /unbound-conf
         - name: unbound-conf-pvc          
           mountPath: /etc/unbound/unbound.conf.d
   restartPolicy: Always
   volumes:
-    - name: var-lib-kea-dhcp4.leases-host
+    - name: tmp-kealeases4-host
       hostPath:
-        path: /var/lib/kea/dhcp4.leases
-    - name: opt-podman-unbound-confd-host
+        path: /tmp/kea-leases4.csv
+    - name: home-podman-deployments-unbound-confd-host
       hostPath:
-        path: /opt/podman/unbound/conf.d/
+        path: /home/podman/deployments/unbound/conf.d/
     - name: unbound-conf-pvc      
       persistentVolumeClaim:
         claimName: unbound-conf
 ```
 
-</details> <!-- markdownlint-enable MD033 -->
+### 4. Additional Configuration Files
 
-### 3. Additional Configuration Files
+You can place additional configuration files in the `unbound/conf.d/` directory. These files can be used to enable features like a **TLS DNS server** for internet traffic or to define DNS names for hosts on your network. You can also block DNS resolution for specific hosts on the internet. This step is optional. Below is an example configuration that enables DNS resolution for the **Mac Mini** gateway server on the `lan` network.
 
-You can place additional configuration files in the `volumes/unbound-conf/` directory. These files can be used to enable features like a **TLS DNS server** for internet traffic or to define DNS names for hosts on your network. You can also block DNS resolution for specific hosts on the internet. This step is optional. Below is an example configuration that enables DNS resolution for the **Mac Mini** gateway server on the `lan` network.
-
-`/opt/podman/unbound/conf.d/local.conf`
+`/home/podman/deployments/unbound/conf.d/local.conf`
 
 ```conf
 server:
@@ -265,90 +328,24 @@ server:
   local-data: "macmini.example.com. IN A 10.1.90.1"
 ```
 
-### 4. Create a Podman Network for Unbound
-
-**Unbound** will play a major role in our solution. There will be specific rules for it, such as redirecting all **DNS requests** on the local network to **Unbound**, regardless of the **DNS server IP** configured on individual hosts. Therefore, having a dedicated network with a **fixed IP address** is crucial.
-
-With that in mind, let's create a network for **Unbound**. This network will require two IP addresses: one for the **host machine** to act as the **Internet Gateway**, allowing **Unbound** to query **DNS names** from the **internet**, and one for the **Unbound** container itself. Since we only need a small number of IPs, we'll create a network with just **6 IPs**. We'll place this network at the very end of the `10.89.1.xxx` range, specifically at `10.89.1.248/30`.
-
-```bash
-podman network create \
-  --driver bridge \
-  --gateway 10.89.1.249 \
-  --subnet 10.89.1.248/30 \
-  --ip-range 10.89.1.250/30 \
-  unbound-net
-```
-
-### 5. Add the Newly Created Network to the Firewall
-
-As mentioned earlier, it is mandatory to add the new network to the `nftables.nft` file.
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-table inet filter {
-  ...
-  chain podman_networks_input {
-    ...
-    ip saddr 10.89.1.248/30 accept comment "Podman unbound-net network"
-  }
-
-  chain podman_networks_forward {
-    ...
-    ip saddr 10.89.1.248/30 accept comment "Podman unbound-net network"
-    ip daddr 10.89.1.248/30 accept comment "Podman unbound-net network"
-  }
-  ...
-}
-```
-
-Apply new firewall rules
-
-```sh
-nixos-rebuild switch
-```
-
-### 6. Start the Unbound Container
+### 5. Start the Unbound Container
 
 Start the **Unbound** pod on the `unbound-net` network with the fixed IP address `10.89.1.250`. This IP address will be useful for configuring firewall rules later.
 
 ```bash
 podman kube play --replace \
-  /opt/podman/unbound/unbound.yaml \
-  --network unbound-net \
-  --ip 10.89.1.250
+  /opt/podman/unbound/unbound.yaml
 ```
 
 ## Firewall Rules
 
-**Podman** has set up the ports specified in the `pod.yaml` file, and **Unbound** is now successfully resolving DNS queries for your gateway. Any device on your network can now use the gateway as its DNS server. You can verify this by running the following command and checking the response:
+By default, Linux does not allow opening ports lower than port 1024. As the default DNS port is 53, We have to forward port 1053 to 53.
 
-```bash
-dig @10.1.1.1 google.com
+Edit `/etc/nixos/modules/nftables.nft`
 
-; <<>> DiG 9.18.28 <<>> @10.1.144.1 google.com
-; (1 server found)
-;; global options: +cmd
-;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 41111
-;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+```conf
 
-;; OPT PSEUDOSECTION:
-; EDNS: version: 0, flags:; udp: 1232
-;; QUESTION SECTION:
-;google.com.  IN  A
-
-;; ANSWER SECTION:
-; google.com.  170  IN  A 142.251.129.78
-
-;; Query time: 286 msec
-;; SERVER: 10.1.144.1#53(10.1.144.1) (UDP)
-;; WHEN: Wed Oct 16 12:41:21 UTC 2024
-;; MSG SIZE  rcvd: 55
 ```
-
-However, there are devices tending to use other DNS servers than Unbound, which I don't want to. So, I made a rule that redirects every DNS request on network **LAN** to **Unbound**. The client has no idea what happens.
 
 ### Update Firewall Configuration
 
