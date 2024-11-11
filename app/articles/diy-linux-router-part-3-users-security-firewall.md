@@ -108,6 +108,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
       openssh.authorizedKeys.keys = [
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."  # Replace with the actual public key
       ];
+      linger = true; # Lingering enables systemd user services to start up without logging into user account.
     };
 
     # Git user
