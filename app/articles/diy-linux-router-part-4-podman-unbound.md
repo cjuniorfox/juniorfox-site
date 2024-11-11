@@ -152,24 +152,12 @@ Create `modules/podman.nix` file. In this file we have the podman configuration 
     dive # look into docker image layers
     podman-tui # status of containers in the terminal
   ];
-
-  systemd.user.services.podman-autostart = {
-    enable = true;
-    after = [ "podman.service" ];
-    wantedBy = [ "multi-user.target" ];
-    description = "Automatically start containers with --restart=always tag";
-    serviceConfig = {
-      Type = "idle";
-      ExecStartPre = ''${pkgs.coreutils}/bin/sleep 1'';
-      ExecStart = ''/run/current-system/sw/bin/podman start --all --filter restart-policy=always'';
-    };
-  };
 }
 ```
 
 ### 3. Enable Linger to user podman
 
-To start the service without logging into it, you should enable `linger` to user `podman`. Run the following command with `sudo`
+To restart pods on a rootless podman user, we have to start it's `systemd` services upon reboots. To do that, enable `linger` to user `podman`. Run the following command with `sudo`
 
 ```bash
 loginctl enable-linger podman
@@ -340,13 +328,58 @@ server:
   local-data: "macmini.example.com. IN A 10.1.90.1"
 ```
 
-### 5. Start the Unbound Container
+### 5. Define a systemd service for unbound
 
-Start the **Unbound** pod with the following command:.
+Let's create a systemd service for unbound to recreate it's pods during reboots. To do that, create a file in the `/home/podman/.config/systemd/user/unbound-podman.service`
+
+If the directory doesn't exist, create it with `mkdir -p /home/podman/.config/systemd/user/`
+
+`/home/podman/.config/systemd/user/podman-unbound.service`
+
+```ini
+[Unit]
+Description=Rebuild Unbound Podman Pod
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=fork
+ExecStartPre=/bin/sh -c 'until /run/current-system/sw/bin/ping -c1 8.8.8.8 &>/dev/null; do /run/current-system/sw/bin/sleep 2; done'
+ExecStart=/run/current-system/sw/bin/podman --log-level=info kube play --replace /home/podman/deployments/unbound/unbound.yaml
+ExecStop=/run/current-system/sw/bin/podman --log-level=info kube down /home/podman/deployments/unbound/unbound.yaml
+RemainAfterExit=true
+
+[Install]
+WantedBy=default.target
+```
+
+### 6. Start the Unbound Container
+
+Start the **Unbound** pod by `systemd`:
 
 ```bash
-podman kube play --replace \
-  /opt/podman/unbound/unbound.yaml
+systemctl --user daemon-reload
+systemctl --user enable --now podman-unbound.service
+```
+
+Some commands to check the status of the container.
+
+#### Service status
+
+```bash
+systemctl --user status unbound-podman
+```
+
+#### List pods
+
+```bash
+podman pod list
+```
+
+#### Check the logs of pod
+
+```bash
+podman pod logs -f unbound
 ```
 
 ## Firewall Rules
@@ -365,7 +398,7 @@ table
 table inet filter {
   ...
   chain unbound_dns_input {
-    iifname {"lan", "guest", "iot" } udp dport 1053 ct state { new, established } counter accept comment "Allow Unbound DNS server"
+    iifname {"br0", "enge0.30", "enge0.90" } udp dport 1053 ct state { new, established } counter accept comment "Allow Unbound DNS server"
   } 
   ...
   chain input {
@@ -387,7 +420,7 @@ table
 table nat {
   chain unbound_redirect {
     # Redirect all DNS requests to any host to Unbound
-    iifname "lan" udp dport 53 redirect to 1053 
+    iifname "br0" udp dport 53 redirect to 1053 
     # Redirect DNS to unbound, allow third-party DNS servers
     ip daddr {10.1.30.1, 10.1.90.1 } udp dport 53 redirect to 1053 
   }
@@ -401,7 +434,7 @@ table nat {
 
 ## Update DHCP Settings
 
-Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember that at `lan` network, every DNS server used for any client will be redirected to the local **Unbound server**.
+Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember that at `br0` network, every DNS server used for any client will be redirected to the local **Unbound server**.
 
 **Leave the rest of the configuration as it is.**
 
@@ -412,17 +445,19 @@ Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember tha
     subnet4 = [
       {
         subnet = "10.1.1.0/24";
-        interface = "lan";
+        interface = "br0";
+        description = "Home";
         pools = [ { pool = "10.1.1.100 - 10.1.1.200"; } ]; 
         option-data = [
-          { name = "routers"; data = "10.1.1.1, 8.8.8.8, 8.8.4.4"; }
-          { name = "domain-name-servers"; data = "8.8.8.8"; } 
+          { name = "routers"; data = "10.1.1.1"; }
+          { name = "domain-name-servers"; data = "10.1.1.1, 8.8.8.8, 8.8.4.4"; } 
           { name = "domain-search"; data = "example.com"; } 
         ];
       }
       {
         subnet = "10.1.30.0/24";
-        interface = "guest";
+        interface = "enge0.30";
+        description = "Guest"
         pools = [ { pool = "10.1.30.100 - 10.1.30.200"; } ];
         option-data = [
           { name = "routers"; data = "10.1.30.1"; }
@@ -431,11 +466,12 @@ Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember tha
       }
       {
         subnet = "10.1.90.0/24";
-        interface = "iot";
+        interface = "enge0.90";
+        description = "IoT";
         pools = [ { pool = "10.1.90.100 - 10.1.90.200"; } ]; 
         option-data = [
-          { name = "routers"; data = "10.1.90.1, 8.8.8.8, 8.8.4.4"; }
-          { name = "domain-name-servers"; data = "8.8.8.8"; } 
+          { name = "routers"; data = "10.1.90.1"; }
+          { name = "domain-name-servers"; data = "10.1.90.1, 8.8.8.8, 8.8.4.4"; } 
         ];
       }
     ];

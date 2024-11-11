@@ -231,12 +231,12 @@ table inet filter {
 
   # Add the following chains to `inet filter` table.
   chain ssh_input {
-    iifname "lan" tcp dport 22 ct state { new, established } counter accept comment "Allow SSH on LAN"
+    iifname "br0" tcp dport 22 ct state { new, established } counter accept comment "Allow SSH on LAN"
     iifname "ppp0" tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic from ppp0 interface with rate limiting"
   }
 
   chain dhcp_input {
-    iifname { "lan", "guest", "iot" } udp dport 67 ct state { new, established } counter accept comment "Allow DHCP on LAN, Guest and IoT networks"
+    iifname { "br0", "enge0.30", "enge0.90" } udp dport 67 ct state { new, established } counter accept comment "Allow DHCP on LAN, Guest and IoT networks"
   }
 
   chain input {
@@ -259,7 +259,7 @@ table inet filter {
 }
 ```
 
-This setup has created a discrete configuration for services enabled on our server. In this case, it only allows the `DHCP` service for `lan`, `guest` and `iot` networks, and enables `ssh` for both `lan` and `ppp0`. You might think that allowing **SSH** traffic to our server is a security breach, but as long as we increased the security on `SSH` by blocking users from logging in with a password, allowing this traffic is up to security standards. Also, to make it difficult for any attempt to brute force the security encryption of our server, we have configured a rule to allow only **10 new connections per minute**.
+This setup has created a discrete configuration for services enabled on our server. In this case, it only allows the `DHCP` service for `Home`, `Guest` and `IoT` networks, and enables `ssh` for both `Home` and `ppp0`. You might think that allowing **SSH** traffic to our server is a security breach, but as long as we increased the security on `SSH` by blocking users from logging in with a password, allowing this traffic is up to security standards. Also, to make it difficult for any attempt to brute force the security encryption of our server, we have configured a rule to allow only **10 new connections per minute**.
 
 ### Rebuild the configuration and test
 

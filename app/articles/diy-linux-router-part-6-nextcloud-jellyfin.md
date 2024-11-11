@@ -55,10 +55,19 @@ So, why not own your proper content and run your own on-demand media server? Jel
 
 Both Jellyfin and Nextcloud store and access files. We could just create folders for them, but properly setting up the storage is better for properly backing up the data. With **ZFS** is fairly easy to create the intended **datasets** for each service.
 
+Run with `sudo`:
+
 ```bash
-zfs create -o mountpoint=none rpool/mnt
-zfs create -o mountpoint=/mnt/container-volumes/nextcloud rpool/mnt/container-volumes/nextcloud
-zfs create -o mountpoint=/mnt/shares/media rpool/mnt/shares/media
+ZDATA=zdata
+```
+
+```bash
+zfs create -o canmount=off ${ZDATA}/containers/podman/volumes
+zfs create ${ZDATA}/containers/podman/volumes/nextcloud_html
+zfs create ${ZDATA}/containers/podman/volumes/nextcloud_db
+zfs create -o canmount=off ${ZDATA}/shares
+zfs create ${ZDATA}/shares/media
+chown -R podman:podman /${ZDATA}/containers/podman/volumes/nextcloud_*
 ```
 
 ## Ingress
@@ -74,34 +83,10 @@ On the domain administrator you have, add two DNS entries for your **IPv4** (A e
 
 As **Nextcloud** and **Jellyfin**, our **Ingress** will live into a **Podman's Pod** (or into a **VPS** for the case mentioned earlier). The **Ingress** needs to be able to talk with the **Nextcloud** and **Jellyfin** pods. So let's create a network for them.
 
-```bash
-podman network create \
-  --driver bridge   \
-  --gateway 10.90.1.1 \
-  --subnet 10.90.1.0/24 \
-  --ip-range 10.90.1.100/24  \
-  ingress-net
-```
-
-Do not forget to add the new range to `nftables.nft`.
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-  chain podman_networks_input {
-    ...
-    ip saddr 10.90.1.0/24 accept comment "Podman ingress-net network"
-  }
-
-  chain podman_networks_forward {
-    ...
-    ip saddr 10.90.1.0/24 accept comment "Podman ingress-net network"
-    ip daddr 10.90.1.0/24 accept comment "Podman ingress-net network"
-  }
-```
+Run as `podman` user:
 
 ```bash
-nixos-rebuild switch
+podman network create ingress-net
 ```
 
 ### Ingress Pod
@@ -111,12 +96,12 @@ It's time to create our `ingress-pod`. As still there's none of the services run
 #### 1. Create a folder to act as **conf** volume
 
 ```bash
-mkdir -p /opt/podman/ingress/conf
+mkdir -p /home/podman/deployments/ingress/conf
 ```
 
 #### 2. Create a basic configuration for **NGINX**
 
-`/opt/podman/ingress/conf/default_server.conf`
+`/home/podman/deployments/ingress/conf/default_server.conf`
 
 ```conf
 server {
@@ -135,7 +120,7 @@ server {
 <details>
   <summary>Click to expand the <b>ingress.yamll</b>.</summary>
 
-`/opt/podman/ingress/ingress.yaml`
+`/home/podman/deployments/ingress/ingress.yaml`
 
 ```yaml
 apiVersion: v1
@@ -172,7 +157,7 @@ spec:
       type: File
   - name: opt-podman-ingress-conf-host
     hostPath:
-      path: /opt/podman/ingress/conf
+      path: /home/podman/deployments/ingress/conf
       type: Directory
   - name: ingress-www-pvc
     persistentVolumeClaim:
@@ -188,7 +173,7 @@ spec:
 
 ```bash
 podman kube play \
-  /opt/podman/ingress/ingress.yaml \
+  /home/podman/deployments/ingress/ingress.yaml \
   --replace --network ingress-net
 ```
 
@@ -204,7 +189,7 @@ The **Let's Encrypt** is a free service that provides **SSL Certificates**. It's
 <details>
   <summary>Click to expand the <b>lets-encrypt.yaml</b>.</summary>
 
-`/opt/podman/ingress/lets-encrypt.yaml`
+`/home/podman/deployments/ingress/lets-encrypt.yaml`
 
 ```yaml
 apiVersion: v1
@@ -257,7 +242,7 @@ spec:
 
 ```bash
 podman kube play \
-  /opt/podman/ingress/lets-encrypt.yaml \
+  /home/podman/deployments/ingress/lets-encrypt.yaml \
   --replace --network ingress-net
 ```
 
@@ -273,7 +258,7 @@ podman pod logs lets-encrypt
 
 Update the configuration of the **nginx** with the certitication path.
 
-`/opt/podman/ingress/conf/default_server.conf`
+`/home/podman/deployments/ingress/conf/default_server.conf`
 
 ```conf
 ssl_certificate     /etc/certificates/live/example.com/fullchain.pem;
@@ -302,7 +287,7 @@ Now that we have the **Ingress** ready, we can start creating the **Nextcloud** 
 Create a path to place **Nextcloud** configuration files.
 
 ```bash
-mkdir -p /opt/podman/nextcloud/
+mkdir -p /home/podman/deployments/nextcloud/
 ```
 
 ### Secrets
@@ -315,7 +300,7 @@ We will need to create a **secret** for the **Nextcloud** service. This secret w
 <details>
   <summary>Click to expand the <b>create_secret.sh</b> file.</summary>
   
-`/opt/podman/nextcloud/create_secret.sh`
+`/home/podman/deployments/nextcloud/create_secret.sh`
 
 ```sh
 #!/bin/bash
@@ -337,8 +322,8 @@ echo "Secret file created with the name secret.yaml"
 ```
 
 ```bash
-chmod +x /opt/podman/nextcloud/create_secret.sh
-cd /opt/podman/nextcloud
+chmod +x /home/podman/deployments/nextcloud/create_secret.sh
+cd /home/podman/deployments/nextcloud
 ./create_secret.sh
 ```
 
@@ -351,7 +336,7 @@ Secret file created with the name secret.yaml
 #### 2. Deploy the secret file created
 
 ```bash
-podman kube play /opt/podman/nextcloud/secret.yaml
+podman kube play /home/podman/deployments/nextcloud/secret.yaml
 ```
 
 #### 3. Check for the newly created secret
@@ -372,7 +357,7 @@ b22f3338bbdcec1ecd2044933  nextcloud-secrets  file        About a minute ago  Ab
 Maintaining the secret file can be a security flaw. It's a good practice to delete the secret file after deployment. Be aware that you cannot retrieve it's secret contents again in the future.
 
 ```bash
-rm -f /opt/podman/nextcloud/secret.yaml
+rm -f /home/podman/deployments/nextcloud/secret.yaml
 ```
 
 ### YAML for Nextcloud
@@ -383,7 +368,7 @@ The **Nextcloud** service will be deployed on **Podman**. To do this, we will ne
 <details>
   <summary>Click to expand the <b>nextcloud.yaml</b>.</summary>
 
-`/opt/podman/nextcloud/nextcloud.yaml`
+`/home/podman/deployments/nextcloud/nextcloud.yaml`
 
 ```yaml
 apiVersion: v1
@@ -468,7 +453,7 @@ This `yaml` file will create a **Nextcloud** service with a **MariaDB** database
 ```bash
 mkdir -p /mnt/container-volumes/nextcloud/html/
 podman kube play \
-  /opt/podman/nextcloud/nextcloud.yaml \
+  /home/podman/deployments/nextcloud/nextcloud.yaml \
   --replace --network ingress-net
 ```
 
@@ -477,7 +462,7 @@ podman kube play \
 As usual, create a directory to maintain **Jellyfin** configuration files.
 
 ```bash
-mkdir -p /opt/podman/jellyfin
+mkdir -p /home/podman/deployments/jellyfin
 ```
 
 The **Jellyfin** service will be deployed on **Podman**. To do this, we will need to create a `yaml` file with the following content:
@@ -486,7 +471,7 @@ The **Jellyfin** service will be deployed on **Podman**. To do this, we will nee
 <details>
   <summary>Click to expand the <b>jellyfin.yaml</b>.</summary>
 
-`/opt/podman/jellyfin/jellyfin.yaml`
+`/home/podman/deployments/jellyfin/jellyfin.yaml`
 
 ```yaml
 apiVersion: v1
@@ -533,7 +518,7 @@ This `yaml` file will create a **Jellyfin** service. Start the **Jellyfin** serv
 
 ```bash
 podman kube play \
-  /opt/podman/jellyfin/jellyfin.yaml \
+  /home/podman/deployments/jellyfin/jellyfin.yaml \
   --replace --network ingress-net
 ```
 
@@ -543,7 +528,7 @@ Our services are up and running on our Gateway and comes the time to configure o
 
 ### 1. Crete the **Nextcloud** configuration file
 
-`/opt/podman/ingress/conf/nextcloud.conf`
+`/home/podman/deployments/ingress/conf/nextcloud.conf`
 
 ```conf
 server {
@@ -569,7 +554,7 @@ server {
 
 ### 2. Create the **Jellyfin** configuration file
 
-`/opt/podman/ingress/conf/jellyfin.conf`
+`/home/podman/deployments/ingress/conf/jellyfin.conf`
 
 ```conf
 server {
@@ -591,7 +576,7 @@ server {
 
 As we have the **Unifi Network Application** already set on server, we can create a ingress for it.
 
-`/opt/podman/ingress/conf/unifi-network.conf`
+`/home/podman/deployments/ingress/conf/unifi-network.conf`
 
 ```conf
 map $http_upgrade $connection_upgrade {
@@ -633,7 +618,7 @@ server {
 
 You can optionally remove the `forward port` for `8443/tcp` from the pod's `yaml`. To do so, it's just removing the following lines:
 
-`/opt/podman/unifi-network/unifi-network.yaml`
+`/home/podman/deployments/unifi-network/unifi-network.yaml`
 
 ```yaml
 ...
@@ -655,7 +640,7 @@ spec:
 Redo the deployment of `unifi-network` pod with parameter `--network=ingress-net`:
 
 ```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml --network ingress-net
+podman kube play --replace /home/podman/deployments/unifi-network/unifi-network.yaml --network ingress-net
 ```
 
 ### 4. Configure the resolver
@@ -675,7 +660,7 @@ Gateway: 10.90.1.1
 <!-- markdownlint-disable MD029 -->
 2. Create the resolver with the `IP Address` obtained:
 
-`/opt/podman/ingress/conf/resolver.conf`
+`/home/podman/deployments/ingress/conf/resolver.conf`
 
 ```conf
 resolver 10.90.1.1 valid=30s;
@@ -693,7 +678,7 @@ podman pod restart ingress
 
 My domain set on **Cloudflare**. To resolve my local DNS's, I will need to retrieve the DNS entries from **Cloudflare** and access those services via my **Public IP** over the Internet. This isn't needed, as I able to resolve the addresses locally. To do so, let's update the configuration for **Unbound** for resolving those addresses locally by editing the `local.conf`
 
-`/opt/podman/unbound/conf.d/local.conf`
+`/home/podman/deployments/unbound/conf.d/local.conf`
 
 ```conf
 server:
@@ -710,7 +695,7 @@ server:
 Restart Unbound:
 
 ```bash
-podman kube play --replace /opt/podman/unbound/unbound.yaml
+podman kube play --replace /home/podman/deployments/unbound/unbound.yaml
 ```
 
 ## Conclusion

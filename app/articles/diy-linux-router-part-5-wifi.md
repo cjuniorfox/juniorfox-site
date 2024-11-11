@@ -16,6 +16,7 @@ This is the fifth part of this series, we will configure our wireless network us
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
+- Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 
 Já temos um roteador de internet funcional e confiável, mas ainda não configuramos nossa rede **Wifi** e este capítulo enderecerá isso.
@@ -26,6 +27,7 @@ Já temos um roteador de internet funcional e confiável, mas ainda não configu
 - [Introduction](#introduction)
 - [Physical Connection](#physical-connection)
 - [Pod Setup](#pod-setup)
+- [Firewall](#firewall)
 - [Conclusion](#conclusion)
 
 ## Introduction
@@ -65,19 +67,17 @@ sudo -i
 Create a directory to contain all the files to manage this pod.
 
 ```bash
-mkdir -p /opt/podman/unifi-network
+mkdir -p /home/podman/deployments/unifi-network
 ```
 
 ### 2. Create the `secret.yaml` file
 
 The **Unifi Network Application** uses a **MongoDB Database** to persist information, which demands setting up **usernames** and **passwords**. We could create a generic password as plain text, but this would be a security risk. It is better to use a complex password and store it securely. **Podman** offers a functionality of this which is the `secrets repository`. I made a simple script that generates the intended passwords randomly and then creates the `secret.yaml` file with it file for deployment.
 
-Create a `sh` file with the following:
-
-`/opt/podman/unifi-network/create_secret.sh`
+Copy and paste the following command as `podman` user:
 
 ```sh
-#!/bin/bash
+cd /home/podman/deployments/unifi-network
 
 export MONGO_INITDB_PASSWORD="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
 export MONGO_PASS="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
@@ -95,18 +95,10 @@ EOF
 echo "Secret file created with the name secret.yaml"
 ```
 
-Attribute to script the execution flag (`-x`) and run it.
-
-```bash
-chmod +x /opt/podman/unifi-network/create_secret.sh
-cd /opt/podman/unifi-network/
-./create_secret.sh
-```
-
 A file named `secret.yaml` wil be created at the directory you are in. Deploy it on `podman`:
 
 ```bash
-podman kube play /opt/podman/unifi-network/secret.yaml
+podman kube play /home/podman/deployments/unifi-network/secret.yaml
 ```
 
 If everything worked as intended. You had deployed a new secret into `podman`. You can check it by:
@@ -123,14 +115,14 @@ ID                         NAME                  DRIVER      CREATED        UPDA
 After deploying this secret, is a good practice to delete the `secret.yaml` file. Be aware that by doing so, you will be unable to delete and recreate this secret using the same password previously created.
 
 ```bash
-rm /opt/podman/unifi-network/secret.yaml
+rm /home/podman/deployments/unifi-network/secret.yaml
 ```
 
 ### 3. Create the `unifi-network.yaml` pod file
 
 As **Podman** being able to natively deploy **Kubernetes** deployment files, let's create a deployment file for **Unifi Network Application**.
 
-`/opt/podman/unifi-network/unifi-network.yaml`
+`/home/podman/deployments/unifi-network/unifi-network.yaml`
 
 ```yaml
 apiVersion: v1
@@ -276,12 +268,79 @@ spec:
 
 ```
 
-### 4. Deploy the Unifi Network Application
+### 4. Create a new system user service
 
-The deployment of the **Unifi Network Application** can be performed by running the following command:
+Create a `systemd` user service for **Unifi Network Application**, so the pod can be recreated upon restart.
+
+`/home/podman/.config/systemd/user/podman-unifi-network.service`
+
+```ini
+[Unit]
+Description=Rebuild Unifi Network Application Podman Pod
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sh -c 'until /run/current-system/sw/bin/ping -c1 8.8.8.8 &>/dev/null; do /run/current-system/sw/bin/sleep 2; done'
+ExecStart=/run/current-system/sw/bin/podman --log-level=info kube play --replace /home/podman/deployments/unifi-network/unifi-network.yaml
+ExecStop=/run/current-system/sw/bin/podman --log-level=info kube down /home/podman/deployments/unifi-network/unifi-network.yaml
+RemainAfterExit=true
+
+[Install]
+WantedBy=default.target
+```
+
+### 5. Start the Unifi Network Container
+
+Enable the `systemd` service the **Unifi Network** pod by `systemd`:
 
 ```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml
+systemctl --user daemon-reload
+systemctl --user enable --now podman-unifi-network.service
+```
+
+## Firewall
+
+To make **Unifi Network** available to the network, it's necessary to open firwall ports. As all the ports are above the `1024`, it's just a matter of opening them. The ports are:
+
+- **3478/UDP** - Unifi STUN port.
+- **10001/UDP** - Unifi Discovery port.
+- **8080/TCP** - HTTP port for communication between Unifi devices.
+- **8443/TCP** - HTTPS Web port. Will keep it open temporarely.
+
+### Edit `nftables.nft`
+
+Edit the file `nftables.nft` as described:
+
+`/etc/nixos/modules/nftables.nft`
+
+```conf
+table inet filter {
+  ...
+  chain unifi_network_input {
+    iifname "br0" udp dport 3478 ct state {new, established } counter accept comment "Unifi STUN"
+    iifname "br0" udp dport 10001 ct state {new, established } counter accept comment "Unifi Discovery"
+    iifname "br0" tcp dport 8080 ct state {new, established } counter accept comment "Unifi Communication"
+    iifname "br0" tcp dport 8443 ct state {new, established } counter accept comment "Unifi Webmanager"
+  }
+  chain input {
+    ...
+    jump unbound_dns_input
+    jump unifi_network_input   
+ 
+    # Allow returning traffic from ppp0 and drop everything else
+    iifname "ppp0" ct state { established, related } counter accept
+    iifname "ppp0" drop
+  }
+  ...
+}
+```
+
+Rebuild **NixOS** as usual
+
+```bash
+nixos-rebuild switch
 ```
 
 ## Configuration

@@ -105,10 +105,10 @@ Let's have the following networks:
 
 | Network      | Interface | VLAN      |
 |--------------|-----------|----------:|
-|10.1.1.0/24   | Lan       | untagged  |
+|10.1.1.0/24   | Home      | untagged  |
 |10.1.30.0/24  | Guest     | 30        |
 |10.1.90.0/24  | IoT       | 90        |
-|PPPoE         | PPP0      | 2         |
+|PPPoE         | ppp0      | 2         |
 
 Let's focus only on IPV4 for now. But we can have IPV6 later.
 
@@ -141,10 +141,12 @@ As far as this Mac Mini only has one Gigabit Ethernet port, this NIC will be tie
 
 #### Networks
 
-- `10.1.1.0/24` is a bridge bound to the NIC. In my case `enp4s0f0`. I leave it as untagged to be easy to reach the computer over the network, if I have some ssue with my switch.
-- `10.1.30.0/24` is `enp4s0f0.30` (VLAN 30) as `guest` network.
-- `10.1.90.0/24` is `enp4s0f0.90` (VLAN 90) as `iot` network.
-- `PPPoE` is `enp4s0f0.2` as `wan` network to PPPoE connection.
+- **Home** : `10.1.1.0/24` is a bridge `br0`. I leave it as untagged to be easy to reach the computer over the network.
+- **Guest**: `10.1.30.0/24` is `enge0.30` (VLAN 30).
+- **IoT**  : `10.1.90.0/24` is `enge0.90` (VLAN 90).
+- **WAN**  : `PPPoE` is `enge0.2` network to **PPPoE** connection.
+
+My network interface is named originally as `enp4s0f0`. This is a persistent name defined by the driver and physical connection of the NIC on the bus, but this name can change sometimes. So I prefer to rename it to another thing more persistent. At case `enge0` tied to the **MAC Address**.
 
 ## NixOS config
 
@@ -226,48 +228,74 @@ As mentioned before, our Mac Mini only has one NIC, this setup relies on VLANs t
 In the example, I'm using the Macmini's NIC `enp4s0f0`. Verify your NIC identification by running:
 
 ```bash
-ip link
+ip link show
 ```
 
 ```txt
+ip link show 
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-2: enp4s0f0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
-    link/ether c4:2c:90:65:50:13 brd ff:ff:ff:ff:ff:ff
-3: wlp3s0b1: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
-    link/ether 60:34:4c:13:41:f0 brd ff:ff:ff:ff:ff:ff
+2: wlp3s0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 60:63:9a:b2:c7:44 brd ff:ff:ff:ff:ff:ff
+3: enp4s0f0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq master lan state UP mode DEFAULT group default qlen 1000
+    link/ether c4:2c:03:36:46:38 brd ff:ff:ff:ff:ff:ff
 ```
+
+As you can see, there's tree interfaces:
+
+1. `lo` which is the **Loopback interface,**
+2. `wlp3s0` which is the **Wireless interface**
+3. `enp4s0f0` being the **Ethernet interface**
+
+The interface we going to rename is `enp4s0f0` with the **MAC Address** `c4:2c:03:36:46:38`. The new name will be `enge0`, meaning **Ethernet Gigabit 0**. Avoid names like `enoX`, `enpX`, `ensX`, `ethX` and so on.
+The name pattern was chosen by following the naming mentioned on this blog post: [www.apalrd.net/posts/2023/tip_link/](https://www.apalrd.net/posts/2023/tip_link/#solution)
 
 `/etc/nixos/modules/networking.nix`
 
 ```nix
 { config, pkgs, ... }:
-let nic = "enp1s0"; # Your main network adapter
+let
+  nic = "enge0"; #Desired name
+  mac_addr = "c4:2c:03:24:d6:18"; #MAC addres for your interface
 in
 {
+  services.udev.extraRules = ''
+    SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="${mac_addr}", NAME="${nic}"
+  '';
+  
   networking = {
     useDHCP = false;
     hostName = "macmini";
     nameservers = [ "8.8.8.8" "8.8.4.4" ];
-   
+
     # Define VLANS
     vlans = {
-      wan = { id = 2; interface = "${nic}"; };
-      guest = { id = 30; interface = "${nic}"; };
-      iot = { id = 90; interface = "${nic}"; };
+      "${nic}.2" = { id = 2; interface = "${nic}"; };
+      "${nic}.30" = { id = 30; interface = "${nic}"; };
+      "${nic}.90" = { id = 90; interface = "${nic}"; };
     };
-    #Lan will be a bridge to the main adapter.
+
+    # Lan will be a bridge to the main adapter.
     bridges = {
-      "lan" = { interfaces = [ "${nic}" ]; };
+      br0 = { interfaces = [ "${nic}" ]; };
     };
+
     interfaces = {
       "${nic}".useDHCP = false;
+
       # Handle VLANs
       wan.useDHCP = false;
-      lan = { ipv4.addresses = [{ address = "10.1.1.1";  prefixLength = 24; } ]; };
-      guest = { ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }]; };
-      iot = { ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; } ]; };
+      br0 = {
+        ipv4.addresses = [{ address = "10.1.1.1"; prefixLength = 24; }];
+      };
+      "${nic}.30" = {
+        ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }];
+      };
+      "${nic}.90" = {
+        ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; }];
+      };
     };
+
     firewall.enable = false;
     nftables = {
       enable = true;
@@ -295,7 +323,7 @@ We'll set up the PPPoE (Point-to-Point Protocol over Ethernet) connection for in
         enable = true;
         config = ''
           plugin pppoe.so 
-          nic-wan
+          nic-enge0.2
           user "testuser"
           password "password"
            
@@ -329,7 +357,7 @@ table inet filter {
   # Flow offloading for better throughput. Remove it you you have troubles with.
   flowtable ftable {
     hook ingress priority filter
-    devices = { "lan", "ppp0" }
+    devices = { "br0", "ppp0" }
   }
 
   chain input {
@@ -337,7 +365,7 @@ table inet filter {
 
     # Allow trusted networks to access the router
     iifname "lo" counter accept
-    iifname "lan" counter accept
+    iifname "br0" counter accept
 
     # Allow returning traffic from ppp0 and drop everything else
     iifname "ppp0" ct state { established, related } counter accept
@@ -355,9 +383,9 @@ table inet filter {
     ip protocol { tcp, udp } flow offload @ftable
 
     # Allow trusted network WAN access
-    iifname "lan" oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
+    iifname "br0" oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
     # Allow established WAN to return
-    iifname "ppp0" oifname "lan" ct state established,related counter accept comment "Allow established back to LANs"
+    iifname "ppp0" oifname "br0" ct state established,related counter accept comment "Allow established back to LANs"
     # https://samuel.kadolph.com/2015/02/mtu-and-tcp-mss-when-using-pppoe-2/
     # Clamp MSS to PMTU for TCP SYN packets
     oifname "ppp0" tcp flags syn tcp option maxseg size set 1452
@@ -389,7 +417,7 @@ Our **DHCP Server** configuration wil be done by `kea.dhcp4`
   services.kea.dhcp4.enable=true;
   services.kea.dhcp4.settings = {
     interfaces-config = {
-      interfaces = ["lan" "guest" "iot"];
+      interfaces = ["br0" "enge0.30" "enge0.90"];
       dhcp-socket-type= "raw";
     };
     lease-database = {
@@ -403,7 +431,8 @@ Our **DHCP Server** configuration wil be done by `kea.dhcp4`
     subnet4 = [
       {
         subnet = "10.1.1.0/24";
-        interface = "lan";
+        interface = "br0";
+        description = "Home";
         pools = [ { pool = "10.1.1.100 - 10.1.1.200"; } ]; 
         option-data = [
           { name = "routers"; data = "10.1.1.1"; }
@@ -413,7 +442,8 @@ Our **DHCP Server** configuration wil be done by `kea.dhcp4`
       }
       {
         subnet = "10.1.30.0/24";
-        interface = "guest";
+        interface = "enge0.30";
+        description = "Guest"
         pools = [ { pool = "10.1.30.100 - 10.1.30.200"; } ];
         option-data = [
           { name = "routers"; data = "10.1.30.1"; }
@@ -422,7 +452,8 @@ Our **DHCP Server** configuration wil be done by `kea.dhcp4`
       }
       {
         subnet = "10.1.90.0/24";
-        interface = "iot";
+        interface = "enge0.90";
+        description = "IoT";
         pools = [ { pool = "10.1.90.100 - 10.1.90.200"; } ]; 
         option-data = [
           { name = "routers"; data = "10.1.90.1"; }
