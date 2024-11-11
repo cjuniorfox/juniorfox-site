@@ -409,26 +409,36 @@ Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember tha
 
 ```nix
   
-  "subnet4" : [
+    subnet4 = [
       {
-        "interface" : "lan",
-        "option-data": [
-          { "name": "domain-name-servers", "data": "10.1.1.1" },
-        ]
-      },
-      {
-        "interface" : "guest",
-        "option-data": [
-          { "name": "domain-name-servers", "data": "10.1.30.1" },
-        ]
-      },
-      {
-        "interface" : "iot",
-        "option-data": [
-          { "name": "domain-name-servers", "data": "10.1.90.1" },
-        ]
+        subnet = "10.1.1.0/24";
+        interface = "lan";
+        pools = [ { pool = "10.1.1.100 - 10.1.1.200"; } ]; 
+        option-data = [
+          { name = "routers"; data = "10.1.1.1, 8.8.8.8, 8.8.4.4"; }
+          { name = "domain-name-servers"; data = "8.8.8.8"; } 
+          { name = "domain-search"; data = "example.com"; } 
+        ];
       }
-    ]
+      {
+        subnet = "10.1.30.0/24";
+        interface = "guest";
+        pools = [ { pool = "10.1.30.100 - 10.1.30.200"; } ];
+        option-data = [
+          { name = "routers"; data = "10.1.30.1"; }
+          { name = "domain-name-servers"; data = "10.1.30.1, 8.8.8.8, 8.8.4.4"; } 
+        ];
+      }
+      {
+        subnet = "10.1.90.0/24";
+        interface = "iot";
+        pools = [ { pool = "10.1.90.100 - 10.1.90.200"; } ]; 
+        option-data = [
+          { name = "routers"; data = "10.1.90.1, 8.8.8.8, 8.8.4.4"; }
+          { name = "domain-name-servers"; data = "8.8.8.8"; } 
+        ];
+      }
+    ];
 ```
 
 ### Rebuild NixOS
