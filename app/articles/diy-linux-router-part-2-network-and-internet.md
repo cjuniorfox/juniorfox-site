@@ -336,6 +336,7 @@ table inet filter {
     type filter hook input priority filter; policy drop;
 
     # Allow trusted networks to access the router
+    iifname "lo" counter accept
     iifname "lan" counter accept
 
     # Allow returning traffic from ppp0 and drop everything else
