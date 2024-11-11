@@ -202,8 +202,9 @@ swapon /dev/zvol/${ZROOT}/swap
 #### UEFI
 
 ```bash
-zfs create -o mountpoint=/boot ${ZROOT}/boot
-mkdir /mnt/boot/efi
+zfs create -o mountpoint=legacy ${ZROOT}/boot
+mkdir -p /mnt/boot/efi
+mount -t zfs ${ZROOT}/boot /mnt/${ZROOT}/boot
 mount ${BOOT} /mnt/boot/efi
 ```
 
@@ -302,8 +303,9 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
      font = "Lat2-Terminus16";
      useXkbConfig = true; # use xkb.options in tty.
    };
-  
-  system.stateVersion = "24.05"; # Did you read the comment?
+  time.timeZone = "America/Sao_Paulo";
+
+  system.stateVersion = "24.05";
   services.openssh = {
     enable = true;
     settings = {
@@ -335,6 +337,10 @@ You can check the hardware-configuration file at the following path: `/mnt/etc/n
 
   fileSystems."/" =
     { device = "zroot/root/nixos";
+      fsType = "zfs";
+    };
+  fileSystems."/boot" =
+    { device = "zroot/boot";
       fsType = "zfs";
     };
   fileSystems."/nix" =
