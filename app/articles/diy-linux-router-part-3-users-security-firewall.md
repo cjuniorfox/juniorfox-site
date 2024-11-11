@@ -241,6 +241,8 @@ table inet filter {
 
   chain input {
     type filter hook input priority filter; policy drop;
+
+    iifname "lo" counter accept
     
     jump ssh_input
     jump dhcp_input
