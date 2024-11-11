@@ -125,7 +125,7 @@ Edit the `/etc/nixos/configuration.nix` file:
 }
 ```
 
-Create `modules/podman.nix` file
+Create `modules/podman.nix` file. In this file we have the podman configuration itself as `systemd`user service for starting rootless pods as **Podman User**.
 
 `/etc/nixos/modules/podman.nix`
 
@@ -153,7 +153,7 @@ Create `modules/podman.nix` file
     podman-tui # status of containers in the terminal
   ];
 
-  systemd.services.podman-autostart = {
+  systemd.user.services.podman-autostart = {
     enable = true;
     after = [ "podman.service" ];
     wantedBy = [ "multi-user.target" ];
@@ -162,10 +162,17 @@ Create `modules/podman.nix` file
       Type = "idle";
       ExecStartPre = ''${pkgs.coreutils}/bin/sleep 1'';
       ExecStart = ''/run/current-system/sw/bin/podman start --all --filter restart-policy=always'';
-      User = "podman"; # In case of rootless https://discourse.nixos.org/t/rootless-podman-compose-configuration/52523/4
     };
   };
 }
+```
+
+### 3. Enable Linger to user podman
+
+To start the service without logging into it, you should enable `linger` to user `podman`.
+
+```bash
+loginctl enable-linger podman
 ```
 
 ## Kea Watcher
@@ -287,9 +294,6 @@ spec:
         - name: DHCPSERVER
           value: "kea" # DHCP server used on our server
       ports:
-        - containerPort: 1853 # DNS over TLS for all networks
-          protocol: TCP
-          hostPort: 1853
         - containerPort: 1053
           protocol: UDP
           hostPort: 1053
@@ -330,7 +334,7 @@ server:
 
 ### 5. Start the Unbound Container
 
-Start the **Unbound** pod on the `unbound-net` network with the fixed IP address `10.89.1.250`. This IP address will be useful for configuring firewall rules later.
+Start the **Unbound** pod with the following command:.
 
 ```bash
 podman kube play --replace \
@@ -351,18 +355,46 @@ Edit `/etc/nixos/modules/nftables.nft`
 
 Edit the `nftables.nft` file by adding the following:
 
+#### Open port
+
 `/etc/nixos/modules/nftables.nft`
 
 ```conf
+table 
+...
+table inet filter {
+  ...
+  chain unbound_dns_input {
+    iifname {"lan", "guest", "iot" } udp dport 1053 ct state { new, established } counter accept comment "Allow Unbound DNS server"
+  } 
+  ...
+  chain input {
+    ...
+    jump unbound_dns_input
+    ...
+  }
+
+}
+```
+
+#### NAT Redirect
+
+`/etc/nixos/modules/nftables.nft`
+
+```conf
+table 
 ...
 table nat {
-  chain redirect_dns {
-    iifname "lan" ip daddr != 10.89.1.250 udp dport 53 dnat to 10.89.1.250:53
+  chain unbound_redirect {
+    # Redirect all DNS requests to any host to Unbound
+    iifname "lan" udp dport 53 redirect to 1053 
+    # Redirect DNS to unbound, allow third-party DNS servers
+    ip daddr {10.1.30.1, 10.1.90.1 } udp dport 53 redirect to 1053 
   }
   ...
   chain prerouting {
-    type nat hook prerouting priority filter; policy accept;
-    jump redirect_dns
+    ...
+    jump unbound_redirect 
   }
 }
 ```
@@ -408,6 +440,8 @@ nixos-rebuild switch
 ### Reload Unbound Pod
 
 Everytime **Firewall rules** are reloaded, is good to reload Pods, so they can reconfigure the expected forward ports.
+
+Run as `podman` user:
 
 ```bash
 podman pod restart unbound
