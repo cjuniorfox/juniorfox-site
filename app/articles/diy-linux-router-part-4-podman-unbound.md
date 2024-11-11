@@ -169,7 +169,7 @@ Create `modules/podman.nix` file. In this file we have the podman configuration 
 
 ### 3. Enable Linger to user podman
 
-To start the service without logging into it, you should enable `linger` to user `podman`.
+To start the service without logging into it, you should enable `linger` to user `podman`. Run the following command with `sudo`
 
 ```bash
 loginctl enable-linger podman
@@ -179,7 +179,7 @@ loginctl enable-linger podman
 
 Rootless pods by default are unable to read Kea leases file. Unbound needs to read this file to make available resources into the network, but because our pod will run on a rootless environment. It will not able to do. To overcome this, let's create a single service to copy **leases file** contents to another place.
 
-`/etc/nixos/modules/what_kea_leases.nix`
+`/etc/nixos/modules/watch_kea_leases.nix`
 
 ```nix
 { config, pkgs, ... }:
@@ -228,11 +228,19 @@ in {
 }
 ```
 
-Also, edit `configuration.nix` and add to it `inotify-tools`. The tool used to watch the leases file for any change.
+Also, edit `configuration.nix` and add to it `inotify-tools`. The tool used to watch the leases file for any change, as the import for the newly created `.nix` file.
 
 `/etc/nixos/configuration.nix`
 
 ```nix
+imports =
+    [ 
+      ...
+      ./modules/watch_kea_leases.nix
+    ];
+
+...
+
 environment.systemPackages = with pkgs; [
     ...
     inotify-tools #To unbound watcher
@@ -345,17 +353,9 @@ podman kube play --replace \
 
 By default, Linux does not allow opening ports lower than port 1024. As the default DNS port is 53, We have to forward port 1053 to 53.
 
-Edit `/etc/nixos/modules/nftables.nft`
-
-```conf
-
-```
-
-### Update Firewall Configuration
-
 Edit the `nftables.nft` file by adding the following:
 
-#### Open port
+## Open port
 
 `/etc/nixos/modules/nftables.nft`
 
@@ -377,7 +377,7 @@ table inet filter {
 }
 ```
 
-#### NAT Redirect
+### NAT Redirect
 
 `/etc/nixos/modules/nftables.nft`
 
@@ -407,7 +407,7 @@ Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember tha
 
 `/etc/nixos/modules/dhcp_server.kea`
 
-```json
+```nix
   
   "subnet4" : [
       {
