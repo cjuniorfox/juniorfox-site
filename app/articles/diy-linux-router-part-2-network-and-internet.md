@@ -302,8 +302,10 @@ in
       "${nic}".useDHCP = false;
 
       # Handle VLANs
-      "${nic}.2".useDHCP = false;
-      "${nic}.2".macAddress = "${mac_addr_prefix}:02";
+      "${nic}.2" = {
+        useDHCP = false;
+        macAddress = "${mac_addr_prefix}:02";
+      };
       "br0" = {
         macAddress = "${mac_addr_prefix}:01";
         ipv4.addresses = [{ address = "10.1.1.1"; prefixLength = 24; }];
@@ -442,10 +444,11 @@ Our **DHCP Server** configuration wil be done by `kea.dhcp4`
       for iface in br0 enge0.30 enge0.90; do
         while ! ${pkgs.iproute2}/bin/ip link show "$iface" up &> /dev/null; do
           echo "Waiting for interface $iface to be up..."
-          sleep 2  # Wait for 2 seconds before checking again
+          sleep 1
         done
-        echo "Interface $iface is up" 
+        echo "Interface $iface is up"
       done
+      sleep 5
       exit 0
     '';
   };
