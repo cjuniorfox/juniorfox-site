@@ -414,6 +414,19 @@ Our **DHCP Server** configuration wil be done by `kea.dhcp4`
 ```nix
 { config, pkgs, ... }:
 { 
+  systemd.services.kea-dhcp4-server = {
+    enable = true;
+    preStart = ''
+      for iface in br0 enge0.30 enge0.90; do
+        while ! ${pkgs.iproute2}/bin/ip link show "$iface" up &> /dev/null; do
+          echo "Waiting for interface $iface to be up..."
+          sleep 2  # Wait for 2 seconds before checking again
+        done
+        echo "Interface $iface is up" 
+      done
+      exit 0
+    '';
+  };
   services.kea.dhcp4.enable=true;
   services.kea.dhcp4.settings = {
     interfaces-config = {

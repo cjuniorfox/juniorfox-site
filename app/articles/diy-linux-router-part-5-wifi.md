@@ -296,6 +296,23 @@ systemctl --user daemon-reload
 systemctl --user enable --now podman-unifi-network.service
 ```
 
+### 6. Add an A entry to Unbound
+
+To allow the **AP** to be adopted, it needs to reach the **Unifi Network Painel** by concatcting a host named **unifi**. Let's add an A entry to **Unbound** configuration
+
+`/home/podman/deployments/unbound/conf.d/local.conf`
+
+```conf
+server:
+  private-domain: "home.juniorfox.net."
+  local-zone: "home.juniorfox.net." static
+  local-data: "macmini.home.juniorfox.net. IN A 10.1.1.1"
+  local-data: "macmini.home.juniorfox.net. IN A 10.1.30.1"
+  local-data: "macmini.home.juniorfox.net. IN A 10.1.90.1"
+  local-data: "unifi.home.juniorfox.net. IN A 10.1.1.1"
+  local-data: "unifi. IN A 10.1.1.1"
+```
+
 ## Firewall
 
 To make **Unifi Network** available to the network, it's necessary to open firwall ports. As all the ports are above the `1024`, it's just a matter of opening them. The ports are:
@@ -347,7 +364,9 @@ nixos-rebuild switch
 
 ### Device Adoption
 
-The **Unifi Network** needs to adopt your **Unifi AP**. Since the application is running on **Podman** under an **IP Address** which is not accessible by other devices, we have to change the **Inform IP Address**. This is done by going to **Settings** > **System** > **Advanced** and setting the **Inform Host** to a **hostname**, in that case, `macmini` or the **IP address** `10.1.1.1`. Additionally the checkbox **"Override"** has to be checked, so that devices can connect to the controller during adoption. More detailed information at the [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+The **Unifi Network** needs to adopt your **Unifi AP**. Since the application is running on **Podman** under an **IP Address** which is not accessible by other devices. So far, everything what we did would allow new devices to be automatically adoptable by the application, but if not, try as described below:
+
+Change the **Inform IP Address**. This is done by going to **Settings** > **System** > **Advanced** and setting the **Inform Host** to a **hostname**, in that case, `macmini` or the **IP address** `10.1.1.1`. Additionally the checkbox **"Override"** has to be checked, so that devices can connect to the controller during adoption. More detailed information at the [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
 
 ### Troubleshooting Adoption Problems
 
