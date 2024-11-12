@@ -250,13 +250,31 @@ As you can see, there's tree interfaces:
 The interface we going to rename is `enp4s0f0` with the **MAC Address** `c4:2c:03:36:46:38`. The new name will be `enge0`, meaning **Ethernet Gigabit 0**. Avoid names like `enoX`, `enpX`, `ensX`, `ethX` and so on.
 The name pattern was chosen by following the naming mentioned on this blog post: [www.apalrd.net/posts/2023/tip_link/](https://www.apalrd.net/posts/2023/tip_link/#solution)
 
+I would also define discrete **Mac addresses** by interface as this:
+
+- A **Mac address** is formed of 6 bytes, or 6 segments of 1 byte each.
+- Every interface will have it's **MAC address** defined by the first **5 bytes** followed by it's **Network ID**:
+  - **br0** : `c4:2c:03:36:46`**`:01`**
+  - **enge0.2** : `c4:2c:03:36:46`**`:02`**
+  - **enge0.30** : `c4:2c:03:36:46`**`:30`**
+  - **enge0.90** : `c4:2c:03:36:46`**`:90`**
+
+To achieve that, those **variable**:
+
+- `mac_addr`: The real **Mac address**, in my case `c4:2c:03:36:46:38`.
+- `mac_addr_refix:`: The four left bytes of the **Mac address**, `c4:2c:03:36:46`
+- `nic`: Intended interface name, `enge0` at this case.
+
+My `network.nix` ended up like this:
+
 `/etc/nixos/modules/networking.nix`
 
 ```nix
 { config, pkgs, ... }:
 let
-  nic = "enge0"; #Desired name
-  mac_addr = "c4:2c:03:24:d6:18"; #MAC addres for your interface
+  nic = "enge0";
+  mac_addr_prefix = "c4:2c:03:36:46";  
+  mac_addr = "${mac_addr_prefix}:38";
 in
 {
   services.udev.extraRules = ''
@@ -284,14 +302,18 @@ in
       "${nic}".useDHCP = false;
 
       # Handle VLANs
-      wan.useDHCP = false;
-      br0 = {
+      "${nic}.2".useDHCP = false;
+      "${nic}.2".macAddress = "${mac_addr_prefix}:02";
+      "br0" = {
+        macAddress = "${mac_addr_prefix}:01";
         ipv4.addresses = [{ address = "10.1.1.1"; prefixLength = 24; }];
       };
       "${nic}.30" = {
+        macAddress = "${mac_addr_prefix}:30";
         ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }];
       };
       "${nic}.90" = {
+        macAddress = "${mac_addr_prefix}:90";
         ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; }];
       };
     };
