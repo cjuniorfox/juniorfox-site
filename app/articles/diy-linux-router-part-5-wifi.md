@@ -199,19 +199,15 @@ spec:
     ports:
     - containerPort: 3478
       hostPort: 3478
-      hostIP: 10.1.1.1
       protocol: UDP
     - containerPort: 10001
       hostPort: 10001
-      hostIP: 10.1.1.1
       protocol: UDP
     - containerPort: 8080
       hostPort: 8080
-      hostIP: 10.1.1.1
       protocol: TCP
     - containerPort: 8443
       hostPort: 8443
-      hostIP: 10.1.1.1
       protocol: TCP
 
   # MongoDB container
