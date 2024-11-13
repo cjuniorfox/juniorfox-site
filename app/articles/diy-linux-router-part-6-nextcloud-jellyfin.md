@@ -57,22 +57,31 @@ Both Jellyfin and Nextcloud store and access files. We could just create folders
 
 Run with `sudo`:
 
+Assuming that the **data** storage pool is named `zdata`. If you has choosen to use the same Pool for root, apply the correct names.
+
 ```bash
 ZDATA=zdata
 ```
+
+### Create a dataset for Nextcloud Storage
 
 ```bash
 zfs create -o canmount=off ${ZDATA}/containers/podman/volumes
 zfs create ${ZDATA}/containers/podman/volumes/nextcloud_html
 zfs create ${ZDATA}/containers/podman/volumes/nextcloud_db
+chown -R podman:podman /mnt/${ZDATA}/containers/podman/volumes/nextcloud_*
+```
+
+### Create another dataset for storing media files
+
+```bash
 zfs create -o canmount=off ${ZDATA}/shares
 zfs create ${ZDATA}/shares/media
-chown -R podman:podman /${ZDATA}/containers/podman/volumes/nextcloud_*
 ```
 
 ## Ingress
 
-Every service lifts its own **HTTP** port. As far as the idea is to make those services available on the Internet, the ideal is to set up an ingress. Ingress is a **NGINX** service that will consolidate all services at **HTTPS** protocol on port **443**. Is important to **have an FQDN domain** and **create subdomains** on it as having a **public IPv4 address** is also good. If you don't have a domain. You could buy one to use it. Is fairly cheap these days. There are even free options. If you don't have a **publicly available IP address**, you can make use of a **VPS** on the Cloud to act as a proxy and ingress for you. **Oracle** per example offers a **Lifetime free of charge VPS** that [you can check it out](https://www.oracle.com/br/cloud/compute/). Just configure a **Wireguard** VPN and configure a connection between your **VPS** and your **Gateway**. There's an article about  **Wireguard** at [this link](/article/wireguard-vpn). Further, we will aboard **Wireguard** on this server, but to keep things simple, this tutorial will assume that you have a **publicity available IP address**.
+Every service runs on its own **HTTP** port. As far as the idea is to make those services available on the Internet, the ideal is to set up an **Ingress Service**. Ingress is a **NGINX** service to act as a **proxy** to consolidate all services at **HTTPS** protocol on port **443**. If you do want to make these services available to the internet, you will have to buy a **FQDN domain** and **create subdomains** on it as having a **public IPv4 address** is also good. If you don't have a domain. You could buy one to use it. Is fairly cheap these days. There are even free options. If you don't have a **publicly available IP address**, you can make use of a **VPS** on the Cloud to act as a proxy and ingress for you. **Oracle** per example offers a **Lifetime free of charge VPS** that [you can check it out](https://www.oracle.com/br/cloud/compute/). Just configure a **Wireguard** VPN and configure a connection between your **VPS** and your **Gateway**. There's an article about  **Wireguard** at [this link](/article/wireguard-vpn). Further, we will aboard **Wireguard** on this server, but to keep things simple, this tutorial will assume that you have a **publicity available IP address**.
 
 ### Setup Subdomains
 
@@ -100,6 +109,8 @@ mkdir -p /home/podman/deployments/ingress/conf
 ```
 
 #### 2. Create a basic configuration for **NGINX**
+
+
 
 `/home/podman/deployments/ingress/conf/default_server.conf`
 
@@ -240,7 +251,7 @@ table inet filter {
 
 Just like we did to the other pods, let's create a systemd user unit for rebuilding the pod across reboots.
 
-`/home/podman/.config/systemd/user/podman-ingress.service`
+`/home/podman/.config/systemd/user/ingress.service`
 
 ```ini
 [Unit]
@@ -265,93 +276,51 @@ Enable and start the **ingress** service by running the following commands:
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now podman-ingress.service
+systemctl --user enable --now ingress.service
 ```
 
 By doing this, the `ingress-www` and `certificates` *(*volumes*)* will be used to validate the **SSL Certificates**, to be created at the next step. You can check it's creations by running `podman volume list`.
 
 ### Let's Encrypt
 
-The **Let's Encrypt** is a free service that provides **SSL Certificates**. It's also a service that's make easy to renew certificates. Let's create a pod to it:
+The **Let's Encrypt** is a free service that provides **SSL Certificates**. We going to use a utility called **certbot** to renew our certificates.
 
-#### 1. Let's encrypt pod creation
+#### Create a systemd unit service for renewal
 
-Create a `yaml` file with the following contens:
-
-`/home/podman/deployments/ingress/lets-encrypt.yaml`
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: lets-encrypt
-  name: lets-encrypt
-spec:
-  networks:
-    - name: ingress-net
-  restartPolicy: Never
-  containers:
-    - name: certbot
-      image: docker.io/certbot/certbot:v2.11.0
-      args:
-      - certonly
-      - --agree-tos
-      - --non-interactive
-      - -v
-      - --webroot
-      - -w
-      - /var/www/
-      - --force-renewal
-      - --email
-      - your_email@gmail.com # Replace with your email
-      - -d
-      - jellyfin.example.net # as `example.net` being your FQDN
-      - -d
-      - nextcloud.example.net # as `example.net` being your FQDN
-      - -d
-      - unifi.example.net # as `example.net` being your FQDN
-      volumeMounts:
-      - name: certificates-pvc
-        mountPath: /etc/letsencrypt
-      - name: ingress-www-pvc
-        mountPath: /var/www
-
-  volumes:
-    - name: ingress-www-pvc
-      persistentVolumeClaim:
-        claimName: ingress-www
-  
-    - name: certificates-pvc
-      persistentVolumeClaim:
-        claimName: certificates
-```
-
-#### 2. Create a systemd unit service for renewal
-
-These certificates expires in a short period of time. So having a systemd unit to renew the service every month avoid your domains to have their certificates expired.
+These certificates expires in a short period of time. So having a systemd unit to renew the service every month avoid your domains to have their certificates expired. Replace the `DOMAINS` list with your domains, as `EMAIL` with your e-mail address.
 
 - Create a systemd unit `podman-letsencrypt.service`
 
-`/home/podman/.config/systemd/user/podman-letsencrypt.service`
+`/home/podman/.config/systemd/user/certbot.service`
 
 ```ini
-[Unit]
-Description=Lets encrypt renewal Podman Pod
+Description=Lets encrypt renewal with Certbot
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStartPre=/bin/sh -c 'until /run/current-system/sw/bin/ping -c1 8.8.8.8 &>/dev/null; do /run/current-system/sw/bin/sleep 2; done'
-ExecStart=/run/current-system/sw/bin/podman --log-level=info kube play --replace /home/podman/deployments/ingress/lets-encrypt.yaml
+Environment="DOMAINS=unifi.example.com,nextcloud.example.com,jellyfin.example.com"
+Environment="EMAIL=your_email@gmail.com"
+ExecStart=/run/current-system/sw/bin/podman run --rm \
+          -v ingress-www:/var/www \
+          -v certificates:/etc/letsencrypt \
+          --log-level info \
+          docker.io/certbot/certbot:v3.0.0 \
+              certonly --agree-tos --non-interactive -v \
+              --webroot -w /var/www --force-renewal \
+              --email ${EMAIL} \
+              --domains ${DOMAINS}
+
 ```
 
 - Create the `timer` unit which will trigger the renewal event once in a month
 
-`/home/podman/.config/systemd/user/podman-letsencrypt.timer`
+`/home/podman/.config/systemd/user/certbot.timer`
 
 ```ini
 [Unit]
-Description=Renew certificates using lets encrypt pod montly
+Description=Renew certificates using certbot montly.
 
 [Timer]
 OnCalendar=monthly
@@ -361,13 +330,13 @@ Persistent=true
 WantedBy=timers.target
 ```
 
-Enable and start the Let's encrypt service. Follow the logs to see if the registration was successful.
+Enable and start `certbot.service`. Check logs to see if the registration was successful.
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable podman-letsencrypt.timer
-systemctl --user start podman-letsencrypt.service
-podman logs -f left-encrypt-certbot
+systemctl --user enable certbot.timer
+systemctl --user start certbot.service
+journalctl --user -eu certbot.service
 ```
 
 ```txt
@@ -401,7 +370,7 @@ server {
 #### 3. Restart the **ingress** pod
 
 ```bash
-systemctl --user restart podman-ingress
+systemctl --user restart ingress
 ```
 
 ## Nextcloud
@@ -554,7 +523,7 @@ This `yaml` file will create a **Nextcloud** service with a **MariaDB** database
 
 As usual, let's create a service for managing **Nextcloud**.
 
-`/home/podman/.config/systemd/user/podman-nextcloud.service`
+`/home/podman/.config/systemd/user/nextcloud.service`
 
 ```ini
 [Unit]
@@ -577,7 +546,7 @@ Enable and start the service
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now podman-nextcloud
+systemctl --user enable --now nextcloud.service
 ```
 
 ## Jellyfin
@@ -618,7 +587,7 @@ spec:
         - mountPath: /cache
           name: jellyfin-cache-pvc
         - mountPath: /media
-          name: zdata-shares-media-host
+          name: mnt-zdata-shares-media-host
   volumes:
     - name: jellyfin-config-pvc
       persistentVolumeClaim:
@@ -626,9 +595,9 @@ spec:
     - name: jellyfin-cache-pvc
       persistentVolumeClaim:
         claimName: jellyfin_cache
-    - name: zdata-shares-media-host
+    - name: mnt-zdata-shares-media-host
       hostPath:
-        path: /zdata/shares/media
+        path: /tmp/zdata/shares/media
 ```
 
 This `yaml` file will create a **Jellyfin** service. Create a `systemd` service as did for the other services:
@@ -637,7 +606,7 @@ This `yaml` file will create a **Jellyfin** service. Create a `systemd` service 
 
 Create a `systemd` service for **Jellyfin**:
 
-`/home/podman/.config/systemd/user/podman-jellyfin.service`
+`/home/podman/.config/systemd/user/jellyfin.service`
 
 ```ini
 [Unit]
@@ -660,7 +629,7 @@ Enable and start the service
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now podman-jellyfin
+systemctl --user enable --now jellyfin.service
 ```
 
 ## Configure Ingress
@@ -825,7 +794,7 @@ resolver 10.89.1.1 valid=30s;
 Everything is set. Restart the **ingress** service.
 
 ```bash
-systemctl --user restart podman-ingress.service
+systemctl --user restart ingress.service
 ```
 
 Check the **Ingress** logs for any issues
