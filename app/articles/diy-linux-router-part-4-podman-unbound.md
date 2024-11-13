@@ -1,6 +1,6 @@
 ---
 title: "DIY Linux Router - Part 4 - Podman and Unbound"
-articleId: "diy-linux-router-part-4-podman-unbound"
+articleId: "diy-linux-router-part-4-unbound"
 date: "2024-10-15"
 author: "Carlos Junior"
 category: "Linux"
@@ -8,10 +8,10 @@ brief: "In this fourth part of this series, it's time to install Podman, a drop-
 image: "/assets/images/diy-linux-router/seal-pod-and-rope.webp"
 keywords : ["macmini","router", "linux", "nixos", "pppoe", "unbound", "podman", "docker"]
 lang : "en"
-other-langs : [{"lang":"pt","article":"roteador-linux-parte-4-podman-unbound"}]
+other-langs : [{"lang":"pt","article":"roteador-linux-parte-4-unbound"}]
 ---
 
-This is the fourth part of a multipart series describing how to build your own Linux router.
+This is the fourth part of a multi-part series describing how to build your own Linux router.
 
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
@@ -24,7 +24,7 @@ In the previous parts, we installed the operating system, configured the gateway
 Now, it's time to install **Podman**, a drop-in replacement for Docker with some interesting features, and configure **Unbound** to run on it.
 
 ![Seal in front a rope](/assets/images/diy-linux-router/seal-pod-and-rope.webp)
-*AI Generated image by Google's [Gemini](https://gemini.google.com/)*
+*AI-Generated image by Google's [Gemini](https://gemini.google.com/)*
 
 ## Table of Contents
 
@@ -35,7 +35,6 @@ Now, it's time to install **Podman**, a drop-in replacement for Docker with some
 - [Unbound Setup](#unbound-setup)
 - [Podman Setup](#podman-setup)
 - [Firewall Rules](#firewall-rules)
-- [Update DHCP Settings](#update-dhcp-settings)
 - [Conclusion](#conclusion)
 
 ## About Podman
@@ -44,7 +43,7 @@ Since **NixOS** is configured using `.nix` files, it might seem straightforward 
 
 ### Why Podman Instead of Docker?
 
-There are several advantages to using **Podman** over **Docker**. While this topic could warrant its own article, here are a few key points:
+There are several advantages to using **Podman** over **Docker**. While this topic could warrant its article, here are a few key points:
 
 1. **Daemonless Architecture**: Podman does not require a central daemon to run containers. Each container runs as a child process of the Podman command, improving security and reducing the risk of a single point of failure.
 2. **Rootless Containers**: Podman allows containers to be run without requiring root privileges, enhancing security by reducing the attack surface.
@@ -63,11 +62,11 @@ For this project, I'll use a Docker image of **Unbound** that I created some tim
 
 ## Podman Setup
 
-### 1. Create pool and a dataset for Podman
+### 1. Create a pool and a dataset for Podman
 
-If you choose to create a separate **ZFS pool**, it's time to create a partition for it, the **ZFS Pool** and a intended dataset for **Podman**.
+If you choose to create a separate **ZFS pool**, create a partition for it, the **ZFS Pool** and an intended dataset for **Podman**.
 
-As we don't have `parted` installed on our system, we can just open a `nix-shell` containing `parted` utility to use it for now.
+As we don't have `parted` installed on our system, we can open a `nix-shell` containing `parted` utility to use it for now.
 
 ```bash
 nix-shell parted
@@ -82,16 +81,19 @@ ZDATA=zdata
 parted ${DISK} mkpart ZFS 32G 100%
 #Assuming the data partition is the partition 4.
 DATA_PART="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
-zpool create -f -o ashift=12 -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl ${ZDATA} ${DATA_PART}
+zpool create -o mountpoint=/mnt/${ZDATA} \
+  -o ashift=12 -O atime=off \
+  -O compression=lz4 -O xattr=sa \-O acltype=posixacl \
+  ${ZDATA} ${DATA_PART}
 ```
 
-Assuming the new pool is **zdata** let's create mountpoints considering `/zdata/containers` as default container path. The idea is storing the rootfull containers on /zdata/containers/root and for rootless, store at /zdata/containers/podman
+Assuming the new pool is **zdata** let's create mountpoints considering `/mnt/zdata/containers` as the default container path. The idea is to store the **Rootfull Containers** on /mnt/zdata/containers/root and for **rootless**, store at /mnt/zdata/containers/podman
 
 ```bash
-zfs create -o canmount=off zdata/containers
-zfs create zdata/containers/root
-zfs create zdata/containers/podman
-chown podman:podman /zdata/containers/podman
+zfs create -o canmount=off ${ZDATA}/containers
+zfs create ${ZDATA}/containers/root
+zfs create ${ZDATA}/containers/podman
+chown podman:podman /mnt/${ZDATA}/containers/podman
 ```
 
 To make new new pool available during boot, you have to add a boot entry into `configuration.nix`
@@ -125,7 +127,7 @@ Edit the `/etc/nixos/configuration.nix` file:
 }
 ```
 
-Create `modules/podman.nix` file. In this file we have the podman configuration itself as `systemd`user service for starting rootless pods as **Podman User**.
+Create `modules/podman.nix` file. In this file, we have the **Podman** configuration itself as `systemd`user service for starting rootless pods as **Podman User**.
 
 `/etc/nixos/modules/podman.nix`
 
@@ -137,9 +139,9 @@ Create `modules/podman.nix` file. In this file we have the podman configuration 
     containers.storage.settings = {
       storage = {
         driver = "zfs";
-        graphroot = "/zdata/containers/root";
+        graphroot = "/mnt/zdata/containers/root";
         runroot = "/run/containers/storage";
-        rootless_storage_path = "/zdata/containers/$USER";
+        rootless_storage_path = "/mnt/zdata/containers/$USER";
       };
     };
     podman = {
@@ -155,88 +157,15 @@ Create `modules/podman.nix` file. In this file we have the podman configuration 
 }
 ```
 
-### 3. Enable Linger to user podman
+### 3. Enable Linger to the user podman
 
-To restart pods on a rootless podman user, we have to start it's `systemd` services upon reboots. To do that, enable `linger` to user `podman`. Run the following command with `sudo`
+To restart pods on a rootless `podman` user, we have to start it's `systemd` services upon reboots. To do that, enable `linger` to user `podman`. Run the following command with `sudo`
 
 ```bash
 loginctl enable-linger podman
 ```
 
-## Kea Watcher
-
-Rootless pods by default are unable to read Kea leases file. Unbound needs to read this file to make available resources into the network, but because our pod will run on a rootless environment. It will not able to do. To overcome this, let's create a single service to copy **leases file** contents to another place.
-
-`/etc/nixos/modules/watch_kea_leases.nix`
-
-```nix
-{ config, pkgs, ... }:
-
-let
-  # The destination directory for the copied leases file
-  destinationDir = "/tmp/";
-  # Path to the watcher script
-  watcherScript = pkgs.writeShellScript "watch_kea_leases.sh" ''
-    #!/bin/bash
-    # Source and destination
-    SOURCE_FILE="/var/lib/kea/kea-leases4.csv"
-    DEST_DIR="${destinationDir}"
-    
-    # Ensure the destination directory exists
-    mkdir -p "$DEST_DIR"
-    if [ -f "$SOURCE_FILE" ]; then
-       cat "$SOURCE_FILE" > "$DEST_DIR/kea-leases4.csv"
-    fi
-    # Watch the source file for modifications
-    /run/current-system/sw/bin/inotifywait -m -e modify "$SOURCE_FILE" | while read path action file; do
-      # When the file changes, copy its contents to the destination directory
-      cat "$SOURCE_FILE" > "$DEST_DIR/kea-leases4.csv"
-      echo "Leases file updated and copied to $DEST_DIR"
-    done
-  '';
-  
-in {
-  systemd.services.watch_kea_leases = {
-    enable = true;
-    description = "Watch Kea Leases and Copy to Destination";
-    after = [ "network.target" ];
-    serviceConfig.ExecStart = "${watcherScript}";
-    serviceConfig.Restart = "always";
-    serviceConfig.User = "root";
-  };
-  users.users.root.extraGroups = [ "podman" ];
-  environment.systemPackages = [
-    pkgs.coreutils
-  ];
-
-  systemd.tmpfiles.rules = [
-    "d ${destinationDir} 0755 root root"
-  ];
-  #Make destination directory readable from user podman
-}
-```
-
-Also, edit `configuration.nix` and add to it `inotify-tools`. The tool used to watch the leases file for any change, as the import for the newly created `.nix` file.
-
-`/etc/nixos/configuration.nix`
-
-```nix
-imports =
-    [ 
-      ...
-      ./modules/watch_kea_leases.nix
-    ];
-
-...
-
-environment.systemPackages = with pkgs; [
-    ...
-    inotify-tools #To unbound watcher
-    ...
-  ];
-```
-
-Let's apply those changes to have **Podman** up and running.
+Apply those changes to have **Podman** up and running.
 
 ```bash
 nixos-rebuild switch
@@ -244,7 +173,7 @@ nixos-rebuild switch
 
 ## Unbound Setup
 
-Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using the **Docker** image [docker.io/cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). Since **Podman** supports **Kubernetes-like** `yaml` deployment files, we'll create our own based on the example provided in the [GitHub repository](https://github.com/cjuniorfox/unbound/) for this image, specifically in the [kubernetes](https://github.com/cjuniorfox/unbound/tree/main/kubernetes) folder. We'll also setup as rootless for security reasons. Log out from the server and log as `podman` user. If you setup your `~/.ssh/config` as I did, it's just:
+Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using the **Docker** image [docker.io/cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). Since **Podman** supports **Kubernetes-like** **YAML** deployment files, we'll create our own based on the example provided in the [GitHub repository](https://github.com/cjuniorfox/unbound/) for this image, specifically in the [Kubernetes](https://github.com/cjuniorfox/unbound/tree/main/kubernetes) folder. We'll also set up as rootless for security reasons. Log out from the server and log in as the `podman` user. If you set your `~/.ssh/config` as I did, it's just:
 
 ```bash
 ssh podman-macmini
@@ -252,7 +181,7 @@ ssh podman-macmini
 
 ### 1. Create Directories and Volumes for Unbound
 
-First, create a directory to store Podman's deployment `yaml` file and volumes. In this example, I'll create the directory under `/home/podman/deployments` and place an `unbound` folder inside it. Additionally, create the `volumes/unbound-conf/` directory to store extra configuration files.
+First, create a directory to store Podman's deployment **YAML** files and volumes. In this example, I'll create the directory under `/home/podman/deployments` and place an `unbound` folder inside it. Additionally, create the `volumes/unbound-conf/` directory to store extra configuration files.
 
 ```sh
 mkdir -p /home/podman/deployments/unbound/conf.d/
@@ -330,11 +259,11 @@ server:
 
 ### 5. Define a systemd service for unbound
 
-Let's create a systemd service for unbound to recreate it's pods during reboots. To do that, create a file in the `/home/podman/.config/systemd/user/unbound-podman.service`
+Let's create a systemd service for unbound to recreate its pods during reboots. To do that, create a file in the `/home/podman/.config/systemd/user/unbound.service`
 
 If the directory doesn't exist, create it with `mkdir -p /home/podman/.config/systemd/user/`
 
-`/home/podman/.config/systemd/user/podman-unbound.service`
+`/home/podman/.config/systemd/user/unbound.service`
 
 ```ini
 [Unit]
@@ -359,7 +288,7 @@ Start the **Unbound** pod by `systemd`:
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now podman-unbound.service
+systemctl --user enable --now unbound.service
 ```
 
 Some commands to check the status of the container.
@@ -367,7 +296,7 @@ Some commands to check the status of the container.
 #### Service status
 
 ```bash
-systemctl --user status unbound-podman
+systemctl --user status unbound.service
 ```
 
 #### List pods
@@ -384,7 +313,7 @@ podman pod logs -f unbound
 
 ## Firewall Rules
 
-By default, Linux does not allow opening ports lower than port 1024. As the default DNS port is 53, We have to forward port 1053 to 53.
+By default, **Linux** does not allow opening ports lower than port 1024 as rootless. As the default DNS port is 53, We have to forward port 1053 to 53.
 
 Edit the `nftables.nft` file by adding the following:
 
@@ -398,7 +327,7 @@ table
 table inet filter {
   ...
   chain unbound_dns_input {
-    iifname {"br0", "enge0.30", "enge0.90" } udp dport 1053 ct state { new, established } counter accept comment "Allow Unbound DNS server"
+    iifname {"br0", "vlan30", "vlan90" } udp dport 1053 ct state { new, established } counter accept comment "Allow Unbound DNS server"
   } 
   ...
   chain input {
@@ -432,51 +361,6 @@ table nat {
 }
 ```
 
-## Update DHCP Settings
-
-Setup the `DHCP Server` to announce the server as the `DNS Server`. Remember that at `br0` network, every DNS server used for any client will be redirected to the local **Unbound server**.
-
-**Leave the rest of the configuration as it is.**
-
-`/etc/nixos/modules/dhcp_server.kea`
-
-```nix
-  
-    subnet4 = [
-      {
-        subnet = "10.1.1.0/24";
-        interface = "br0";
-        description = "Home";
-        pools = [ { pool = "10.1.1.100 - 10.1.1.200"; } ]; 
-        option-data = [
-          { name = "routers"; data = "10.1.1.1"; }
-          { name = "domain-name-servers"; data = "10.1.1.1, 8.8.8.8, 8.8.4.4"; } 
-          { name = "domain-search"; data = "example.com"; } 
-        ];
-      }
-      {
-        subnet = "10.1.30.0/24";
-        interface = "enge0.30";
-        description = "Guest"
-        pools = [ { pool = "10.1.30.100 - 10.1.30.200"; } ];
-        option-data = [
-          { name = "routers"; data = "10.1.30.1"; }
-          { name = "domain-name-servers"; data = "10.1.30.1, 8.8.8.8, 8.8.4.4"; } 
-        ];
-      }
-      {
-        subnet = "10.1.90.0/24";
-        interface = "enge0.90";
-        description = "IoT";
-        pools = [ { pool = "10.1.90.100 - 10.1.90.200"; } ]; 
-        option-data = [
-          { name = "routers"; data = "10.1.90.1"; }
-          { name = "domain-name-servers"; data = "10.1.90.1, 8.8.8.8, 8.8.4.4"; } 
-        ];
-      }
-    ];
-```
-
 ### Rebuild NixOS
 
 ```bash
@@ -485,12 +369,12 @@ nixos-rebuild switch
 
 ### Reload Unbound Pod
 
-Everytime **Firewall rules** are reloaded, is good to reload Pods, so they can reconfigure the expected forward ports.
+Every time **Firewall rules** are reloaded, is good to reload Pods, so they can reconfigure the expected forward ports.
 
 Run as `podman` user:
 
 ```bash
-podman pod restart unbound
+systemctl --user restart unbound.service
 ```
 
 ## Conclusion
@@ -498,3 +382,5 @@ podman pod restart unbound
 In this part of the series, we successfully installed Podman as a container engine and configured **Unbound** to run within it, providing DNS resolution and ad-blocking capabilities for our network. By leveraging **Podman**, we benefit from a more secure, rootless container environment while still utilizing the vast ecosystem of pre-configured Docker images. Additionally, we set up firewall rules to ensure that all DNS traffic is routed through our **Unbound** server, further enhancing the security of our network.
 
 Next, we will configure our wireless network using a **Ubiquiti UniFi AP**.
+
+- Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
