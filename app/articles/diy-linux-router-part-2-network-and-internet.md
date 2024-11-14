@@ -158,7 +158,6 @@ Let's configure our server by editing the `.nix` files accordingly. To maintain 
 /etc/nixos
 ├── configuration.nix 
 └── modules/ 
-      ├── kea_dhcp4_server.nix # DHCP Server Configuration
       ├── networking.nix       # Network settings/ enable NFTables
       ├── pppoe.nix            # PPPoE connection setup
       ├── services.nix         # Other services
@@ -341,6 +340,17 @@ systemd.network = {
         networkConfig = {
           Address = "10.1.1.1/24";
           DHCPServer = "yes";
+        };
+        dhcpServerConfig = {
+          PoolOffset = 20;
+          PoolSize = 150;
+          DefaultLeaseTimeSec = 3600;
+          MaxLeaseTimeSec = 7200;
+          SendOption=[
+            "15:string:home.example.com" // Replace with your own 
+            "119:string:\x04home\x09example\x03com\x00" # To generate 119, https://jjjordan.github.io/dhcp119/
+          ];
+          DNS = [ "10.1.1.1" "8.8.8.8" "1.1.1.1" ];
         };
       };
     };
