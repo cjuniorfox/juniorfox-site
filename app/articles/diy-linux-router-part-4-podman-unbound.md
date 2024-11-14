@@ -165,7 +165,66 @@ To restart pods on a rootless `podman` user, we have to start it's `systemd` ser
 loginctl enable-linger podman
 ```
 
-Apply those changes to have **Podman** up and running.
+### 4. Create systemd unit to start Podman pods
+
+By default, the **Podman** installation, install some `systemd` units by default, but there are none for dealing with **pods** properly. There's a `systemd` unit for deploying **Kubernetes Pods** that comes closer to what I need but demands an internet connection right at the moment to start Pods, which there's no way to guarantee during the system initialization. Also, my installation made use of the newer [Pasta Network provider](https://docs.podman.io/en/latest/markdown/podman-network.1.html#pasta), which is great if you compare it to the older [slirp4netns](https://github.com/rootless-containers/slirp4netns), but, at least on my setup, enabling the pod to start with the server gets me an issue because, during the pod's initialization, the **Pasta Network** is not ready yet, preventing containers to initiate. So, I wrote my parametrized systemd unit to deal with **rootless pods**, doing two things:
+
+- On `ExecStartPre`, it tries to raise the `hello-word` container. If the lack of **Pasta Network** readiness prevents the container from starting, it waits 2 seconds and then it tries again.
+- Creates an `ExecStart` and `ExecStop` receiving the pod name as a parameter.
+
+So, let's write our `.nix` file to compose the intended unit service:
+
+`/etc/nixos/modules/podman-pod-systemd.nix`
+
+```nix
+{ config, pkgs, ... }:
+
+let
+  podman = "${config.virtualisation.podman.package}/bin/podman";
+  logLevel= "--log-level info";
+  podmanReadness = pkgs.writeShellScript "podman-readness.sh" ''
+    #!/bin/sh
+    while ! ${podman} run --rm docker.io/hello-world:linux > /dev/null; do 
+      ${pkgs.coreutils}/bin/sleep 2; 
+    done
+    echo "Podman is ready."
+  ''; 
+in {
+  systemd.user.services."podman-pod@" = {
+    description = "Run podman workloads via podman pod start";
+    documentation = [ "man:podman-pod-start(1)" ];
+    wants = [ "network.target" ];
+    after = [ "network.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStartPre = "${podmanReadness}";
+      ExecStart = "${podman} pod ${logLevel} start %I";
+      ExecStop = "${podman} pod ${logLevel} stop %I";
+      RemainAfterExit = "true";
+    };
+    wantedBy = [ "default.target" ];
+  };
+}
+```
+
+Add the new .nix file to the section `imports` from `configuration.nix` file.
+
+`/etc/nixos/configuration.nix`
+
+```nix
+imports =
+    [ 
+      ...
+      ./modules/podman.nix
+      ./modules/podman-pod-systemd.nix
+      ...
+    ];
+
+```
+
+### 5. Rebuild the system configuration
+
+To made Podman available, rebuild the system configuration:
 
 ```bash
 nixos-rebuild switch
@@ -181,17 +240,18 @@ ssh podman-macmini
 
 ### 1. Create Directories and Volumes for Unbound
 
-First, create a directory to store Podman's deployment **YAML** files and volumes. In this example, I'll create the directory under `/home/podman/deployments` and place an `unbound` folder inside it. Additionally, create the `volumes/unbound-conf/` directory to store extra configuration files.
+First, create a directory to store Podman's deployment **YAML** files and volumes. In this example, I'll create the directory under `/home/podman/deployments` and place an `unbound.yaml` inside it. Additionally, create the **container volume** `unbound-conf` to store extra configuration files.
 
 ```sh
-mkdir -p /home/podman/deployments/unbound/conf.d/
+mkdir -p /home/podman/deployments/
+podman volume create unbound-conf
 ```
 
 ### 2. Build the YAML Deployment File
 
 Next, create a `unbound.yaml` file in `/home/podman/deployments/unbound/`. This file is based on the example provided in the **Docker** image repository [cjuniorfox/unbound](https://github.com/cjuniorfox/unbound/).
 
-`/home/podman/deployments/unbound/unbound.yaml`
+`/home/podman/deployments/unbound.yaml`
 
 ```yaml
 apiVersion: v1
@@ -215,28 +275,16 @@ spec:
           ephemeral-storage: "500Mi"
       env:
         - name: DOMAIN
-          value: "example.com" # Same as defined in the kea configuration
-        - name: DHCPSERVER
-          value: "kea" # DHCP server used on our server
+          value: "home.example.com" # The same as defined on DHCP server section of network.nix
       ports:
-        - containerPort: 1053
+        - containerPort: 53
           protocol: UDP
           hostPort: 1053
       volumeMounts:
-        - name: tmp-kealeases4-host
-          mountPath: /dhcp.leases
-        - name: home-podman-deployments-unbound-confd-host
-          mountPath: /unbound-conf
         - name: unbound-conf-pvc          
-          mountPath: /etc/unbound/unbound.conf.d
+          mountPath: /unbound-conf
   restartPolicy: Always
   volumes:
-    - name: tmp-kealeases4-host
-      hostPath:
-        path: /tmp/kea-leases4.csv
-    - name: home-podman-deployments-unbound-confd-host
-      hostPath:
-        path: /home/podman/deployments/unbound/conf.d/
     - name: unbound-conf-pvc      
       persistentVolumeClaim:
         claimName: unbound-conf
@@ -244,9 +292,9 @@ spec:
 
 ### 4. Additional Configuration Files
 
-You can place additional configuration files in the `unbound/conf.d/` directory. These files can be used to enable features like a **TLS DNS server** for internet traffic or to define DNS names for hosts on your network. You can also block DNS resolution for specific hosts on the internet. This step is optional. Below is an example configuration that enables DNS resolution for the **Mac Mini** gateway server on the `lan` network.
+Hosts with **fixed IP**, **fixed leases**, and their own **Router identification** itself can be placed on a customized configuration file that makes the **DNS Server** return properly DNS queries about. Let's put this configuration file into the newly created volume `unbound-conf`. You will find its path at `/mnt/zdata/containers/podman/volumes/unbound-conf/_data/`
 
-`/home/podman/deployments/unbound/conf.d/local.conf`
+`/mnt/zdata/containers/podman/volumes/unbound-conf/_data/local.conf`
 
 ```conf
 server:
@@ -257,58 +305,67 @@ server:
   local-data: "macmini.example.com. IN A 10.1.90.1"
 ```
 
-### 5. Define a systemd service for unbound
+### 5. Start the unbound pod and check its status
 
-Let's create a systemd service for unbound to recreate its pods during reboots. To do that, create a file in the `/home/podman/.config/systemd/user/unbound.service`
-
-If the directory doesn't exist, create it with `mkdir -p /home/podman/.config/systemd/user/`
-
-`/home/podman/.config/systemd/user/unbound.service`
-
-```ini
-[Unit]
-Description=Rebuild Unbound Podman Pod
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-Type=fork
-ExecStartPre=/bin/sh -c 'until /run/current-system/sw/bin/ping -c1 8.8.8.8 &>/dev/null; do /run/current-system/sw/bin/sleep 2; done'
-ExecStart=/run/current-system/sw/bin/podman --log-level=info kube play --replace /home/podman/deployments/unbound/unbound.yaml
-ExecStop=/run/current-system/sw/bin/podman --log-level=info kube down /home/podman/deployments/unbound/unbound.yaml
-RemainAfterExit=true
-
-[Install]
-WantedBy=default.target
-```
-
-### 6. Start the Unbound Container
-
-Start the **Unbound** pod by `systemd`:
+With everything set, start the Unbound Pod with the following command:
 
 ```bash
-systemctl --user daemon-reload
-systemctl --user enable --now unbound.service
+podman kube play --log-level info --replace /home/podman/deployments/unbound.yaml 
 ```
 
-Some commands to check the status of the container.
-
-#### Service status
-
-```bash
-systemctl --user status unbound.service
-```
-
-#### List pods
-
-```bash
-podman pod list
-```
-
-#### Check the logs of pod
+Check it status by doing:
 
 ```bash
 podman pod logs -f unbound
+```
+
+You can also check if **DNS queries** are being properly processed by doing:
+
+```bash
+dig @localhost -p 1053 google.com
+```
+
+ ```txt
+; <<>> DiG 9.18.28 <<>> @localhost -p 1053 google.com
+; (2 servers found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 64081
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;google.com.			IN	A
+
+;; ANSWER SECTION:
+google.com.		48	IN	A	142.250.79.46
+
+;; Query time: 0 msec
+;; SERVER: ::1#1053(localhost) (UDP)
+;; WHEN: Thu Nov 14 17:47:19 -03 2024
+;; MSG SIZE  rcvd: 55
+```
+
+### 6. Enable Systemd Service for Unbound
+
+It's time to make use of the `systemd` unit created above, by enabling our Pod startup during system initialization. Do the following command:
+
+```bash
+systemctl --user enable podman-pod@unbound.service
+```
+
+You can reboot the machine to see if the service starts up with no issues
+
+```bash
+systemctl --user status podman-pod@unbound.service
+```
+
+```txt
+podman-pod@unbound.service - Run podman workloads via podman pod start
+     Loaded: loaded (/home/podman/.config/systemd/user/podman-pod@unbound.service; enabled; preset: enabled)
+     Active: active (exited) since Thu 2024-11-14 16:48:04 -03; 1h 2min ago
+...
 ```
 
 ## Firewall Rules
