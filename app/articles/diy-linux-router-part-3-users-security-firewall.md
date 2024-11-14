@@ -180,17 +180,17 @@ ssh -i ~/.ssh/router-admin admin@10.1.1.1
 If you do not want to type `ssh -i ~/.ssh/router-admin admin@10.1.1.1` everytime to authenticate into the serverm, configure the file `~/.ssh/config` as following:
 
 ```yaml
-Host admin-macmini
+Host router-admin
   Hostname 10.1.1.1
   user admin
   IdentityFile ~/.ssh/router-admin
 
-Host podman-macmini
+Host router-podman
   Hostname 10.1.1.1
   user podman
   IdentityFile ~/.ssh/router-podman
 
-Host git-macmini
+Host router-git
   Hostname 10.1.1.1
   user git
   IdentityFile ~/.ssh/router-git
@@ -199,7 +199,7 @@ Host git-macmini
 Teste o acesso **SSH** sem informar o arquivo de chaves.
 
 ```bash
-ssh admin-macmini
+ssh router-admin
 ```
 
 ### 7. Lock the root Account (optional)
