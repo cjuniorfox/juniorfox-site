@@ -11,4 +11,6 @@ lang : "pt"
 other-langs : [{"lang":"en","article":"old-ipad-as-a-second-screen"}]
 ---
 
-There's a plenty of multi-boot disk solutions around like Ventoy or multi-boot, but why do not do the thing at the hard way?
+There's a plenty of multi-boot disk solutions around like Ventoy or multi-boot, but why make our lives easier if we can do things hard way? And that's the idea of this article.
+Let's create a multi-boot disk using **GRUB** for **Linux** and **Windows** instalaller doing all steps manually.
+
