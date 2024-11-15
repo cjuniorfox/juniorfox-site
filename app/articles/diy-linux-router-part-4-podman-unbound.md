@@ -288,9 +288,9 @@ spec:
 
 ### 4. Additional Configuration Files
 
-Hosts with **fixed IP**, **fixed leases**, and their own **Router identification** itself can be placed on a customized configuration file that makes the **DNS Server** return properly DNS queries about. Let's put this configuration file into the newly created volume `unbound-conf`. You will find its path at `/mnt/zdata/containers/podman/volumes/unbound-conf/_data/`
+Hosts with **fixed IP**, **fixed leases**, and their own **Router identification** itself can be placed on a customized configuration file that makes the **DNS Server** return properly DNS queries about. Let's put this configuration file into the newly created volume `unbound-conf`. You will find its path at `/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/`
 
-`/mnt/zdata/containers/podman/volumes/unbound-conf/_data/local.conf`
+`/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/local.conf`
 
 ```conf
 server:
