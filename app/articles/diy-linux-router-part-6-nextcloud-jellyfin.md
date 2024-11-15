@@ -64,10 +64,9 @@ ZDATA=zdata
 ### Create a dataset for Nextcloud Storage
 
 ```bash
-zfs create -o canmount=off ${ZDATA}/containers/podman/volumes
-zfs create ${ZDATA}/containers/podman/volumes/nextcloud-html
-zfs create ${ZDATA}/containers/podman/volumes/nextcloud-db
-chown -R podman:podman /mnt/${ZDATA}/containers/podman/volumes/nextcloud-*
+zfs create ${ZDATA}/containers/podman/storage/volumes/nextcloud-html
+zfs create ${ZDATA}/containers/podman/storage/volumes/nextcloud-db
+chown -R podman:podman /mnt/${ZDATA}/containers/podman/storage/volumes/nextcloud-*
 ```
 
 ### Create another dataset for storing media files
@@ -108,7 +107,7 @@ podman volume create ingress-conf
 
 #### 2. Create a basic configuration for **NGINX**
 
-`/mnt/zdata/containers/podman/volumes/ingress-conf/_data/default_server.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/default_server.conf`
 
 ```conf
 server {
@@ -366,7 +365,7 @@ NEXT STEPS:
 
 Update the configuration of the **nginx** with the certitication path.
 
-`/mnt/zdata/containers/podman/volumes/ingress-conf/_data/default_server.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/default_server.conf`
 
 ```conf
 ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;
@@ -605,7 +604,7 @@ Our services are up and running on our Gateway and comes the time to configure o
 
 ### 1. Create the **Nextcloud** configuration file
 
-`/mnt/zdata/containers/podman/volumes/ingress-conf/_data/nextcloud.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/nextcloud.conf`
 
 ```conf
 server {
@@ -631,7 +630,7 @@ server {
 
 ### 2. Create the **Jellyfin** configuration file
 
-`/mnt/zdata/containers/podman/volumes/ingress-conf/_data/jellyfin.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/jellyfin.conf`
 
 ```conf
 server {
@@ -653,7 +652,7 @@ server {
 
 As we have the **Unifi Network Application** already set on server, we can create a ingress for it.
 
-`/mnt/zdata/containers/podman/volumes/ingress-conf/_data/unifi.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/unifi.conf`
 
 ```conf
 map $http_upgrade $connection_upgrade {
@@ -738,7 +737,7 @@ Gateway: 10.89.1.1
 <!-- markdownlint-disable MD029 -->
 2. Create the resolver with the `IP Address` obtained:
 
-`/mnt/zdata/containers/podman/volumes/ingress-conf/_data/resolver.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/resolver.conf`
 
 ```conf
 resolver 10.89.1.1 valid=30s;
@@ -748,7 +747,7 @@ resolver 10.89.1.1 valid=30s;
 
 My domain set on **Cloudflare**. To resolve my local DNS's, I will need to retrieve the DNS entries from **Cloudflare** and access those services via my **Public IP** over the Internet. This isn't needed, as I able to resolve the addresses locally. To do so, let's update the configuration for **Unbound** for resolving those addresses locally by editing the `local.conf`
 
-`/mnt/zdata/containers/podman/volumes/unbound-conf/_data/local.conf`
+`/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/local.conf`
 
 ```conf
 server:

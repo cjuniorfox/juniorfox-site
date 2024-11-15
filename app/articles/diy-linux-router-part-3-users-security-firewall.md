@@ -105,7 +105,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
       isNormalUser = true;
       description = "Podman Rootless";
       home = "/home/podman";
-      extraGroups = [ "containers" ];
+      group = "containers";
       openssh.authorizedKeys.keys = [
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."  # Replace with the actual public key
       ];

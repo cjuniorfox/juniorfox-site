@@ -93,7 +93,11 @@ Assuming the new pool is **zdata** let's create mountpoints considering `/mnt/zd
 zfs create -o canmount=off ${ZDATA}/containers
 zfs create ${ZDATA}/containers/root
 zfs create ${ZDATA}/containers/podman
-chown podman:podman /mnt/${ZDATA}/containers/podman
+zfs create -o canmount=off ${ZDATA}/containers/root/storage
+zfs create -o canmount=off ${ZDATA}/containers/root/storage/volumes
+zfs create -o canmount=off ${ZDATA}/containers/podman/storage
+zfs create -o canmount=off ${ZDATA}/containers/podman/storage/volumes
+chown -R podman:containers /mnt/${ZDATA}/containers/podman
 ```
 
 To make new new pool available during boot, you have to add a boot entry into `configuration.nix`
@@ -139,9 +143,9 @@ Create `modules/podman.nix` file. In this file, we have the **Podman** configura
     containers.storage.settings = {
       storage = {
         driver = "zfs";
-        graphroot = "/mnt/zdata/containers/root";
+        graphroot = "/mnt/zdata/containers/root/storage";
         runroot = "/run/containers/storage";
-        rootless_storage_path = "/mnt/zdata/containers/$USER";
+        rootless_storage_path = "/mnt/zdata/containers/$USER/storage";
       };
     };
     podman = {
