@@ -244,7 +244,7 @@ in
   networking = {
     useDHCP = false;
     hostName = "macmini";
-    nameservers = [ "1.1.1.1" "8.8.8.8" ];
+    nameservers = [ "8.8.8.8" "8.8.4.4" ];
    
     # Define VLANS
     vlans = {
@@ -269,6 +269,7 @@ in
       enable = true;
       rulesetFile = ./nftables.nft;
       flattenRulesetFile = true;
+      preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
     };
   };
 }
@@ -285,7 +286,7 @@ Configuraremos a conexão PPPoE (protocolo de conexão ponto a ponto pela Ethern
   services.pppd = {
     enable = true;
     peers = {
-      providername = {
+      meuprovedor = {
         # Iniciar automaticamente a sessão PPPoE na inicialização
         autostart = true;
         enable = true;
@@ -323,9 +324,9 @@ A regra `flow offloading`, que tem o objetivo de melhorar o desempenho da ligaç
 ```conf
 table inet filter {
   # Flow offloading para melhor performace. Remova se tiver problemas gerar o build.
-  flowtable f {
+  flowtable ftable {
     hook ingress priority 0
-    devices = { ppp0, lan }
+    devices = { "lan" "ppp0" }
   }
 
   chain input {
@@ -347,7 +348,7 @@ table inet filter {
     type filter hook forward priority filter; policy drop;
 
     # flow offloading para melhor performace
-    ip protocol { tcp, udp } flow offload @f
+    ip protocol { tcp, udp } flow offload @ftable
 
     # Permite acesso a rede local a intenret
     iifname "lan" oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
@@ -356,7 +357,7 @@ table inet filter {
     iifname "ppp0" oifname {"lan",} ct state established,related counter accept comment "Allow established back to LANs"
     # https://samuel.kadolph.com/2015/02/mtu-and-tcp-mss-when-using-pppoe-2/
     # Clamp MSS to PMTU for TCP SYN packets
-    oifname "ppp0" tcp flags syn tcp option maxseg size set rt mtu
+    oifname "ppp0" tcp flags syn tcp option maxseg size set 1452
   }
 }
 

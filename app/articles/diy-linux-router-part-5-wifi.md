@@ -16,6 +16,7 @@ This is the fifth part of this series, we will configure our wireless network us
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
+- Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 
 Já temos um roteador de internet funcional e confiável, mas ainda não configuramos nossa rede **Wifi** e este capítulo enderecerá isso.
@@ -26,6 +27,7 @@ Já temos um roteador de internet funcional e confiável, mas ainda não configu
 - [Introduction](#introduction)
 - [Physical Connection](#physical-connection)
 - [Pod Setup](#pod-setup)
+- [Firewall](#firewall)
 - [Conclusion](#conclusion)
 
 ## Introduction
@@ -54,59 +56,40 @@ Remember to install the **PoE feeder** to supply power for the **AP**. Check whe
 
 To manage this **AP** we need to install the **Unifi Network Application**. There's a **Docker Image** provided [LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/) that fits this purpose. Let's then set a **Pod** with.
 
-Run all the commands as `sudo`:
+Run all the commands as `podman` user:
 
 ```bash
-sudo -i
+ssh router-podman
 ```
 
-### 1. Create directories for this Pod
+### 1. Create the `unifi-secret.yaml` file
 
-Create a directory to contain all the files to manage this pod.
+The **Unifi Network Application** uses a **MongoDB Database** to persist information, which demands setting up **usernames** and **passwords**. We could create a generic password as plain text, but this would be a security risk. It is better to use a complex password and store it securely. **Podman** offers a functionality of this which is the `secrets repository`. I made a simple script that generates the intended passwords randomly and then creates the `unifi-secret.yaml` file with it file for deployment.
 
-```bash
-mkdir -p /opt/podman/unifi-network
-```
-
-### 2. Create the `secret.yaml` file
-
-The **Unifi Network Application** uses a **MongoDB Database** to persist information, which demands setting up **usernames** and **passwords**. We could create a generic password as plain text, but this would be a security risk. It is better to use a complex password and store it securely. **Podman** offers a functionality of this which is the `secrets repository`. I made a simple script that generates the intended passwords randomly and then creates the `secret.yaml` file with it file for deployment.
-
-Create a `sh` file with the following:
-
-`/opt/podman/unifi-network/create_secret.sh`
 
 ```sh
-#!/bin/bash
+cd /home/podman/deployments/
 
 export MONGO_INITDB_PASSWORD="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
 export MONGO_PASS="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
 
-cat << EOF > secret.yaml
+cat << EOF > unifi-secret.yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: unifi-network-secret
+  name: unifi-secret
 data:
   mongoRootPassword: $(echo -n ${MONGO_INITDB_PASSWORD} | base64)
   mongoPassword: $(echo -n ${MONGO_PASS} | base64)
 EOF
 
-echo "Secret file created with the name secret.yaml"
+echo "Secret file created with the name unifi-secret.yaml"
 ```
 
-Attribute to script the execution flag (`-x`) and run it.
+A file named `unifi-secret.yaml` wil be created at the directory you are in. Deploy it on `podman`:
 
 ```bash
-chmod +x /opt/podman/unifi-network/create_secret.sh
-cd /opt/podman/unifi-network/
-./create_secret.sh
-```
-
-A file named `secret.yaml` wil be created at the directory you are in. Deploy it on `podman`:
-
-```bash
-podman kube play /opt/podman/unifi-network/secret.yaml
+podman kube play /home/podman/deployments/unifi-secret.yaml
 ```
 
 If everything worked as intended. You had deployed a new secret into `podman`. You can check it by:
@@ -117,26 +100,26 @@ podman secret list
 
 ```txt
 ID                         NAME                  DRIVER      CREATED        UPDATED
-8aca9476dd8846f979b3f9054  unifi-network-secret  file        8 seconds ago  8 seconds ago
+8aca9476dd8846f979b3f9054  unifi-secret          file        8 seconds ago  8 seconds ago
 ```
 
 After deploying this secret, is a good practice to delete the `secret.yaml` file. Be aware that by doing so, you will be unable to delete and recreate this secret using the same password previously created.
 
 ```bash
-rm /opt/podman/unifi-network/secret.yaml
+rm /home/podman/deployments/unifi-secret.yaml
 ```
 
-### 3. Create the `unifi-network.yaml` pod file
+### 3. Create the `unifi.yaml` pod file
 
 As **Podman** being able to natively deploy **Kubernetes** deployment files, let's create a deployment file for **Unifi Network Application**.
 
-`/opt/podman/unifi-network/unifi-network.yaml`
+`/home/podman/deployments/unifi.yaml`
 
 ```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: unifi-network-initdb-mongo
+  name: unifi-initdb-mongo
 data:
   init-mongo.sh: |
     #!/bin/bash
@@ -161,9 +144,9 @@ data:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: unifi-network
+  name: unifi
   labels:
-    app: unifi-network
+    app: unifi
 spec:
   enableServiceLinks: false
   restartPolicy: Always
@@ -181,7 +164,7 @@ spec:
         ephemeral-storage: 50Mi
     volumeMounts:
     - mountPath: /config
-      name: unifi-network-application-config-pvc
+      name: unifi-application-config-pvc
     env:
     - name: PGID
       value: "1000"
@@ -192,10 +175,10 @@ spec:
     - name: MONGO_PASS
       valueFrom:
         secretKeyRef:
-          name: unifi-network-secret
+          name: unifi-secret
           key: mongoPassword
     - name: MONGO_HOST
-      value: unifi-network-db
+      value: unifi-db
     - name: MONGO_PORT
       value: "27017"
     - name: MONGO_DBNAME
@@ -207,19 +190,15 @@ spec:
     ports:
     - containerPort: 3478
       hostPort: 3478
-      hostIP: 10.1.1.1
       protocol: UDP
     - containerPort: 10001
       hostPort: 10001
-      hostIP: 10.1.1.1
       protocol: UDP
     - containerPort: 8080
       hostPort: 8080
-      hostIP: 10.1.1.1
       protocol: TCP
     - containerPort: 8443
       hostPort: 8443
-      hostIP: 10.1.1.1
       protocol: TCP
 
   # MongoDB container
@@ -237,19 +216,19 @@ spec:
       name: initdb-mongo-configmap
       readOnly: true
     - mountPath: /data/db
-      name: unifi-network-mongo-db-pvc
+      name: unifi-mongo-db-pvc
     - mountPath: /data/configdb
-      name: unifi-network-mongo-configdb-pvc 
+      name: unifi-mongo-configdb-pvc 
     env:
     - name: MONGO_PASS
       valueFrom:
         secretKeyRef:
-          name: unifi-network-secret
+          name: unifi-secret
           key: mongoPassword
     - name: MONGO_INITDB_ROOT_PASSWORD
       valueFrom:
         secretKeyRef:
-          name: unifi-network-secret
+          name: unifi-secret
           key: mongoRootPassword
     - name: MONGO_INITDB_ROOT_USERNAME
       value: root
@@ -263,25 +242,90 @@ spec:
   volumes:
   - name: initdb-mongo-configmap
     configMap:
-      name: unifi-network-initdb-mongo
-  - name: unifi-network-mongo-db-pvc
+      name: unifi-initdb-mongo
+  - name: unifi-mongo-db-pvc
     persistentVolumeClaim:
-      claimName: unifi-network-mongo-db
-  - name: unifi-network-mongo-configdb-pvc 
+      claimName: unifi-mongo-db
+  - name: unifi-mongo-configdb-pvc 
     persistentVolumeClaim:
-      claimName: unifi-network-mongo-configdb
-  - name: unifi-network-application-config-pvc
+      claimName: unifi-mongo-configdb
+  - name: unifi-application-config-pvc
     persistentVolumeClaim:
-      claimName: unifi-network-application-config
-
+      claimName: unifi-application-config
 ```
 
-### 4. Deploy the Unifi Network Application
+### 4. Start Pod and Enable its Systemd Unit
 
-The deployment of the **Unifi Network Application** can be performed by running the following command:
+Start the pod and check if its working properly.
 
 ```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml
+podman --log-level info kube play --replace /home/podman/deployments/unifi.yaml
+```
+
+Enable its `systemd` unit.
+
+```bash
+systemctl --user enable --now podman-pod@unifi.service
+```
+
+### 5. Add an A entry to Unbound
+
+To allow the **AP** to be adopted, it needs to reach the **Unifi Network Painel** by concatcting a host named **unifi**. Let's add an A entry to **Unbound** configuration
+
+`/mnt/zdata/containers/podman/volumes/unbound-conf/_data/local.conf`
+
+```conf
+server:
+  private-domain: "home.example.com."
+  local-zone: "home.example.com." static
+  local-data: "macmini.home.example.com. IN A 10.1.1.1"
+  local-data: "macmini.home.example.com. IN A 10.1.30.1"
+  local-data: "macmini.home.example.com. IN A 10.1.90.1"
+  local-data: "unifi.home.example.com. IN A 10.1.1.1"
+  local-data: "unifi. IN A 10.1.1.1"
+```
+
+## Firewall
+
+To make **Unifi Network** available to the network, it's necessary to open firwall ports. As all the ports are above the `1024`, it's just a matter of opening them. The ports are:
+
+- **3478/UDP** - Unifi STUN port.
+- **10001/UDP** - Unifi Discovery port.
+- **8080/TCP** - HTTP port for communication between Unifi devices.
+- **8443/TCP** - HTTPS Web port. Will keep it open temporarely.
+
+### Edit `nftables.nft`
+
+Edit the file `nftables.nft` as described. You have to switch from user `podman` to user `admin` and do the firewall changes with `sudo`:
+
+`/etc/nixos/modules/nftables.nft`
+
+```conf
+table inet filter {
+  ...
+  chain unifi_network_input {
+    iifname "br0" udp dport 3478 ct state {new, established } counter accept comment "Unifi STUN"
+    iifname "br0" udp dport 10001 ct state {new, established } counter accept comment "Unifi Discovery"
+    iifname "br0" tcp dport 8080 ct state {new, established } counter accept comment "Unifi Communication"
+    iifname "br0" tcp dport 8443 ct state {new, established } counter accept comment "Unifi Webmanager"
+  }
+  chain input {
+    ...
+    jump unbound_dns_input
+    jump unifi_network_input   
+ 
+    # Allow returning traffic from ppp0 and drop everything else
+    iifname "ppp0" ct state { established, related } counter accept
+    iifname "ppp0" drop
+  }
+  ...
+}
+```
+
+Rebuild **NixOS**
+
+```bash
+nixos-rebuild switch
 ```
 
 ## Configuration
@@ -292,7 +336,9 @@ podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml
 
 ### Device Adoption
 
-The **Unifi Network** needs to adopt your **Unifi AP**. Since the application is running on **Podman** under an **IP Address** which is not accessible by other devices, we have to change the **Inform IP Address**. This is done by going to **Settings** > **System** > **Advanced** and setting the **Inform Host** to a **hostname**, in that case, `macmini` or the **IP address** `10.1.1.1`. Additionally the checkbox **"Override"** has to be checked, so that devices can connect to the controller during adoption. More detailed information at the [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+The **Unifi Network** needs to adopt your **Unifi AP**. Since the application is running on **Podman** under an **IP Address** which is not accessible by other devices. So far, everything what we did would allow new devices to be automatically adoptable by the application, but if not, try as described below:
+
+Change the **Inform IP Address**. This is done by going to **Settings** > **System** > **Advanced** and setting the **Inform Host** to a **hostname**, in that case, `macmini` or the **IP address** `10.1.1.1`. Additionally the checkbox **"Override"** has to be checked, so that devices can connect to the controller during adoption. More detailed information at the [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
 
 ### Troubleshooting Adoption Problems
 
