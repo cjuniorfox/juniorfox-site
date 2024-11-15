@@ -105,6 +105,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
       isNormalUser = true;
       description = "Podman Rootless";
       home = "/home/podman";
+      extraGroups = [ "containers" ];
       openssh.authorizedKeys.keys = [
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."  # Replace with the actual public key
       ];
@@ -121,6 +122,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
       ];
     };
   };
+  users.groups.containers.members = [ "podman" ];
 
   # Enable sudo for users in the 'wheel' group
   security.sudo = {
