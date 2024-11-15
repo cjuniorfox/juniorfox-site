@@ -11,7 +11,7 @@ lang : "en"
 other-langs : [{"lang":"pt","article":"roteador-linux-parte-6-nextcloud-jellyfin"}]
 ---
 
-This is the fifth part of a multipart series describing how to build your own Linux router.
+This is the sixth part of a multi-part series describing how to build your own Linux router.
 
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
@@ -19,10 +19,8 @@ This is the fifth part of a multipart series describing how to build your own Li
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 
-In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, setup Firewall and Unbound as DNS Server.
-
 In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, and set up Firewall and Unbound as DNS Servers.
-In this chapter, let's do something more useful with our server, by installing some good services like Jellyfin and Nextcloud.
+In this chapter, let's do something more useful with our server by installing some good services like Jellyfin and Nextcloud.
 
 ![Jellyfin, Nextcloud](/assets/images/diy-linux-router/nextcloud-jellyfin.webp)
 *Jellyfin and Nextcloud*
@@ -55,15 +53,32 @@ So, why not own your proper content and run your own on-demand media server? Jel
 
 Both Jellyfin and Nextcloud store and access files. We could just create folders for them, but properly setting up the storage is better for properly backing up the data. With **ZFS** is fairly easy to create the intended **datasets** for each service.
 
+Run with `sudo`:
+
+Assuming that the **data** storage pool is named `zdata`. If you has choosen to use the same Pool for root, apply the correct names.
+
 ```bash
-zfs create -o mountpoint=none rpool/mnt
-zfs create -o mountpoint=/mnt/container-volumes/nextcloud rpool/mnt/container-volumes/nextcloud
-zfs create -o mountpoint=/mnt/shares/media rpool/mnt/shares/media
+ZDATA=zdata
+```
+
+### Create a dataset for Nextcloud Storage
+
+```bash
+zfs create ${ZDATA}/containers/podman/storage/volumes/nextcloud-html
+zfs create ${ZDATA}/containers/podman/storage/volumes/nextcloud-db
+chown -R podman:podman /mnt/${ZDATA}/containers/podman/storage/volumes/nextcloud-*
+```
+
+### Create another dataset for storing media files
+
+```bash
+zfs create -o canmount=off ${ZDATA}/shares
+zfs create ${ZDATA}/shares/media
 ```
 
 ## Ingress
 
-Every service lifts its own **HTTP** port. As far as the idea is to make those services available on the Internet, the ideal is to set up an ingress. Ingress is a **NGINX** service that will consolidate all services at **HTTPS** protocol on port **443**. Is important to **have an FQDN domain** and **create subdomains** on it as having a **public IPv4 address** is also good. If you don't have a domain. You could buy one to use it. Is fairly cheap these days. There are even free options. If you don't have a **publicly available IP address**, you can make use of a **VPS** on the Cloud to act as a proxy and ingress for you. **Oracle** per example offers a **Lifetime free of charge VPS** that [you can check it out](https://www.oracle.com/br/cloud/compute/). Just configure a **Wireguard** VPN and configure a connection between your **VPS** and your **Gateway**. There's an article about  **Wireguard** at [this link](/article/wireguard-vpn). Further, we will aboard **Wireguard** on this server, but to keep things simple, this tutorial will assume that you have a **publicity available IP address**.
+Every service runs on its own **HTTP** port. As far as the idea is to make those services available on the Internet, the ideal is to set up an **Ingress Service**. Ingress is a **NGINX** service to act as a **proxy** to consolidate all services at **HTTPS** protocol on port **443**. If you do want to make these services available to the internet, you will have to buy a **FQDN domain** and **create subdomains** on it as having a **public IPv4 address** is also good. If you don't have a domain. You could buy one to use it. Is fairly cheap these days. There are even free options. If you don't have a **publicly available IP address**, you can make use of a **VPS** on the Cloud to act as a proxy and ingress for you. **Oracle** per example offers a **Lifetime free of charge VPS** that [you can check it out](https://www.oracle.com/br/cloud/compute/). Just configure a **Wireguard** VPN and configure a connection between your **VPS** and your **Gateway**. There's an article about  **Wireguard**
 
 ### Setup Subdomains
 
@@ -74,49 +89,25 @@ On the domain administrator you have, add two DNS entries for your **IPv4** (A e
 
 As **Nextcloud** and **Jellyfin**, our **Ingress** will live into a **Podman's Pod** (or into a **VPS** for the case mentioned earlier). The **Ingress** needs to be able to talk with the **Nextcloud** and **Jellyfin** pods. So let's create a network for them.
 
-```bash
-podman network create \
-  --driver bridge   \
-  --gateway 10.90.1.1 \
-  --subnet 10.90.1.0/24 \
-  --ip-range 10.90.1.100/24  \
-  ingress-net
-```
-
-Do not forget to add the new range to `nftables.nft`.
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-  chain podman_networks_input {
-    ...
-    ip saddr 10.90.1.0/24 accept comment "Podman ingress-net network"
-  }
-
-  chain podman_networks_forward {
-    ...
-    ip saddr 10.90.1.0/24 accept comment "Podman ingress-net network"
-    ip daddr 10.90.1.0/24 accept comment "Podman ingress-net network"
-  }
-```
+Run as `podman` user:
 
 ```bash
-nixos-rebuild switch
+podman network create ingress-net
 ```
 
 ### Ingress Pod
 
 It's time to create our `ingress-pod`. As still there's none of the services running, this will be just a placeholder for setting up the **SSL Certificate**.
 
-#### 1. Create a folder to act as **conf** volume
+#### 1. Create the ingress-conf volume
 
 ```bash
-mkdir -p /opt/podman/ingress/conf
+podman volume create ingress-conf
 ```
 
 #### 2. Create a basic configuration for **NGINX**
 
-`/opt/podman/ingress/conf/default_server.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/default_server.conf`
 
 ```conf
 server {
@@ -131,11 +122,9 @@ server {
 
 #### 3. Create the **ingress.yaml** file
 
-<!-- markdownlint-disable MD033 -->
-<details>
-  <summary>Click to expand the <b>ingress.yamll</b>.</summary>
+Create the pod file for ingress:
 
-`/opt/podman/ingress/ingress.yaml`
+`/home/podman/deployments/ingress.yaml`
 
 ```yaml
 apiVersion: v1
@@ -152,17 +141,17 @@ spec:
       image: docker.io/library/nginx:1.27.2-alpine
       ports:
       - containerPort: 80
-        hostPort: 80
+        hostPort: 1080
       - containerPort: 443
-        hostPort: 443
+        hostPort: 1443
       volumeMounts:
       - mountPath: /etc/localtime
         name: etc-localtime-host
       - mountPath: /etc/nginx/conf.d
-        name: opt-podman-ingress-conf-host
+        name: ingress-conf-pvc
       - mountPath: /var/www
         name: ingress-www-pvc
-      - mountPath: /etc/certificates
+      - mountPath: /etc/letsencrypt 
         name: certificates-pvc
   restartPolicy: Always
   volumes:
@@ -170,10 +159,9 @@ spec:
     hostPath:
       path: /etc/localtime
       type: File
-  - name: opt-podman-ingress-conf-host
-    hostPath:
-      path: /opt/podman/ingress/conf
-      type: Directory
+  - name: ingress-conf-pvc
+    persistentVolumeClaim:
+      claimName: ingress-conf
   - name: ingress-www-pvc
     persistentVolumeClaim:
       claimName: ingress-www
@@ -182,102 +170,206 @@ spec:
       claimName: certificates
 ```
 
-</details> <!-- markdownlint-enable MD033 -->
+As you can see, because of the limitation to open ports below `1024` on `rootless` mode, the `HTTP` and `HTTPS` ports will be redirect. `80` to `1080` and `443` to `1443`.
 
-#### 4. Start the **ingress** pod by running the following command
+We need to open these ports and redirect them on Firewall back to `80` and `443` to make it work as intended.
+With `sudo`, let's adjust our `nftables` configuration. Remember to after that, login back to the `podman` user, as there's other things needed to be done with **podman** user.
 
-```bash
-podman kube play \
-  /opt/podman/ingress/ingress.yaml \
-  --replace --network ingress-net
+##### Table `inet filter`
+
+`/etc/nixos/modules/nftables.nft`
+
+```conf
+table inet filter {
+  ...
+  chain ingress_dns_input {
+    tcp dport 1080 ct state { new, established } counter accept comment "Ingress HTTP"
+    tcp dport 1443 ct state { new, established } counter accept comment "Ingress HTTPS"
+  }
+
+  chain input {
+    ...
+    jump ingress_dns_input  
+
+    # Allow returning traffic from ppp0 and drop everything else
+    iifname "ppp0" ct state { established, related } counter accept
+    iifname "ppp0" drop
+  }
+}
 ```
 
-By doing this, the `ingress-www` and `certificates` volumes will be used to validate the **SSL Certificates**, to be created at the next step.
+##### Table `nat`
+
+`/etc/nixos/modules/nftables.nft`
+table ip nat {
+  ...
+  chain ingress_redirect {
+    ip daddr { 10.1.1.1, 10.1.30.1, 10.1.90.1 } tcp dport  80 redirect to 1080
+    ip daddr { 10.1.1.1, 10.1.30.1, 10.1.90.1 } tcp dport 443 redirect to 1443
+    iifname "ppp0" tcp dport  80 redirect to 1080
+    iifname "ppp0" tcp dport 443 redirect to 1443
+  }
+  chain prerouting {
+    type nat hook prerouting priority filter; policy accept;
+    tcp flags syn tcp option maxseg size set 1452
+    jump unbound_redirect
+    jump ingress_redirect
+  }
+}
+`
+
+We can also close the port `8443` used by **Unifi Network** as we will access these service through **ingress**.
+
+`/etc/nixos/modules/nftables.nft`
+
+```conf
+table inet filter {
+  chain unifi_network_input {
+    iifname "br0" udp dport 3478 ct state { new, established } counter accept comment "Unifi STUN"
+    iifname "br0" udp dport 10001 ct state { new, established } counter accept comment "Unifi Discovery"
+    iifname "br0" tcp dport 8080 ct state { new, established } counter accept comment "Unifi Communication"
+    # Remove the
+    # Allow returning traffic from ppp0 and drop everything else
+    iifname "ppp0" ct state { established, related } counter accept
+    iifname "ppp0" drop
+  }
+}
+```
+
+##### Table NAT
+
+`/etc/nixos/modules/nftables.nft`
+table ip nat {
+  ...
+  chain ingress_redirect {
+    ip daddr { 10.1.1.1, 10.1.30.1, 10.1.90.1 } tcp dport  80 redirect to 1080
+    ip daddr { 10.1.1.1, 10.1.30.1, 10.1.90.1 } tcp dport 443 redirect to 1443
+    iifname "ppp0" tcp dport  80 redirect to 1080
+    iifname "ppp0" tcp dport 443 redirect to 1443
+  }
+  chain prerouting {
+    type nat hook prerouting priority filter; policy accept;
+    tcp flags syn tcp option maxseg size set 1452
+    jump unbound_redirect
+    jump ingress_redirect
+  }
+}
+`
+
+We can also close the port `8443` used by **Unifi Network** as we will access these service through **ingress**.
+
+`/etc/nixos/modules/nftables.nft`
+
+```conf
+table inet filter {
+  chain unifi_network_input {
+    iifname "br0" udp dport 3478 ct state { new, established } counter accept comment "Unifi STUN"
+    iifname "br0" udp dport 10001 ct state { new, established } counter accept comment "Unifi Discovery"
+    iifname "br0" tcp dport 8080 ct state { new, established } counter accept comment "Unifi Communication"
+    # Remove the 8443 redirect, let the other ones.
+  }
+}
+```
+
+##### What we did?
+
+- On **input**, we accepted every connection to ingress ports, at this case `1080` and `1443` regardless of the interface.
+- On **rerouting** we have:
+  - **Redirected** any connection comming from `ppp0` to the `ingress` pod from ports `80` and `443` to `1080` and `1443` respectively.
+  - **Redirected** any connection from local network intended to reach the server to **ingress** pod.
+  - **Removed** the `8443` port access from network, as is not needed anymore.
+
+#### 4. Start the Ingress Pod and Enalbe Systemd Unit
+
+Start the Ingress Pod by running:
+
+```bash
+podman kube play --log-level info --network ingress-net --replace /home/podman/deployments/ingress.yaml 
+```
+
+Enable its `systemd` service file:
+
+```bash
+systemctl --user enable podman-pod@ingress.service --now
+```
+
+The Ingress pod creates additional volumes, like `ingress-www` and `certificates` that will be used to validate the **SSL Certificates**, to be created at the next step. You can check it's creations by running `podman volume list`.
 
 ### Let's Encrypt
 
-The **Let's Encrypt** is a free service that provides **SSL Certificates**. It's also a service that is very easy to use. To use it, we will need to create a **pod** for it.
+The **Let's Encrypt** is a free service that provides **SSL Certificates**. We going to use a utility called **certbot** to renew our certificates.
 
-#### 1. Create an `yaml` file with the following content
+#### Create a systemd unit service for renewal
 
-<!-- markdownlint-disable MD033 -->
-<details>
-  <summary>Click to expand the <b>lets-encrypt.yaml</b>.</summary>
+These certificates expires in a short period of time. So having a systemd unit to renew the service every month avoid your domains to have their certificates expired. Replace the `DOMAINS` list with your domains, as `EMAIL` with your e-mail address.
 
-`/opt/podman/ingress/lets-encrypt.yaml`
+- Create a systemd unit `certbot.service`
 
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: lets-encrypt
-  name: lets-encrypt
-spec:
-  networks:
-    - name: ingress-net
-  restartPolicy: Never
-  containers:
-    - name: certbot
-      image: docker.io/certbot/certbot:v2.11.0
-      args:
-      - certonly
-      - --agree-tos
-      - --non-interactive
-      - -v
-      - --webroot
-      - -w
-      - /var/www/
-      - --force-renewal
-      - --email
-      - your_email@gmail.com # Replace with your email
-      - -d
-      - jellyfin.example.net # as `example.net` being your FQDN
-      - -d
-      - nextcloud.example.net # as `example.net` being your FQDN
-      volumeMounts:
-      - name: certificates-pvc
-        mountPath: /etc/letsencrypt
-      - name: ingress-www-pvc
-        mountPath: /var/www
+`/home/podman/.config/systemd/user/certbot.service`
 
-  volumes:
-    - name: ingress-www-pvc
-      persistentVolumeClaim:
-        claimName: ingress-www
-  
-    - name: certificates-pvc
-      persistentVolumeClaim:
-        claimName: certificates
+```ini
+Description=Lets encrypt renewal with Certbot
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment="DOMAINS=unifi.example.com,nextcloud.example.com,jellyfin.example.com"
+Environment="EMAIL=your_email@gmail.com"
+ExecStart=/run/current-system/sw/bin/podman run --rm \
+          -v ingress-www:/var/www \
+          -v certificates:/etc/letsencrypt \
+          --log-level info --network ingress-net \
+          docker.io/certbot/certbot:v3.0.0 \
+              certonly --agree-tos --non-interactive -v \
+              --webroot -w /var/www --force-renewal \
+              --email ${EMAIL} \
+              --domains ${DOMAINS}
+
 ```
 
-</details> <!-- markdownlint-enable MD033 -->
+- Create the `timer` unit which will trigger the renewal event once in a month
 
-#### 2. Run **lets-encrypt** pod with the following command
+`/home/podman/.config/systemd/user/certbot.timer`
 
-```bash
-podman kube play \
-  /opt/podman/ingress/lets-encrypt.yaml \
-  --replace --network ingress-net
+```ini
+[Unit]
+Description=Renew certificates using certbot montly.
+
+[Timer]
+OnCalendar=monthly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
 ```
 
-By running this **pod**, the **SSL Certificate** will be created and stored at the `certificate` volume. The `ingress-www` one was used to validate the **SSL Certificate**. With the certificate, let's update the ingress pod to serve **HTTPS** traffic with this certificate.
-
-The **lets-encrypt** pod will be stopped after the **SSL Certificate** is created. You will need to run the **lets-encrypt** pod again from time to time to renew the **SSL Certificate**.
-
-The certificate will be created at the `certificates` volume. You can check the logs of the **lets-encrypt** pod with the following command:
+Enable and start `certbot.service`. Check logs to see if the registration was successful.
 
 ```bash
-podman pod logs lets-encrypt
+systemctl --user daemon-reload
+systemctl --user enable certbot.timer
+systemctl --user start certbot.service
+journalctl --user -eu certbot.service
+```
+
+```txt
+...
+Successfully received certificate.
+Certificate is saved at: /etc/letsencrypt/live/example.com/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/example.com/privkey.pem
+This certificate expires on 2025-02-10.
+NEXT STEPS:
+- The certificate will need to be renewed before it expires. Certbot can automatically renew the certificate in the background, but you may need to take steps to enable that functionality. See https://certbot.org/renewal-setup for instructions.
 ```
 
 Update the configuration of the **nginx** with the certitication path.
 
-`/opt/podman/ingress/conf/default_server.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/default_server.conf`
 
 ```conf
-ssl_certificate     /etc/certificates/live/example.com/fullchain.pem;
-ssl_certificate_key /etc/certificates/live/example.com/privkey.pem; 
+ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem; 
 
 server {
     listen 80 default_server;
@@ -292,18 +384,12 @@ server {
 #### 3. Restart the **ingress** pod
 
 ```bash
-podman pod restart ingress
+systemctl --user restart podman-pod@ingress.service
 ```
 
 ## Nextcloud
 
 Now that we have the **Ingress** ready, we can start creating the **Nextcloud** service.
-
-Create a path to place **Nextcloud** configuration files.
-
-```bash
-mkdir -p /opt/podman/nextcloud/
-```
 
 ### Secrets
 
@@ -311,47 +397,30 @@ We will need to create a **secret** for the **Nextcloud** service. This secret w
 
 #### 1. Create the secret file
 
-<!-- markdownlint-disable MD033 -->
-<details>
-  <summary>Click to expand the <b>create_secret.sh</b> file.</summary>
-  
-`/opt/podman/nextcloud/create_secret.sh`
+Create the secret file for the **Nextcloud** service:
 
 ```sh
-#!/bin/bash
-
+cd /home/podman/deployments/
 export MARIADB_ROOT_PASSWORD="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
 export MYSQL_PASSWORD="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
 
-cat << EOF > secret.yaml
+cat << EOF > nextcloud-secret.yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: nextcloud-secrets
+  name: nextcloud-secret
 data:
   mariadbRootPassword: $(echo -n ${MARIADB_ROOT_PASSWORD} | base64)
   mysqlPassword: $(echo -n ${MYSQL_PASSWORD} | base64)
 EOF
 
-echo "Secret file created with the name secret.yaml"
+echo "Secret file created with the name nextcloud-secret.yaml"
 ```
-
-```bash
-chmod +x /opt/podman/nextcloud/create_secret.sh
-cd /opt/podman/nextcloud
-./create_secret.sh
-```
-
-```txt
-Secret file created with the name secret.yaml
-```
-
-</details> <!-- markdownlint-enable MD033 -->
 
 #### 2. Deploy the secret file created
 
 ```bash
-podman kube play /opt/podman/nextcloud/secret.yaml
+podman kube play /home/podman/deployments/nextcloud-secret.yaml
 ```
 
 #### 3. Check for the newly created secret
@@ -364,7 +433,7 @@ podman secret list
 
 ```txt
 ID                         NAME               DRIVER      CREATED             UPDATED
-b22f3338bbdcec1ecd2044933  nextcloud-secrets  file        About a minute ago  About a minute ago
+b22f3338bbdcec1ecd2044933  nextcloud-secret   file        About a minute ago  About a minute ago
 ```
 
 #### 4. Delete the `secret.yaml` file
@@ -372,18 +441,14 @@ b22f3338bbdcec1ecd2044933  nextcloud-secrets  file        About a minute ago  Ab
 Maintaining the secret file can be a security flaw. It's a good practice to delete the secret file after deployment. Be aware that you cannot retrieve it's secret contents again in the future.
 
 ```bash
-rm -f /opt/podman/nextcloud/secret.yaml
+rm -f /home/podman/deployments/nextcloud-secret.yaml
 ```
 
 ### YAML for Nextcloud
 
 The **Nextcloud** service will be deployed on **Podman**. To do this, we will need to create a `yaml` file with the following content:
 
-<!-- markdownlint-disable MD033 -->
-<details>
-  <summary>Click to expand the <b>nextcloud.yaml</b>.</summary>
-
-`/opt/podman/nextcloud/nextcloud.yaml`
+`/home/podman/deployments/nextcloud.yaml`
 
 ```yaml
 apiVersion: v1
@@ -408,7 +473,7 @@ spec:
           ephemeral-storage: 50Mi
       volumeMounts:
       - mountPath: /var/www/html
-        name: mnt-container-volumes-nextcloud-html-host
+        name: nextcloud-html-pvc
       env:
       - name: MYSQL_DATABASE
         value: nextcloud
@@ -419,7 +484,7 @@ spec:
       - name: MYSQL_PASSWORD
         valueFrom:
           secretKeyRef:
-            name: nextcloud-secrets
+            name: nextcloud-secret
             key: mysqlPassword
 
     - image: docker.io/mariadb:11.5.2
@@ -443,52 +508,44 @@ spec:
       - name: MYSQL_PASSWORD
         valueFrom:
           secretKeyRef:
-            name: nextcloud-secrets
+            name: nextcloud-secret
             key: mysqlPassword
       - name: MARIADB_ROOT_PASSWORD
         valueFrom:
           secretKeyRef:
-            name: nextcloud-secrets
+            name: nextcloud-secret
             key: mariadbRootPassword
 
   volumes:
-  - name: mnt-container-volumes-nextcloud-html-host
-    hostPath:
-      path: /mnt/container-volumes/nextcloud/html
-      type: Directory
-
-
+  - name: nextcloud-html-pvc
+    persistentVolumeClaim:
+      claimName: nextcloud-html
   - name: nextcloud-db-pvc
     persistentVolumeClaim:
-      claimName: nextcloud_db
+      claimName: nextcloud-db
 ```
-
-</details> <!-- markdownlint-enable MD033 -->
 
 This `yaml` file will create a **Nextcloud** service with a **MariaDB** database. It will use `/srv/nextcloud` as the **Nextcloud** data directory. Start the **Nextcloud** service with the following command:
 
+### Start Pod and enable its systemd service
+
+As did for Ingress, start the pod with the following command:
+
 ```bash
-mkdir -p /mnt/container-volumes/nextcloud/html/
-podman kube play \
-  /opt/podman/nextcloud/nextcloud.yaml \
-  --replace --network ingress-net
+podman kube play --log-level info --network ingress-net --replace /home/podman/deployments/nextcloud.yaml 
+```
+
+Enable **Nextcloud** `systemd` service:
+
+```bash
+systemctl --user enable --now podman-pod@nextcloud.service
 ```
 
 ## Jellyfin
 
-As usual, create a directory to maintain **Jellyfin** configuration files.
+Create the `jellyfin.yaml` file with the following content:
 
-```bash
-mkdir -p /opt/podman/jellyfin
-```
-
-The **Jellyfin** service will be deployed on **Podman**. To do this, we will need to create a `yaml` file with the following content:
-
-<!-- markdownlint-disable MD033 -->
-<details>
-  <summary>Click to expand the <b>jellyfin.yaml</b>.</summary>
-
-`/opt/podman/jellyfin/jellyfin.yaml`
+`/home/podman/deployments/jellyfin.yaml`
 
 ```yaml
 apiVersion: v1
@@ -516,36 +573,38 @@ spec:
         - mountPath: /cache
           name: jellyfin-cache-pvc
         - mountPath: /media
-          name: mnt-shares-media-host
+          name: mnt-zdata-shares-media-host
   volumes:
     - name: jellyfin-config-pvc
       persistentVolumeClaim:
-        claimName: jellyfin_config
+        claimName: jellyfin-config
     - name: jellyfin-cache-pvc
       persistentVolumeClaim:
-        claimName: jellyfin_cache
-    - name: mnt-shares-media-host
+        claimName: jellyfin-cache
+    - name: mnt-zdata-shares-media-host
       hostPath:
-        path: /mnt/shares/media
+        path: /mnt/zdata/shares/media
 ```
 
-</details> <!-- markdownlint-enable MD033 -->
-
-This `yaml` file will create a **Jellyfin** service. Start the **Jellyfin** service with the following command:
+Start **JellyFin** Pod and enable its `systemd` service:
 
 ```bash
-podman kube play \
-  /opt/podman/jellyfin/jellyfin.yaml \
-  --replace --network ingress-net
+podman kube play --log-level info --network ingress-net --replace /home/podman/deployments/jellyfin.yaml 
+```
+
+Enable its `systemd` service
+
+```bash
+systemctl --user enable --now podman-pod@jellyfin.service
 ```
 
 ## Configure Ingress
 
 Our services are up and running on our Gateway and comes the time to configure our ingress to proxy the ingresses connections from `nextcloud.example.com` and `jellyfin.example.com` to proxy the `nextcloud` **Pod** and `jellyfin` **Pod** respectively.
 
-### 1. Crete the **Nextcloud** configuration file
+### 1. Create the **Nextcloud** configuration file
 
-`/opt/podman/ingress/conf/nextcloud.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/nextcloud.conf`
 
 ```conf
 server {
@@ -571,7 +630,7 @@ server {
 
 ### 2. Create the **Jellyfin** configuration file
 
-`/opt/podman/ingress/conf/jellyfin.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/jellyfin.conf`
 
 ```conf
 server {
@@ -593,7 +652,7 @@ server {
 
 As we have the **Unifi Network Application** already set on server, we can create a ingress for it.
 
-`/opt/podman/ingress/conf/unifi-network.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/unifi.conf`
 
 ```conf
 map $http_upgrade $connection_upgrade {
@@ -608,7 +667,7 @@ server {
 server {
   listen 443 ssl;
   server_name unifi.example.com;
-  set $upstream unifi-network:8443;
+  set $upstream unifi:8443;
 
   location / {
     proxy_pass     https://$upstream;
@@ -635,7 +694,7 @@ server {
 
 You can optionally remove the `forward port` for `8443/tcp` from the pod's `yaml`. To do so, it's just removing the following lines:
 
-`/opt/podman/unifi-network/unifi-network.yaml`
+`/home/podman/deployments/unifi.yaml`
 
 ```yaml
 ...
@@ -646,18 +705,19 @@ spec:
   ...
   ports:
   ...
-  # Remove these lines below:
+  # Remove these lines:
   - containerPort: 8443
       hostPort: 8443
-      hostIP: 10.1.1.1
       protocol: TCP
   ...
 ```
 
-Redo the deployment of `unifi-network` pod with parameter `--network=ingress-net`:
+Redeploy the **Unifi Network Application** adding it to the network `ingress-net` as did with the other Pods.
+
+`/home/podman/.config/systemd/user/podman-unifi.service`
 
 ```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml --network ingress-net
+podman kube play --log-level info --network ingress-net --replace /home/podman/deployments/unifi.yaml 
 ```
 
 ### 4. Configure the resolver
@@ -672,30 +732,22 @@ podman network inspect ingress-net \
 ```
 
 ```txt
-Gateway: 10.90.1.1
+Gateway: 10.89.1.1
 ```
 <!-- markdownlint-disable MD029 -->
 2. Create the resolver with the `IP Address` obtained:
 
-`/opt/podman/ingress/conf/resolver.conf`
+`/mnt/zdata/containers/podman/storage/volumes/ingress-conf/_data/resolver.conf`
 
 ```conf
-resolver 10.90.1.1 valid=30s;
-```
-
-### 5. Restart **ingress**
-
-Everything is set. Restart the **ingress** service.
-
-```bash
-podman pod restart ingress
+resolver 10.89.1.1 valid=30s;
 ```
 
 ### 6. Configure `Unbound` to Resolve the hostsnames locally
 
 My domain set on **Cloudflare**. To resolve my local DNS's, I will need to retrieve the DNS entries from **Cloudflare** and access those services via my **Public IP** over the Internet. This isn't needed, as I able to resolve the addresses locally. To do so, let's update the configuration for **Unbound** for resolving those addresses locally by editing the `local.conf`
 
-`/opt/podman/unbound/conf.d/local.conf`
+`/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/local.conf`
 
 ```conf
 server:
@@ -709,10 +761,10 @@ server:
   local-data: "jellyfin.example.com. IN A 10.1.1.1"
 ```
 
-Restart Unbound:
+Restart Ingress:
 
 ```bash
-podman kube play --replace /opt/podman/unbound/unbound.yaml
+systemctl --user restart podman-pod@ingress.service
 ```
 
 ## Conclusion
