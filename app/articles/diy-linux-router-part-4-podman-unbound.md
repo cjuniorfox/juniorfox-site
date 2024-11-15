@@ -231,7 +231,7 @@ nixos-rebuild switch
 Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using the **Docker** image [docker.io/cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). Since **Podman** supports **Kubernetes-like** **YAML** deployment files, we'll create our own based on the example provided in the [GitHub repository](https://github.com/cjuniorfox/unbound/) for this image, specifically in the [Kubernetes](https://github.com/cjuniorfox/unbound/tree/main/kubernetes) folder. We'll also set up as rootless for security reasons. Log out from the server and log in as the `podman` user. If you set your `~/.ssh/config` as I did, it's just:
 
 ```bash
-ssh podman-macmini
+ssh router-podman
 ```
 
 ### 1. Create Directories and Volumes for Unbound
@@ -348,7 +348,7 @@ google.com.		48	IN	A	142.250.79.46
 It's time to make use of the `systemd` unit created above, by enabling our Pod startup during system initialization. Do the following command:
 
 ```bash
-systemctl --user enable podman-pod@unbound.service
+systemctl --user enable --now podman-pod@unbound.service
 ```
 
 You can reboot the machine to see if the service starts up with no issues
