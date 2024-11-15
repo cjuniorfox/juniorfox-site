@@ -175,7 +175,7 @@ As you can see, because of the limitation to open ports below `1024` on `rootles
 We need to open these ports and redirect them on Firewall back to `80` and `443` to make it work as intended.
 With `sudo`, let's adjust our `nftables` configuration. Remember to after that, login back to the `podman` user, as there's other things needed to be done with **podman** user.
 
-##### Table `inet filter`
+##### Table inet Filter
 
 `/etc/nixos/modules/nftables.nft`
 
@@ -198,7 +198,7 @@ table inet filter {
 }
 ```
 
-##### Table `nat`
+##### Table NAT
 
 `/etc/nixos/modules/nftables.nft`
 table ip nat {
@@ -232,43 +232,6 @@ table inet filter {
     # Allow returning traffic from ppp0 and drop everything else
     iifname "ppp0" ct state { established, related } counter accept
     iifname "ppp0" drop
-  }
-}
-```
-
-##### Table NAT
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-table ip nat {
-  ...
-  chain ingress_redirect {
-    ip daddr { 10.1.1.1, 10.1.30.1, 10.1.90.1 } tcp dport  80 redirect to 1080
-    ip daddr { 10.1.1.1, 10.1.30.1, 10.1.90.1 } tcp dport 443 redirect to 1443
-    iifname "ppp0" tcp dport  80 redirect to 1080
-    iifname "ppp0" tcp dport 443 redirect to 1443
-  }
-  chain prerouting {
-    type nat hook prerouting priority filter; policy accept;
-    tcp flags syn tcp option maxseg size set 1452
-    jump unbound_redirect
-    jump ingress_redirect
-  }
-}
-`
-
-We can also close the port `8443` used by **Unifi Network** as we will access these service through **ingress**.
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-table inet filter {
-  chain unifi_network_input {
-    iifname "br0" udp dport 3478 ct state { new, established } counter accept comment "Unifi STUN"
-    iifname "br0" udp dport 10001 ct state { new, established } counter accept comment "Unifi Discovery"
-    iifname "br0" tcp dport 8080 ct state { new, established } counter accept comment "Unifi Communication"
-    # Remove the 8443 redirect, let the other ones.
   }
 }
 ```
