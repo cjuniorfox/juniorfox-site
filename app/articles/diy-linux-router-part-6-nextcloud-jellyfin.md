@@ -613,7 +613,7 @@ server {
 }
 ```
 
-### 3, Create a configuration file for **unifi**
+### 3, Create a configuration file for Unifi Network
 
 As we have the **Unifi Network Application** already set on server, we can create a ingress for it.
 
@@ -708,7 +708,7 @@ Gateway: 10.89.1.1
 resolver 10.89.1.1 valid=30s;
 ```
 
-### 6. Configure `Unbound` to Resolve the hostsnames locally
+### 6. Configure Unbound to Resolve the hostsnames locally
 
 My domain set on **Cloudflare**. To resolve my local DNS's, I will need to retrieve the DNS entries from **Cloudflare** and access those services via my **Public IP** over the Internet. This isn't needed, as I able to resolve the addresses locally. To do so, let's update the configuration for **Unbound** for resolving those addresses locally by editing the `local.conf`
 
@@ -716,11 +716,8 @@ My domain set on **Cloudflare**. To resolve my local DNS's, I will need to retri
 
 ```conf
 server:
-  private-domain: "example.com."
-  local-zone: "example.com." static
-  local-data: "macmini.example.com. IN A 10.1.1.1"
-  local-data: "macmini.example.com. IN A 10.1.30.1"
-  local-data: "macmini.example.com. IN A 10.1.90.1"
+  ...
+  #Add the lines below. Leave the rest as is.
   local-data: "unifi.example.com. IN A 10.1.1.1"
   local-data: "nextcloud.example.com. IN A 10.1.1.1"
   local-data: "jellyfin.example.com. IN A 10.1.1.1"
