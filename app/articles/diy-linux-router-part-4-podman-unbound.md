@@ -161,14 +161,6 @@ Create `modules/podman.nix` file. In this file, we have the **Podman** configura
 }
 ```
 
-### 3. Enable Linger to the user podman
-
-To restart pods on a rootless `podman` user, we have to start it's `systemd` services upon reboots. To do that, enable `linger` to user `podman`. Run the following command with `sudo`
-
-```bash
-loginctl enable-linger podman
-```
-
 ### 4. Create systemd unit to start Podman pods
 
 By default, the **Podman** installation, install some `systemd` units by default, but there are none for dealing with **pods** properly. There's a `systemd` unit for deploying **Kubernetes Pods** that comes closer to what I need but demands an internet connection right at the moment to start Pods, which there's no way to guarantee during the system initialization. Also, my installation made use of the newer [Pasta Network provider](https://docs.podman.io/en/latest/markdown/podman-network.1.html#pasta), which is great if you compare it to the older [slirp4netns](https://github.com/rootless-containers/slirp4netns), but, at least on my setup, enabling the pod to start with the server gets me an issue because, during the pod's initialization, the **Pasta Network** is not ready yet, preventing containers to initiate. So, I wrote my parametrized systemd unit to deal with **rootless pods**, doing two things:
