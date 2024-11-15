@@ -239,6 +239,8 @@ table inet filter {
 ##### Table NAT
 
 `/etc/nixos/modules/nftables.nft`
+
+```conf
 table ip nat {
   ...
   chain ingress_redirect {

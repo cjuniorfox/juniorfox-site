@@ -295,10 +295,10 @@ Hosts with **fixed IP**, **fixed leases**, and their own **Router identification
 ```conf
 server:
   private-domain: "example.com."
-  local-zone: "example.com." static
-  local-data: "macmini.example.com. IN A 10.1.1.1"
-  local-data: "macmini.example.com. IN A 10.1.30.1"
-  local-data: "macmini.example.com. IN A 10.1.90.1"
+  local-zone: "macmini.home.example.com." static
+  local-data: "macmini.home.example.com. IN A 10.1.1.1"
+  local-data: "macmini.home.example.com. IN A 10.1.30.1"
+  local-data: "macmini.home.example.com. IN A 10.1.90.1"
 ```
 
 ### 5. Start the unbound pod and check its status
