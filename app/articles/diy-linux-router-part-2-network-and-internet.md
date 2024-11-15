@@ -146,7 +146,11 @@ This Mac Mini only has one Gigabit Ethernet port, this NIC will be tied to VLANs
 - **IoT**: `10.1.90.0/24` is `vlan90` (VLAN 90).
 - **WAN**: `PPPoE` is `wan` network to **PPPoE** connection.
 
-My network interface is previously named `enp4s0f0`. This is a persistent name defined by the driver and physical connection of the NIC on the bus, but this name can change sometimes. So I prefer to rename it to another thing more persistent. At case `enge0` tied to the **MAC Address**.
+#### Renaming Network Interface
+
+In the old days, the network interfaces were arbitrarily named `eth0`, `eth1`... The order of interfaces was defined during kernel initialization, which caused many problems. Today the network card is identified by their physical connection on the bus. It works, but sometimes, during kernel updates or firmware upgrades, the network interface identification changes, causing problems. Thinking about that, I wanted to rename my interface to something more persistent. All Network card has a **MAC Address**. I'll define the network card name by its address.
+
+My network interface was previously named `enp4s0f0`. This is a persistent name defined by the driver and physical connection of the NIC on the bus, but this name can change sometimes. So I prefer to rename it to another thing more persistent. At case `enge0` tied to the **MAC Address**.
 
 ## NixOS config
 
@@ -363,7 +367,6 @@ systemd.network = {
       enable = true;
       rulesetFile = ./nftables.nft;
       flattenRulesetFile = true;
-      preCheckRuleset = "sed 's/.*devices.*/devices = { lo }/g' -i ruleset.conf";
     };
   };
 }
