@@ -1,48 +1,46 @@
 ---
-title: "Create a multi-boot disk at the hard way"
+title: "Create a Multi-Boot Disk the Hard Way"
 articleId: "create-multi-boot-disk-hard-way"
 date: "2024-11-08"
 author: "Carlos Junior"
 category: "Linux"
-brief: "There's a plenty of multi-boot disk solutions like Ventoy or multi-boot, but why do not do all the work manually?"
+brief: "There are many multi-boot disk solutions like Ventoy, but why not do it manually and learn how bootloaders work?"
 image: "/assets/images/create-a-multi-boot-disk-hard-way/multi-boot-disk.webp"
-keywords : ["usb","multi-boot disk", "windows", "linux", "boot", "bios", "uefi"]
-lang : "pt"
-other-langs : [{"lang":"en","article":"old-ipad-as-a-second-screen"}]
+keywords: ["usb", "multi-boot disk", "windows", "linux", "boot", "bios", "uefi"]
+lang: "pt"
+other-langs: [{"lang":"en","article":"old-ipad-as-a-second-screen"}]
 ---
 
-With tools like Ventoy, creating a multi-boot USB disk for operating systems ISOs is easier than ever. For those who want to have the job done, Ventoy is the most appropriate way to go.
-This article is for those who want to do things manually or would like to learn more about how the operating systems boot.
-In this tutorial, we gonna do every step to make a multi-boot-disk, by partitioning and even compiling GRUB for using it, partitioning the USB stick, installing GRUB, copying our ISOS, and setting the GRUB menu. So without further redo, let's get started.
-Download and compile GRUB.
-Many Linux operating systems make GRUB available for installation, but they mostly have a setup made for their operating systems not always work for this kind of setup. Thinking about that I prefer to download the GRUB source code and compile it by myself. To make it more system-agnostic, I'll use Distrobox to build it.
+Creating a multi-boot USB disk for operating system ISOs is easier than ever with tools like **Ventoy**. For those who prefer an automated solution, **Ventoy** is the way to go. However, if you want to learn how operating systems boot and gain full control over the process, this guide is for you.
 
-## Obtaining GRUB
+In this tutorial, we will manually create a **multi-boot USB stick**, covering partitioning, compiling **GRUB**, installing it, copying **ISOs**, and configuring the **GRUB menu**.
 
-To have **GRUB**, we need to download its source code and compile it.
+---
 
-### 1. Create a container on Distrobox
+## Download and Compile GRUB
+
+Many Linux distributions provide **precompiled GRUB packages**, but these are often tailored for the host OS and may not suit our multi-boot setup. Instead, we'll download GRUB's source code and compile it to ensure flexibility. We'll use Distrobox to maintain a clean build environment.
+
+### 1. Create a Container in Distrobox
 
 ```bash
 distrobox create --name grub-builder --image ubuntu:latest
 distrobox enter grub-builder
 ```
 
-### 2. Prepare the built environment
+### 2. Prepare the Build Environment
 
 ```bash
 sudo sh << EOF
 apt update -y
-apt upgrade -
-apt install -y gcc g++ make bison gawk gettext binutils flex pkg-config patch build-essential 
+apt upgrade -y
+apt install -y gcc g++ make bison gawk gettext binutils flex pkg-config patch build-essential
 EOF
-
-#sudo apt install  gawk acpica-tools  ninja-build libpixman-1-dev
 ```
 
 ### 3. Download GRUB Sources
 
-Til the moment I write this article, the last stable version of GRUB is 2.12.
+The latest stable version of GRUB at the time of writing is 2.12.
 
 ```bash
 mkdir ~/.local/src/
@@ -63,7 +61,7 @@ make -j$(nproc)
 cd ..
 ```
 
-### 5. Build for UEFI
+### 5. Build GRUB for UEFI
 
 ```bash
 mkdir build-uefi
@@ -72,42 +70,31 @@ cd build-uefi
 make -j$(nproc)
 ```
 
-## USB Stick
+---
 
-This **Multi-boot USB Sick will** support:
+## Prepare the USB Stick
 
-- Both **BIOS** and **UEFI**
+This multi-boot USB stick will support:
+
+- **BIOS** and **UEFI**
 - Windows Installer
-- Many Linux Distros
+- Various Linux distributions
 
-### Partitioning
+### 1. Partition the USB Stick
 
-The partition schema for this USB stick will be as follows:
+The partition scheme will include:
 
-- **Partition 1**: Special partition for **BIOS** Boot.
-- **Partition 2**: **FAT-32** Boot partition for **UEFI**
-- **Partition 3**: **NTFS** For **Windows** Initialization
-- **Partition 4**: **EXT-4** partition for Linux ISOs.
+1. BIOS Boot (1 MiB)
+2. UEFI Boot (FAT-32, 512 MiB)
+3. Windows Installation (NTFS, 8 GiB)
+4. Linux ISOs (EXT4, remaining space)
 
-Leave distrobox environment with `exit` and prepare the USB Stick by doing the following:
-
-#### 1. Identify USB Stick
+**WARNING**: This will erase all data on the USB stick.
 
 ```bash
 ls /dev/disk/by-id/
-```
-
-#### 2. Define USB Stick
-
-```bash
 STICK=/dev/disk/by-id/usb-my-thumbdrive
-```
 
-#### 3. Partition USB Stick
-
-Be aware that will wipe out the entire USB Stick.
-
-```bash
 sudo sh << EOF
 wipefs -a ${STICK}
 parted ${STICK} mklabel gpt
@@ -125,56 +112,43 @@ mkfs.ext4 -L Multi-Boot ${STICK}-part4
 EOF
 ```
 
-#### 4. Mount intended filesystems
+---
 
-```bash
-MNT=$(mktemp -d)
-mkdir ${MNT}/{multiboot,efi,windows}
-sudo sh << EOF
-mount ${STICK}-part2 ${MNT}/efi
-mount ${STICK}-part3 ${MNT}/windows
-mount ${STICK}-part4 ${MNT}/multiboot
-mkdir ${MNT}/multiboot/boot
-EOF
-```
+## Install GRUB
 
-## Installing GRUB
-
-Let's install GRUB for both **UEFI** and **BIOS**
+We'll install GRUB for both UEFI and BIOS.
 
 ```bash
 cd grub-2.12/build-bios/
-sudo sh << EOF
-./grub-install --boot-directory ${MNT}/multiboot/boot/ --directory=./grub-core/ --target=i386-pc ${STICK}
+sudo ./grub-install --boot-directory=${MNT}/multiboot/boot/ --directory=./grub-core/ --target=i386-pc ${STICK}
+
 cd ../build-uefi/
-./grub-install --directory=./grub-core/ --target=x86_64-efi --efi-directory=/${MNT}/efi --boot-directory=${MNT}/multiboot/boot/ --removable
-EOF
+sudo ./grub-install --directory=./grub-core/ --target=x86_64-efi --efi-directory=${MNT}/efi --boot-directory=${MNT}/multiboot/boot/ --removable
 ```
 
-## Copy iso files
+---
 
-For **Linux Based** operating systems, all files will be placed on `/isos` inside **Multi-boot** partition. To make life a bit easier, create a `/isos` directory and define as owner your user.
+## Copy ISO Files
+
+Create directories for Linux ISOs:
 
 ```bash
-sudo sh << EOF
-mkdir ${MNT}/multiboot/isos
-chown $(id -u) ${MNT}/multiboot/isos
-EOF
+sudo mkdir ${MNT}/multiboot/isos
+sudo chown $(id -u):$(id -g) ${MNT}/multiboot/isos
 ```
 
-## Copy ISOS files
-
-Copy intended isos files to the folder `/isos` created
+Copy the ISO files to `/isos`:
 
 ```bash
-cd my-iso-files #Directory where your isos are in
-rsync -axHAWXs --info=progress2 *.iso ${MNT}/multiboot/isos
+rsync -axHAWX --info=progress2 my-iso-files/*.iso ${MNT}/multiboot/isos
 sync
 ```
 
+---
+
 ## Windows
 
-Windows was unable to read its contents from a ISO file inside an **EXT4** filesystem. Instead, Windows installers need to be extracted from ISO file and placed on a **NTFS** partition.
+Windows is unable to read its contents from a ISO file inside an **EXT4** filesystem. Instead, Windows installers need to be extracted to a proper **NTFS** partition.
 
 ### 1. Download Windows Installer ISO
 
@@ -182,7 +156,7 @@ Download the Windows installer ISO from [Microsoft](https://www.microsoft.com/pt
 
 ### 2. Mount and Copy Windows ISO Contentss
 
-Mount the ISO using `udiskctl` or `mount` and copy its contents to the **NTFS** partition we just created.
+Mount the ISO with `udiskctl` or `mount` and copy its contents to the **NTFS**.
 
 ```bash
 udisksctl loop-setup -f /home/junior/Downloads/Win11_24H2_x64.iso
@@ -190,30 +164,30 @@ cd /media/your_user/Win11_23H2_x64v2
 rsync -a -r ./ ${MNT}/windows
 ```
 
-## Grub Menu
+---
 
-We need to create menu itens to made operating systems available to initialization. The idea is simple. What a menu item does:
+## Configure the GRUB Menu
+
+Create a **GRUB** Menu to made operating systems available to initialization. Grub menu works as follows:
 
 1. Looks for intended **ISO**.
 2. Mount the **ISO**.
 3. Switch root to **ISO's** root folder.
 4. Start Linux Kernel with **ISO's** flag.
 
-
 ### Creation of grub.cfg file
 
-The `grub.cfg` file will be created in the directory `/boot/grub2`. The first thing this file needs to do, is find where the USB stick is and then switch the `/root` folder to it. To do that, let's create a empty file with an `uuid` to be used as a reference for grub to locate yourself. To make things easier, let's also change the owner of the `grub.cfg` to your user, so you will not need to be `sudo` to edit its entries.
+The `grub.cfg` file will be created in the directory `/boot/grub`. Change the owner of the `grub.cfg` to your user, so you wont need to use `sudo` to edit its entries.
 
 ```bash
 REF_FILE=$(uuid)
 sudo sh << EOF
-mkdir ${MNT}/multiboot/boot/grub2/
-touch ${MNT}/multiboot/boot/grub2/grub.cfg
+touch ${MNT}/multiboot/boot/grub/grub.cfg
 touch ${MNT}/multiboot/${REF_FILE}
-chown $(id -u) ${MNT}/multiboot/boot/grub2/grub.cfg
+chown $(id -u):$(id -g) ${MNT}/multiboot/boot/grub/grub.cfg
 EOF
 
-cat << HEREDOC >> ${MNT}/multiboot/boot/grub2/grub.cfg
+cat << HEREDOC >> ${MNT}/multiboot/boot/grub/grub.cfg
 search --no-floppy --set=root --file /${REF_FILE}
 set timeout=10
 set default=0
@@ -222,12 +196,11 @@ HEREDOC
 
 ### Common Menuentries
 
-It's time to add its menu entries. This step is a kind of boring because every distribution has its own combination of kernel flags that needs to be added manually to **GRUB** menu. At the most part of Linux distributions, it's the same kernel flag found on its ISOS's **GRUB** configuration file with the additional flag:
+Add the menu entries. This step is a kind of boring because every distribution has its own combination of kernel flags that needs to be added to **GRUB** menu. For the most part, it's the same kernel flag found on its ISOS's **GRUB** configuration file with the following additional flag:
 
 - `iso-scan/filename="${iso_path}"`
 
-Being `iso_path` the path for that iso.
-**NixOS** its a exception. Because it do not need to add the mentioned flag. So is just redirecting the grub menu to the one present on the **NixOS** iso. So, the secure way to create your **GRUB** menu is mounting ISO by ISO and adding its flags, but let me make the life a bit easier by presenting the most common ones:
+The best way to now the set of kernel flags needs to be added, is **mounting every ISO** file and reading its `grub.cfg` contents file. The most common menuentries are:
 
 #### Debian 12 Live
   
@@ -278,11 +251,11 @@ menuentry 'NixOS 24.05.6122.080166c15633 Installer '  --class installer {
 }
 ```
 
-#### Windows 11
+#### Windows Entries
 
-Apart of Linux ISOS, Windows needs to chainload the **Windows** `bootmgr` bootloader and then boot from the files present into the **Windows Installer partition**. There's a difference between booting **BIOS** and **UEFI** on Winwdows Far as I know, **Windows 11** only supports **UEFI**, **Windows 10** supports both **UEFI** and **BIOS**, and **Windows 7** only supports **BIOS**.
+Windows needs to chainload `bootmgr` from a **NTSC** partition. There's some differences between **BIOS** and **UEFI**. Here the common menuentries:
 
-##### UEFI (Windows 11)
+#### UEFI (Windows 11)
 
 ```ini
 menuentry "Install Windows 11 23H2 x64v2" {
@@ -304,6 +277,18 @@ menuentry "Windows 10 Installer" {
 }
 ```
 
+---
+
+## Umount everything and testing
+
+Umount the USB Stick and test if work as intended.
+
+```bash
+sudo umount -Rl ${MNT}/multiboot/
+sudo umount -Rl ${MNT}/windows/
+sudo umount -Rl ${MNT}/efi/
+```
+
 ## Conclusion
 
-In this article, we learned how to create a multi-bootable USB stick for a bunch of different operating systems.
+In this guide, we built a fully functional multi-boot USB stick supporting both BIOS and UEFI systems. From partitioning to configuring GRUB, we covered every step manually. Happy booting!
