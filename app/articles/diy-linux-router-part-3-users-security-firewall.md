@@ -44,6 +44,9 @@ Create a password for the `admin` user. A password for the `git` user is not nec
 ```bash
 mkpasswd --method=SHA-512
 Password: #type the password (hackme00)
+```
+
+```txt
 $6$ZeLsWXraGkrm9IDL$Y0eTIK4lQm8D0Kj7tSVzdTJ/VbPKea4ZPf0YaJR68Uz4MWCbG1EJp2YBOfWHNSZprZpjpbUvCIozbkr8yPNM0.
 ```
 
@@ -94,7 +97,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
       description = "Administrator User";
       home = "/home/admin"; # Home directory
       extraGroups = [ "wheel" ]; # Add the user to the 'wheel' group for sudo access
-      hashedPassword = "$6$rounds=656000$example$hashedpassword"; # Password, optional
+      initialHashedPassword = "$6$rounds=656000$example$hashedpassword"; # Password, optional
       openssh.authorizedKeys.keys = [
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."  # Replace with the actual public key
       ];
