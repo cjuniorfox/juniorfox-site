@@ -31,6 +31,19 @@ With this old **Mac Mini**, that is currently sitting in the corner and making i
   - [Manageable Switch TP-Link TL-SG108E](#manageable-switch-tp-link-tl-sg108e)
   - [Ubiquiti Unifi C6 Lite](#ubiquiti-unifi-c6-lite)
 - [Linux Setup](#linux-setup)
+   1. [Download NixOS](#1-download-nixos)
+   2. [Enable SSH Service](#2-enable-ssh-service)
+   3. [SSH into the Mac Mini](#3-ssh-into-the-mac-mini)
+   4. [Partition the Disk](#4-partition-the-disk)
+   5. [Create ZFS Datasets](#5-create-zfs-datasets)
+   6. [Create and mount the Boot filesystem](#6-create-and-mount-the-boot-filesystem)
+   7. [Generate NixOS Configuration](#7-generate-nixos-configuration)
+   8. [Generate a password for the root user](#8-generate-a-password-for-the-root-user)
+   9. [Edit the Configuration](#8-edit-the-configuration)
+      - [Hardware Configuration](#hardware-configuration)
+   10. [Install NixOS](#9-install-nixos)
+   11. [Umount the filesystem](#10-umount-the-filesystem)
+   12. [Post-Installation Configuration](#11-post-installation-configuration)
 - [Conclusion](#conclusion)
 
 ## The Idea
@@ -144,7 +157,9 @@ parted ${DISK} mkpart primary 1MiB 2MiB
 parted ${DISK} set 1 bios_grub on
 parted ${DISK} mkpart EFI 2MiB 514MiB
 parted ${DISK} set 2 esp on
-parted ${DISK} mkpart ZFS 514MiB 32G
+parted ${DISK} mkpart ZFS 514MiB 8GiB
+parted ${DISK} mkpart Swap 8GiB 8GiB
+
 sleep 1
 mkfs.msdos -F 32 -n EFI ${DISK}-part2
 ```
@@ -154,6 +169,7 @@ Get the `UUID` for partitions
 ```bash
 BOOT="/dev/disk/by-uuid/"$(blkid -s UUID -o value ${DISK}-part2)
 ROOT="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part3)
+SWAP="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
 ```
 
 ### 5. Create ZFS Datasets
@@ -168,32 +184,59 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 - **acltype=posixacl**: Requirement for installing Linux on a ZFS formatted system.
 
 ```bash
-zpool create -o canmount=off -O mountpoint=/ \
+zpool create -O canmount=off -O mountpoint=/ \
   -o ashift=12 -O atime=off -O compression=lz4 \
   -O xattr=sa -O acltype=posixacl \
   ${ZROOT} ${ROOT} -R /mnt
 ```
 
-#### Create intended **datasets**
+### Create the filesystem
 
-Starting with the most basic ones. `rootfs` and `home`:
+On **NixOS**, the operating system is installed on `/nix` directory. **NixOS** makes all the references to this directory and creates the other directories during initialization for compatibility. So if you want to do so, you can mount the **root** filesystem as `tmpfs` being an ephemeral storage. Everything in this directory will vanish after the shutdown.
+
+So, with that in mind, we can have everything ephemeral using `tmpfs` for the root filesystem, or we create a **ZFS** dataset for this mountpoint.
+
+#### Advantages of ephemeral storage
+
+Guarantees that any change on the system apart from what **NixOS** is configured to do will vanish during reboot
+
+#### Disadvantages
+
+As there are files on those ephemeral montpoints, this approach consumes a bit of RAM.
+
+#### ROOT as ephemeral
+
+To install as ephemeral, let's mount a `tmpfs` filesystem for `root` and create only the necessary datasets to let **NixOS** work properly.
+
+```bash
+mount -t tmpfs tmpfs -o,size=2G /mnt
+```
+
+#### ROOT as filesystem
+
+If you want to create a filesystem for `root`, do as follows:
 
 ```bash
 zfs create -o mountpoint=none -o canmount=off ${ZROOT}/root
-zfs create -o mountpoint=/ -o canmount=noauto ${ZROOT}/root/nixos
+zfs create -o mountpoint=/ -o canmonut=noauto ${ZROOT}/root/nixos
 zfs mount ${ZROOT}/root/nixos
+```
+
+#### Other datasets
+
+Create the following datasets for eather persistent or ephemeral `root` filesystem.
+
+```bash
+zfs create -o canmount=off ${ZROOT}/etc
+zfs create ${ZROOT}/etc/nixos
+zfs create -o canmount=noauto ${ZROOT}/nix
+zfs mount ${ZROOT}/nix
+zfs create -o canmount=off ${ZROOT}/var
+zfs create ${ZROOT}/var/log
 zfs create ${ZROOT}/home
 ```
 
-Having `/nix` in on it's own **dataset** is a good idea:
-
-```bash
-zfs create -o mountpoint=legacy -o canmount=noauto ${ZROOT}/nix
-mkdir /mnt/nix
-mount -t zfs ${ZROOT}/nix /mnt/nix
-```
-
-You can use `tmpfs` or a **ZFS dataset** for **temporary files**:
+You can use `tmpfs` or a **ZFS dataset** for **temporary files**. Remember that if you are using the ephemeral `root` filesystem, does not make sense mount **temporary directories** as filesystem, so, in that case, just jump to the **Swap** step if you want to use swap.
 
 ##### ZFS Dataset
 
@@ -205,42 +248,27 @@ chmod 1777 /mnt/var/tmp
 chmod 1777 /mnt/tmp
 ```
 
-If you want to use `tmpfs` instead, do as follows. But remember that `tmpfs` consumes some amount of RAM.
+If you want to use `tmpfs` instead, do as follows:
 
 ```bash
+mkdir /mnt/tmp
+mkdir -p /mnt/var/tmp
 mount -t tmpfs tmpfs /mnt/tmp
 mount -t tmpfs tmpfs /mnt/var/tmp
 ```
 
-#### Swap dataset
+#### Swap partition
 
 Using a swap on an **SSD** can reduce the drive's lifespan, but in some cases is necessary.
-
-```bash
-zfs create -V 8G \
-  -o compression=zle \
-  -o logbias=throughput -o sync=always \
-  -o primarycache=metadata -o secondarycache=none \
-  -o com.sun:auto-snapshot=false ${ZROOT}/swap
-```
 
 Create the swap and start using it.
 
 ```bash
-mkswap -f /dev/zvol/${ZROOT}/swap
-swapon /dev/zvol/${ZROOT}/swap
+mkswap -f ${SWAP}
+swapon ${SWAP}
 ```
 
 ### 6. Create and mount the Boot filesystem
-
-#### UEFI
-
-```bash
-mkdir -p /mnt/boot/efi
-mount ${BOOT} /mnt/boot/efi
-```
-
-#### BIOS
 
 ```bash
 mkdir /mnt/boot
@@ -252,6 +280,16 @@ mount ${BOOT} /mnt/boot
 ```bash
 nixos-generate-config --root /mnt
 ```
+
+### 8. Generate a password for the root user
+
+This step is only necessary if you use the root filesystem as `tmpfs`. With `/etc` being an ephemeral mountpoint, because the `/etc` directory resets to default on each reboot, setting the password with `mkpasswd` does not affect this kind of setup.
+
+```bash
+PASS=$(mkpasswd --method=SHA-512)
+```
+
+Type the password. It will be stored in the variable `PASS` for further use.
 
 ### 8. Edit the Configuration
 
@@ -285,15 +323,15 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.efi.efiSysMountPoint = "/boot/efi"; 
 
   i18n.defaultLocale = "en_US.UTF-8";
    console = {
      font = "Lat2-Terminus16";
      useXkbConfig = true; # use xkb.options in tty.
    };
-  
-  system.stateVersion = "24.05"; # Did you read the comment?
+  time.timeZone = "America/Sao_Paulo";
+  users.users.root.initialHashedPassword = "${PASS}";
+  system.stateVersion = "24.05";
   services.openssh = {
     enable = true;
     settings = {
@@ -321,6 +359,11 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
 { config, pkgs, ... }:
 
 {
+  imports =
+    [ 
+      <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
+      ./hardware-configuration.nix
+    ];
   system.stateVersion = "24.05";
   boot = {
     loader = {
@@ -336,8 +379,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
      useXkbConfig = true; # use xkb.options in tty.
    };
   time.timeZone = "America/Sao_Paulo";
-
-  system.stateVersion = "24.05";
+  users.users.root.initialHashedPassword = "${PASS}";
   services.openssh = {
     enable = true;
     settings = {
@@ -358,7 +400,14 @@ EOF
 
 #### Hardware Configuration
 
-The command `nixos-generate-config` scans your hardware and creates all the mount points needed for your system, but there's an issue with the `root` filesystem. You can check if is everything ok with it.
+The command `nixos-generate-config` scans your hardware and creates all the mount points your system needs. You can check if everything is ok with it.
+You don't need to keep the mountpoints managed by **ZFS**. Only let the following mountpoints:
+
+- `/`: Adding options `[ "defaults" "size=1G" "mode=755" ]` to if, if you choose to leave `root`as ephemeral with `tmpfs`.
+- `/nix`: Leave as is.
+- `/boot`: Becase is not a **ZFS** Filesystem, but a **FAT32** for booting.
+- `/tmp` and `/var/tmp`: If you choose to create those being `tmpfs` as well.
+
 Also, It creates all mounpoints created by `zfs`. Maintain mountpoints `/`, `/nix` `/boot/efi` (or `/boot` if you took the **BIOS** path) and delete the mountpoints `/home` and (**UEFI** installation) `/boot`.
 
 You can check the hardware-configuration file at the following path: `/mnt/etc/nixos/hardware-configuration.nix`
@@ -366,18 +415,19 @@ You can check the hardware-configuration file at the following path: `/mnt/etc/n
 ```nix
 {
 ...boot
-
+  ## Root as filesystem
   fileSystems."/" =
     { device = "zroot/root/nixos";
       fsType = "zfs";
     };
-    
-  fileSystems."/nix" =
-    { device = "zroot/nix";
-      fsType = "zfs";
-    };
-
-  fileSystems."/boot/efi" =
+  ## Root as tmpfs
+  fileSystems."/" = {
+    device = "tmpfs";
+    fsType = "tmpfs";
+    options = [ "defaults" "size=2G" "mode=755" ];
+  };
+  
+  fileSystems."/boot/" =
     { device = "/dev/disk/by-uuid/3E83-253D";
       fsType = "vfat";
       options = [ "fmask=0022" "dmask=0022" ];
@@ -399,8 +449,8 @@ nixos-install
 
 ```bash
 cd /
-swapoff /dev/zvol/${ZROOT}/swap
-umount /boot/efi
+swapoff ${SWAP}
+umount /boot/
 umount -Rl /mnt
 zpool export -a
 ```
@@ -413,7 +463,7 @@ reboot
 
 ### 11. Post-Installation Configuration
 
-Once NixOS is installed, you can begin configuring the services that will run on your router. Here are some of the key services you'll want to set up:
+Once **NixOS** is installed, you can start configuring the services that will run on your router. Here are some of the key services you'll want to set up:
 
 - **Nextcloud**: For private cloud storage.
 - **Unbound DNS with Adblock**: To block ads across the network.
@@ -423,7 +473,7 @@ Each of these services can be configured in your NixOS configuration file (`/etc
 
 ## Conclusion
 
-By repurposing an old Mac Mini and using NixOS, you've created a powerful and flexible Linux router that can manage your network, provide cloud storage, block ads, and more. This setup is highly customizable and can be expanded with additional services as needed. Whether you're looking to improve your home network or just want to experiment with NixOS, this project is a great way to breathe new life into old hardware.
-This wraps up the first part of this article. In the second part, we’ll configure our network, including VLAN configuration to split our network into `private`, `guest`, and `wan`, as well as set up a PPPoE connection and basic firewall rules using `nftables`.
+By repurposing an old Mac Mini and using NixOS, you've created a powerful and flexible Linux router that can manage your network, provide cloud storage, block ads, and more. This setup is highly customizable and can be expanded with additional services. Whether you're looking to improve your home network or just want to experiment with NixOS, this project is a great way to breathe new life into old hardware.
+This wraps up the first part of this article. In the second part, we’ll configure our network, including VLAN configuration to split our network into **Home**, **Guest**, **IoT**, and set up a **PPPoE connection** with basic firewall rules using `nftables` for security.
 
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
