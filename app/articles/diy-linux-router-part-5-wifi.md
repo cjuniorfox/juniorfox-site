@@ -272,7 +272,7 @@ systemctl --user enable --now podman-pod@unifi.service
 
 To allow the **AP** to be adopted, it needs to reach the **Unifi Network Painel** by concatcting a host named **unifi**. Let's add an A entry to **Unbound** configuration
 
-`/mnt/zdata/containers/podman/volumes/unbound-conf/_data/local.conf`
+`/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/local.conf`
 
 ```conf
 server:

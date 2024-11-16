@@ -161,14 +161,6 @@ Create `modules/podman.nix` file. In this file, we have the **Podman** configura
 }
 ```
 
-### 3. Enable Linger to the user podman
-
-To restart pods on a rootless `podman` user, we have to start it's `systemd` services upon reboots. To do that, enable `linger` to user `podman`. Run the following command with `sudo`
-
-```bash
-loginctl enable-linger podman
-```
-
 ### 4. Create systemd unit to start Podman pods
 
 By default, the **Podman** installation, install some `systemd` units by default, but there are none for dealing with **pods** properly. There's a `systemd` unit for deploying **Kubernetes Pods** that comes closer to what I need but demands an internet connection right at the moment to start Pods, which there's no way to guarantee during the system initialization. Also, my installation made use of the newer [Pasta Network provider](https://docs.podman.io/en/latest/markdown/podman-network.1.html#pasta), which is great if you compare it to the older [slirp4netns](https://github.com/rootless-containers/slirp4netns), but, at least on my setup, enabling the pod to start with the server gets me an issue because, during the pod's initialization, the **Pasta Network** is not ready yet, preventing containers to initiate. So, I wrote my parametrized systemd unit to deal with **rootless pods**, doing two things:
@@ -239,7 +231,7 @@ nixos-rebuild switch
 Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using the **Docker** image [docker.io/cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). Since **Podman** supports **Kubernetes-like** **YAML** deployment files, we'll create our own based on the example provided in the [GitHub repository](https://github.com/cjuniorfox/unbound/) for this image, specifically in the [Kubernetes](https://github.com/cjuniorfox/unbound/tree/main/kubernetes) folder. We'll also set up as rootless for security reasons. Log out from the server and log in as the `podman` user. If you set your `~/.ssh/config` as I did, it's just:
 
 ```bash
-ssh podman-macmini
+ssh router-podman
 ```
 
 ### 1. Create Directories and Volumes for Unbound
@@ -296,17 +288,17 @@ spec:
 
 ### 4. Additional Configuration Files
 
-Hosts with **fixed IP**, **fixed leases**, and their own **Router identification** itself can be placed on a customized configuration file that makes the **DNS Server** return properly DNS queries about. Let's put this configuration file into the newly created volume `unbound-conf`. You will find its path at `/mnt/zdata/containers/podman/volumes/unbound-conf/_data/`
+Hosts with **fixed IP**, **fixed leases**, and their own **Router identification** itself can be placed on a customized configuration file that makes the **DNS Server** return properly DNS queries about. Let's put this configuration file into the newly created volume `unbound-conf`. You will find its path at `/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/`
 
-`/mnt/zdata/containers/podman/volumes/unbound-conf/_data/local.conf`
+`/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/local.conf`
 
 ```conf
 server:
   private-domain: "example.com."
-  local-zone: "example.com." static
-  local-data: "macmini.example.com. IN A 10.1.1.1"
-  local-data: "macmini.example.com. IN A 10.1.30.1"
-  local-data: "macmini.example.com. IN A 10.1.90.1"
+  local-zone: "macmini.home.example.com." static
+  local-data: "macmini.home.example.com. IN A 10.1.1.1"
+  local-data: "macmini.home.example.com. IN A 10.1.30.1"
+  local-data: "macmini.home.example.com. IN A 10.1.90.1"
 ```
 
 ### 5. Start the unbound pod and check its status
@@ -356,7 +348,7 @@ google.com.		48	IN	A	142.250.79.46
 It's time to make use of the `systemd` unit created above, by enabling our Pod startup during system initialization. Do the following command:
 
 ```bash
-systemctl --user enable podman-pod@unbound.service
+systemctl --user enable --now podman-pod@unbound.service
 ```
 
 You can reboot the machine to see if the service starts up with no issues
