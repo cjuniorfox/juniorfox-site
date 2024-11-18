@@ -450,7 +450,7 @@ nixos-install
 ```bash
 cd /
 swapoff ${SWAP}
-umount /boot/
+umount /mnt/boot/
 umount -Rl /mnt
 zpool export -a
 ```
