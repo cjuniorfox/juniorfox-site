@@ -142,7 +142,7 @@ What Linux has in security and reliability, it lacks in automatically configurin
 2. Reload `firewalld` to make the service available:
 
 ```bash
-sudo firewall-cmd reload
+sudo firewall-cmd --reload
 ```
 
 3. Add the newly created service to the local network zone. By default, firewalld configures the default adapter to the public zone or home zone. You can check what zone with the command `sudo firewall-cmd --get-zone-of-interface=enp6s0` assuming that your network adapter is named `enp6s0`. In my case, the zone of my network adapter is home. So let's add the service to the home zone:
@@ -161,6 +161,7 @@ A little disclaimer: This script is for Hyprland. If you're using another compos
 - Create the file `/home/username/.local/bin/virtual-screen.sh` with the following content:
 
 ```bash
+#!/usr/bin/bash
 RESOLUTION=1024x768
 POSITION=auto
 SCALE=1
@@ -199,7 +200,7 @@ With everthing up and working, do as followws:
    flatpak-spawn --host /home/username/.local/bin/virtual-screen.sh create
 ```
 
-   - To the `Undo Command`, set it as 
+   - To the `Undo Command`, set it as
 
 ```sh
    #Use "flatpak-spawn --host" only if you're using the Flatpak version of Sunshine.

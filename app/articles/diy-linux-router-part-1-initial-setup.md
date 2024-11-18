@@ -218,7 +218,7 @@ If you want to create a filesystem for `root`, do as follows:
 
 ```bash
 zfs create -o mountpoint=none -o canmount=off ${ZROOT}/root
-zfs create -o mountpoint=/ -o canmonut=noauto ${ZROOT}/root/nixos
+zfs create -o mountpoint=/ -o canmount=noauto ${ZROOT}/root/nixos
 zfs mount ${ZROOT}/root/nixos
 ```
 
