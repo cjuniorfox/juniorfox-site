@@ -1,19 +1,31 @@
 ---
 title: "Create a Multi-Boot Disk the Hard Way"
 articleId: "create-multi-boot-disk-hard-way"
-date: "2024-11-08"
+date: "2024-11-16"
 author: "Carlos Junior"
 category: "Linux"
 brief: "There are many multi-boot disk solutions like Ventoy, but why not do it manually and learn how bootloaders work?"
 image: "/assets/images/create-a-multi-boot-disk-hard-way/multi-boot-disk.webp"
 keywords: ["usb", "multi-boot disk", "windows", "linux", "boot", "bios", "uefi"]
 lang: "pt"
-other-langs: [{"lang":"en","article":"old-ipad-as-a-second-screen"}]
+other-langs: [{"lang":"pt","article":"crie-um-pendrive-multiboot-do-jeito-dificil"}]
 ---
 
 Creating a multi-boot USB disk for operating system ISOs is easier than ever with tools like **Ventoy**. For those who prefer an automated solution, **Ventoy** is the way to go. However, if you want to learn how operating systems boot and gain full control over the process, this guide is for you.
 
+![Multi Boot Disk]("/assets/images/create-a-multi-boot-disk-hard-way/multi-boot-disk.webp")
+
 In this tutorial, we will manually create a **multi-boot USB stick**, covering partitioning, compiling **GRUB**, installing it, copying **ISOs**, and configuring the **GRUB menu**.
+
+- [Download and Compile GRUB](#download-and-compile-grub)
+- [Prepare the USB Stick](#prepare-the-usb-stick)
+- [Install GRUB](#install-grub)
+- [Copy ISO Files](#copy-iso-files)
+  - [Windows Installer](#windows-installer)
+- [GRUB Menu](#grub-menu)
+  - [Creation of grub.cfg File](#creation-of-grubcfg-file)
+  - [Common Menuentries](#common-menuentries)
+- [Conclusion](#conclusion)
 
 ---
 
@@ -146,15 +158,15 @@ sync
 
 ---
 
-## Windows
+### Windows Installer
 
 Windows is unable to read its contents from a ISO file inside an **EXT4** filesystem. Instead, Windows installers need to be extracted to a proper **NTFS** partition.
 
-### 1. Download Windows Installer ISO
+#### 1. Download Windows Installer ISO
 
 Download the Windows installer ISO from [Microsoft](https://www.microsoft.com/pt-br/software-download/windows11).
 
-### 2. Mount and Copy Windows ISO Contentss
+#### 2. Mount and Copy Windows ISO Contentss
 
 Mount the ISO with `udiskctl` or `mount` and copy its contents to the **NTFS**.
 
@@ -166,7 +178,7 @@ rsync -a -r ./ ${MNT}/windows
 
 ---
 
-## Configure the GRUB Menu
+## GRUB Menu
 
 Create a **GRUB** Menu to made operating systems available to initialization. Grub menu works as follows:
 
@@ -175,7 +187,7 @@ Create a **GRUB** Menu to made operating systems available to initialization. Gr
 3. Switch root to **ISO's** root folder.
 4. Start Linux Kernel with **ISO's** flag.
 
-### Creation of grub.cfg file
+### Creation of grub.cfg File
 
 The `grub.cfg` file will be created in the directory `/boot/grub`. Change the owner of the `grub.cfg` to your user, so you wont need to use `sudo` to edit its entries.
 
