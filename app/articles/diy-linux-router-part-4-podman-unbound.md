@@ -80,7 +80,7 @@ ZDATA=zdata
 ```bash
 parted ${DISK} mkpart ZFS 16G 100%
 #Assuming the data partition is the partition 4.
-DATA_PART="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
+DATA_PART="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part5)
 zpool create -O mountpoint=/mnt/${ZDATA} \
   -o ashift=12 -O atime=off \
   -O compression=lz4 -O xattr=sa \-O acltype=posixacl \
