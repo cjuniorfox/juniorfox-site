@@ -78,7 +78,7 @@ ZDATA=zdata
 ```
 
 ```bash
-parted ${DISK} mkpart ZFS 32G 100%
+parted ${DISK} mkpart ZFS 16G 100%
 #Assuming the data partition is the partition 4.
 DATA_PART="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
 zpool create -O mountpoint=/mnt/${ZDATA} \
