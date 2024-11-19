@@ -129,6 +129,7 @@ Select the disk. You can check your disk by `ls /dev/disk/by-id/`
 
 ```bash
 DISK=/dev/disk/by-id/scsi-SATA_disk1
+MNT=$(mktemp -d)
 ```
 
 Define your tank name. For this tutorial, I will use the name `rpool`.
@@ -158,7 +159,7 @@ parted ${DISK} set 1 bios_grub on
 parted ${DISK} mkpart EFI 2MiB 514MiB
 parted ${DISK} set 2 esp on
 parted ${DISK} mkpart ZFS 514MiB 8GiB
-parted ${DISK} mkpart Swap 8GiB 8GiB
+parted ${DISK} mkpart Swap 8GiB 16GiB
 
 sleep 1
 mkfs.msdos -F 32 -n EFI ${DISK}-part2
@@ -187,7 +188,7 @@ There's a bunch of commands we will use for creating our zpool and datasets.
 zpool create -O canmount=off -O mountpoint=/ \
   -o ashift=12 -O atime=off -O compression=lz4 \
   -O xattr=sa -O acltype=posixacl \
-  ${ZROOT} ${ROOT} -R /mnt
+  ${ZROOT} ${ROOT} -R ${MNT}
 ```
 
 ### Create the filesystem
@@ -209,7 +210,7 @@ As there are files on those ephemeral montpoints, this approach consumes a bit o
 To install as ephemeral, let's mount a `tmpfs` filesystem for `root` and create only the necessary datasets to let **NixOS** work properly.
 
 ```bash
-mount -t tmpfs tmpfs -o,size=2G /mnt
+mount -t tmpfs tmpfs -o,size=2G ${MNT}
 ```
 
 #### ROOT as filesystem
@@ -218,7 +219,7 @@ If you want to create a filesystem for `root`, do as follows:
 
 ```bash
 zfs create -o mountpoint=none -o canmount=off ${ZROOT}/root
-zfs create -o mountpoint=/ -o canmonut=noauto ${ZROOT}/root/nixos
+zfs create -o mountpoint=/ -o canmount=noauto ${ZROOT}/root/nixos
 zfs mount ${ZROOT}/root/nixos
 ```
 
@@ -244,17 +245,17 @@ You can use `tmpfs` or a **ZFS dataset** for **temporary files**. Remember that 
 zfs create -o com.sun:auto-snapshot=false ${ZROOT}/tmp
 zfs create -o canmount=off ${ZROOT}/var
 zfs create -o com.sun:auto-snapshot=false ${ZROOT}/var/tmp
-chmod 1777 /mnt/var/tmp
-chmod 1777 /mnt/tmp
+chmod 1777 ${MNT}/var/tmp
+chmod 1777 ${MNT}/tmp
 ```
 
 If you want to use `tmpfs` instead, do as follows:
 
 ```bash
-mkdir /mnt/tmp
-mkdir -p /mnt/var/tmp
-mount -t tmpfs tmpfs /mnt/tmp
-mount -t tmpfs tmpfs /mnt/var/tmp
+mkdir ${MNT}/tmp
+mkdir -p ${MNT}/var/tmp
+mount -t tmpfs tmpfs ${MNT}/tmp
+mount -t tmpfs tmpfs ${MNT}/var/tmp
 ```
 
 #### Swap partition
@@ -271,14 +272,14 @@ swapon ${SWAP}
 ### 6. Create and mount the Boot filesystem
 
 ```bash
-mkdir /mnt/boot
-mount ${BOOT} /mnt/boot
+mkdir ${MNT}/boot
+mount ${BOOT} ${MNT}/boot
 ```
 
 ### 7. Generate NixOS Configuration
 
 ```bash
-nixos-generate-config --root /mnt
+nixos-generate-config --root ${MNT}
 ```
 
 ### 8. Generate a password for the root user
@@ -293,7 +294,7 @@ Type the password. It will be stored in the variable `PASS` for further use.
 
 ### 8. Edit the Configuration
 
-Open the `/mnt/etc/nixos/configuration.nix` file and make sure to enable ZFS support.There are two versions of this configuration file. One for `BIOS` and the other for `UEFI`.
+Open the `${MNT}/etc/nixos/configuration.nix` file and make sure to enable ZFS support.There are two versions of this configuration file. One for `BIOS` and the other for `UEFI`.
 
 For the **2010 Mac Mini**, there are some hardware issues that needs to be addressed. Fortunately, NixOS provides **hardware configuration** schemas, which helps to address those issues easily. On the **UEFI** file, there's a reference on imports for importing the profile for my machine. But first I have to add these channels. More details on [github.com/NixOS/nixos-hardware](https://github.com/NixOS/nixos-hardware).
 
@@ -309,7 +310,7 @@ sudo nix-channel --update
   <summary>UEFI <b>configuration.nix</b>.</summary>
 
 ```bash
-cat << EOF > /mnt/etc/nixos/configuration.nix
+cat << EOF > ${MNT}/etc/nixos/configuration.nix
 
 { config, lib, pkgs, ... }:
 
@@ -318,6 +319,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     [ 
       <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
       ./hardware-configuration.nix
+      ./modules/users.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -330,7 +332,6 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
      useXkbConfig = true; # use xkb.options in tty.
    };
   time.timeZone = "America/Sao_Paulo";
-  users.users.root.initialHashedPassword = "${PASS}";
   system.stateVersion = "24.05";
   services.openssh = {
     enable = true;
@@ -355,7 +356,7 @@ EOF
   <summary>BIOS <b>configuration.nix</b>.</summary>
 
 ```bash
-cat << EOF > /mnt/etc/nixos/configuration.nix
+cat << EOF > ${MNT}/etc/nixos/configuration.nix
 { config, pkgs, ... }:
 
 {
@@ -363,6 +364,7 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
     [ 
       <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
       ./hardware-configuration.nix
+      ./modules/users.nix
     ];
   system.stateVersion = "24.05";
   boot = {
@@ -379,7 +381,6 @@ cat << EOF > /mnt/etc/nixos/configuration.nix
      useXkbConfig = true; # use xkb.options in tty.
    };
   time.timeZone = "America/Sao_Paulo";
-  users.users.root.initialHashedPassword = "${PASS}";
   services.openssh = {
     enable = true;
     settings = {
@@ -398,6 +399,21 @@ EOF
 
 </details><!-- markdownlint-enable MD033 -->
 
+#### users.nix
+
+The `users.nix` file will configure the intended users to the server. For now, let's just set the root password with it and secure the file against unatended reading for other users beside the root. Be aware that this step is fundamental to garantee that you will be able to access the server after reboot. Principally if you choosed to create `root` as `tmpfs`.
+
+```bash
+mkdir -p /etc/nixos/modules
+cat << EOF > /etc/nixos/modules/users.nix
+{ config, pkgs, ... }:
+{
+  users.users.root.initialHashedPassword = "${PASS}";
+}
+EOF
+chmod 600 /etc/nixos/modules/users.nix 
+```
+
 #### Hardware Configuration
 
 The command `nixos-generate-config` scans your hardware and creates all the mount points your system needs. You can check if everything is ok with it.
@@ -410,7 +426,7 @@ You don't need to keep the mountpoints managed by **ZFS**. Only let the followin
 
 Also, It creates all mounpoints created by `zfs`. Maintain mountpoints `/`, `/nix` `/boot/efi` (or `/boot` if you took the **BIOS** path) and delete the mountpoints `/home` and (**UEFI** installation) `/boot`.
 
-You can check the hardware-configuration file at the following path: `/mnt/etc/nixos/hardware-configuration.nix`
+You can check the hardware-configuration file at the following path: `${MNT}/etc/nixos/hardware-configuration.nix`
 
 ```nix
 {
@@ -450,8 +466,8 @@ nixos-install
 ```bash
 cd /
 swapoff ${SWAP}
-umount /boot/
-umount -Rl /mnt
+umount ${MNT}/boot/
+umount -Rl ${MNT}
 zpool export -a
 ```
 

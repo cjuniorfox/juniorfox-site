@@ -173,8 +173,7 @@ Let's configure our server by editing the `.nix` files accordingly. To maintain 
 Create all the necessary folders and files:
 
 ```bash
-mkdir -p /etc/nixos/modules
-touch /etc/nixos/modules/{{kea_dhcp4_server,networking,pppoe,services}.nix,nftables.nft}
+touch /etc/nixos/modules/{{networking,pppoe,services}.nix,nftables.nft}
 ```
 
 ### 2. Basic config
@@ -194,10 +193,10 @@ To act as a router, add **forwarding** instruction to the kernel as well.
     [ 
       <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
       ./hardware-configuration.nix
-      ./modules/kea_dhcp4_server.nix
       ./modules/networking.nix
       ./modules/services.nix
       ./modules/pppoe.nix
+      ./modules/users.nix
     ];
   
   # Add  ipv4 and ipv6 forwarding to act as a router
