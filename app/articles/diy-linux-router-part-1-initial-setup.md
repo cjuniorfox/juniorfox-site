@@ -319,6 +319,7 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
     [ 
       <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
       ./hardware-configuration.nix
+      ./modules/users.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -331,7 +332,6 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
      useXkbConfig = true; # use xkb.options in tty.
    };
   time.timeZone = "America/Sao_Paulo";
-  users.users.root.initialHashedPassword = "${PASS}";
   system.stateVersion = "24.05";
   services.openssh = {
     enable = true;
@@ -364,6 +364,7 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
     [ 
       <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
       ./hardware-configuration.nix
+      ./modules/users.nix
     ];
   system.stateVersion = "24.05";
   boot = {
@@ -380,7 +381,6 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
      useXkbConfig = true; # use xkb.options in tty.
    };
   time.timeZone = "America/Sao_Paulo";
-  users.users.root.initialHashedPassword = "${PASS}";
   services.openssh = {
     enable = true;
     settings = {
@@ -398,6 +398,21 @@ EOF
 ```
 
 </details><!-- markdownlint-enable MD033 -->
+
+#### users.nix
+
+The `users.nix` file will configure the intended users to the server. For now, let's just set the root password with it and secure the file against unatended reading for other users beside the root. Be aware that this step is fundamental to garantee that you will be able to access the server after reboot. Principally if you choosed to create `root` as `tmpfs`.
+
+```bash
+mkdir -p /etc/nixos/modules
+cat << EOF > /etc/nixos/modules/users.nix
+{ config, pkgs, ... }:
+{
+  users.users.root.initialHashedPassword = "${PASS}";
+}
+EOF
+chmod 600 /etc/nixos/modules/users.nix 
+```
 
 #### Hardware Configuration
 

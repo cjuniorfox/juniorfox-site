@@ -90,6 +90,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
 
 ```nix
 { config, pkgs, ... }: {
+  users.users.root.initialHashedPassword = "##HashedPa$$word"; # You can remove this line if you do not want to log directly with root user.
   users.users = {
     # Admin user
     admin = {
@@ -133,19 +134,6 @@ Create your users. Replace the `authorization.keys` with the one generated above
     wheelNeedsPassword = true;  # Optional: require a password for sudo. Set as false to allow passwordless sudo or you had not specified a password for the admin user.
   };
 }
-```
-
-Add the `users.nix` file to `configuration.nix`.
-
-`/etc/nixos/configuration.nix`
-
-```nix
-...
-  imports = [
-    ... # Other imports
-    ./modules/users.nix
-  ];
-...
 ```
 
 ### 4. Disable password authentication over SSH
