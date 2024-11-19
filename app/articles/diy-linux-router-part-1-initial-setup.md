@@ -150,7 +150,7 @@ For flash-based storage, if the disk was previously used, you may want to do a f
 blkdiscard -f ${DISK}
 ```
 
-Create the partition schema. On this example, I'm creating a partition of `32G` to be the rpool ZFS pool. 32Gb is more than NixOS will ever need. I prefer to have a discrete pool for root to ease the maintability, but if you prefer to keep everything at the same pool, just replace the `32G` to `100%`. For now I'll just create the `rpool` ZFS pool.
+Create the partition schema. On this example, I'm creating a partition of `8Gb` to be the rpool ZFS pool. I prefer to have a discrete **ZFS Pool** for `root` and another one for data to ease the maintability, but if you prefer to keep everything at the same pool, just replace the `8G` to `100%`. For now I'll just create the `rpool` ZFS pool.
 
 ```bash
 parted ${DISK} mklabel gpt
