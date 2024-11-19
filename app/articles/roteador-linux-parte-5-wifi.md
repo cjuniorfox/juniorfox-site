@@ -206,19 +206,19 @@ spec:
     ports:
     - containerPort: 3478
       hostPort: 3478
-      hostIP: 10.1.1.1
+      hostIP: 10.1.78.1
       protocol: UDP
     - containerPort: 10001
       hostPort: 10001
-      hostIP: 10.1.1.1
+      hostIP: 10.1.78.1
       protocol: UDP
     - containerPort: 8080
       hostPort: 8080
-      hostIP: 10.1.1.1
+      hostIP: 10.1.78.1
       protocol: TCP
     - containerPort: 8443
       hostPort: 8443
-      hostIP: 10.1.1.1
+      hostIP: 10.1.78.1
       protocol: TCP
 
   # MongoDB container
@@ -284,13 +284,13 @@ podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml
 
 ## Configuração
 
-1. Acesse o **Unifi Network Application** no **Navegador Web** em [10.1.1.1:8443](https://10.1.1.1:8443). Futuramente colocaremos seu acesso por trás de um proxy **NGINX**.
+1. Acesse o **Unifi Network Application** no **Navegador Web** em [10.1.78.1:8443](https://10.1.78.1:8443). Futuramente colocaremos seu acesso por trás de um proxy **NGINX**.
 2. Configure seu `Server Name` (Nome do servidor) e `Country` (País).
 3. Configure seu **username** e **senha**. Você pode criar uma conta em [account.ui.com](https://account.ui.com/) ou criar uma conta local.
 
 ### Adoção do dispositivo
 
-O **Unifi Network** precisa adotar seu **Unifi AP**. Como a aplicação está em execução pelo **Podman** utilizando um **Endereço IP** inacessível à outros dispositivos, é preciso alterar a opção **Inform IP Address**. Esse é feito indo em: **Settings** > **System** > **Advanced** e configurando **Inform Host** com o **hostname**, no nosso caso `macmini` ou o **Endereço IP** `10.1.1.1`. Precisa-se também marcar a caixa de seleção **Override**. Dessa forma, os dispositivos **Unifi** serão capazes de se conectar ao controlador para adoção. Maiores detalhes na documentação disponibilizada pelo [LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+O **Unifi Network** precisa adotar seu **Unifi AP**. Como a aplicação está em execução pelo **Podman** utilizando um **Endereço IP** inacessível à outros dispositivos, é preciso alterar a opção **Inform IP Address**. Esse é feito indo em: **Settings** > **System** > **Advanced** e configurando **Inform Host** com o **hostname**, no nosso caso `macmini` ou o **Endereço IP** `10.1.78.1`. Precisa-se também marcar a caixa de seleção **Override**. Dessa forma, os dispositivos **Unifi** serão capazes de se conectar ao controlador para adoção. Maiores detalhes na documentação disponibilizada pelo [LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
 
 ### Resolvendo problemas com adoção
 
@@ -305,7 +305,7 @@ Se todos os ajustes realizados não fizeram seu dispositivo **Unifi** ser adotad
 
 ```bash
 ssh ubnt@$AP-IP
-set-inform http://10.1.1.1:8080/inform
+set-inform http://10.1.78.1:8080/inform
 ```
 
 Verifique o endereço IP do **AP** no arquivo do `servidor DHCP` em `/var/lib/kea/dhcp4.leases`.

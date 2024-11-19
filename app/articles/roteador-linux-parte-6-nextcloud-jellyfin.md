@@ -649,7 +649,7 @@ spec:
   # Remova as linhas abaixo:
   - containerPort: 8443
       hostPort: 8443
-      hostIP: 10.1.1.1
+      hostIP: 10.1.78.1
       protocol: TCP
   ...
 ```
@@ -701,12 +701,12 @@ Meu domínio está configurado no **Cloudflare**. Para resolver os DNSs  locais,
 server:
   private-domain: "example.com."
   local-zone: "example.com." static
-  local-data: "macmini.example.com. IN A 10.1.1.1"
-  local-data: "macmini.example.com. IN A 10.1.30.1"
-  local-data: "macmini.example.com. IN A 10.1.90.1"
-  local-data: "unifi.example.com. IN A 10.1.1.1"
-  local-data: "nextcloud.example.com. IN A 10.1.1.1"
-  local-data: "jellyfin.example.com. IN A 10.1.1.1"
+  local-data: "macmini.example.com. IN A 10.1.78.1"
+  local-data: "macmini.example.com. IN A 10.30.17.1"
+  local-data: "macmini.example.com. IN A 10.90.85.1"
+  local-data: "unifi.example.com. IN A 10.1.78.1"
+  local-data: "nextcloud.example.com. IN A 10.1.78.1"
+  local-data: "jellyfin.example.com. IN A 10.1.78.1"
 ```
 
 Reinicie Unbound:

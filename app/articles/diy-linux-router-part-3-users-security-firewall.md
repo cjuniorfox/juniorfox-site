@@ -165,26 +165,26 @@ nixos-rebuild switch
 Try to log in to the server using the `admin` using the private key generated earlier.
 
 ```bash
-ssh -i ~/.ssh/router-admin admin@10.1.1.1
+ssh -i ~/.ssh/router-admin admin@10.1.78.1
 ```
 
 ### 6. Add to SSH configuration file
 
-If you do not want to type `ssh -i ~/.ssh/router-admin admin@10.1.1.1` everytime to authenticate into the serverm, configure the file `~/.ssh/config` as following:
+If you do not want to type `ssh -i ~/.ssh/router-admin admin@10.1.78.1` everytime to authenticate into the serverm, configure the file `~/.ssh/config` as following:
 
 ```yaml
 Host router-admin
-  Hostname 10.1.1.1
+  Hostname 10.1.78.1
   user admin
   IdentityFile ~/.ssh/router-admin
 
 Host router-podman
-  Hostname 10.1.1.1
+  Hostname 10.1.78.1
   user podman
   IdentityFile ~/.ssh/router-podman
 
 Host router-git
-  Hostname 10.1.1.1
+  Hostname 10.1.78.1
   user git
   IdentityFile ~/.ssh/router-git
 ```

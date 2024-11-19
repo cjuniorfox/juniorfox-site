@@ -105,9 +105,9 @@ Let's have the following networks:
 
 | Network      | Interface | VLAN      |
 |--------------|-----------|----------:|
-|10.1.1.0/24   | Home      | untagged  |
-|10.1.30.0/24  | Guest     | 30        |
-|10.1.90.0/24  | IoT       | 90        |
+|10.1.78.0/24  | Home      | untagged  |
+|10.30.17.0/24 | Guest     | 30        |
+|10.90.85.0/24 | IoT       | 90        |
 |PPPoE         | ppp0      | 2         |
 
 Let's focus only on IPV4 for now. But we can have IPV6 later.
@@ -141,9 +141,9 @@ This Mac Mini only has one Gigabit Ethernet port, this NIC will be tied to VLANs
 
 #### Networks
 
-- **Home**: `10.1.1.0/24` is a bridge `br0`. I leave it untagged to make it easy to reach the computer over the network.
-- **Guest**: `10.1.30.0/24` is `vlan30` (VLAN 30).
-- **IoT**: `10.1.90.0/24` is `vlan90` (VLAN 90).
+- **Home**: `10.1.78.0/24` is a bridge `br0`. I leave it untagged to make it easy to reach the computer over the network.
+- **Guest**: `10.30.17.0/24` is `vlan30` (VLAN 30).
+- **IoT**: `10.90.85.0/24` is `vlan90` (VLAN 90).
 - **WAN**: `PPPoE` is `wan` network to **PPPoE** connection.
 
 #### Renaming Network Interface
@@ -332,16 +332,16 @@ systemd.network = {
       };
      "10-vlan30" = {
         matchConfig.Name = "vlan30";
-        networkConfig.Address = "10.1.30.1/24";
+        networkConfig.Address = "10.30.17.1/24";
       };
      "10-vlan90" = {
         matchConfig.Name = "vlan90";
-        networkConfig.Address = "10.1.90.1/24";
+        networkConfig.Address = "10.90.85.1/24";
       };
       "10-br0" = {
         matchConfig.Name = "br0";
         networkConfig = {
-          Address = "10.1.1.1/24";
+          Address = "10.1.78.1/24";
           DHCPServer = "yes";
         };
         dhcpServerConfig = {
@@ -353,7 +353,7 @@ systemd.network = {
             "15:string:home.example.com" // Replace with your own 
             "119:string:\x04home\x09example\x03com\x00" # To generate 119, https://jjjordan.github.io/dhcp119/
           ];
-          DNS = [ "10.1.1.1" "8.8.8.8" "1.1.1.1" ];
+          DNS = [ "10.1.78.1" "8.8.8.8" "1.1.1.1" ];
         };
       };
     };

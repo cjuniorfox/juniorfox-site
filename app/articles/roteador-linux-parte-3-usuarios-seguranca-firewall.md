@@ -161,21 +161,21 @@ nixos-rebuild switch
 Teste a autenticação ao servidor com o usuário `admin`, usando  a chave privada gerada para o mesmo nas etapas anteriores.
 
 ```bash
-ssh -i ~/.ssh/router-admin admin@10.1.1.1
+ssh -i ~/.ssh/router-admin admin@10.1.78.1
 ```
 
 ### 6. Adicionar configuração de SSH
 
-Para não precisar digitar toda a vez `ssh -i ~/.ssh/router-admin admin@10.1.1.1` para se autênticar, adicione ao arquivo `~/.ssh/config`:
+Para não precisar digitar toda a vez `ssh -i ~/.ssh/router-admin admin@10.1.78.1` para se autênticar, adicione ao arquivo `~/.ssh/config`:
 
 ```yaml
 Host macmini
-  Hostname 10.1.1.1
+  Hostname 10.1.78.1
   user admin
   IdentityFile ~/.ssh/router-admin
 
 Host macmini
-  Hostname 10.1.1.1
+  Hostname 10.1.78.1
   user admin
   IdentityFile ~/.ssh/router-git
 ```

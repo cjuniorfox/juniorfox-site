@@ -278,11 +278,11 @@ To allow the **AP** to be adopted, it needs to reach the **Unifi Network Painel*
 server:
   private-domain: "home.example.com."
   local-zone: "home.example.com." static
-  local-data: "macmini.home.example.com. IN A 10.1.1.1"
-  local-data: "macmini.home.example.com. IN A 10.1.30.1"
-  local-data: "macmini.home.example.com. IN A 10.1.90.1"
-  local-data: "unifi.home.example.com. IN A 10.1.1.1"
-  local-data: "unifi. IN A 10.1.1.1"
+  local-data: "macmini.home.example.com. IN A 10.1.78.1"
+  local-data: "macmini.home.example.com. IN A 10.30.17.1"
+  local-data: "macmini.home.example.com. IN A 10.90.85.1"
+  local-data: "unifi.home.example.com. IN A 10.1.78.1"
+  local-data: "unifi. IN A 10.1.78.1"
 ```
 
 ## Firewall
@@ -330,7 +330,7 @@ nixos-rebuild switch
 
 ## Configuration
 
-1. Access the **Unifi Network Application** on **Web browser** at [10.1.1.1:8443](https://10.1.1.1:8443). This will placed under a **NGINX** proxy afterwards.
+1. Access the **Unifi Network Application** on **Web browser** at [10.1.78.1:8443](https://10.1.78.1:8443). This will placed under a **NGINX** proxy afterwards.
 2. Define your `Server Name` and your `Country`.
 3. Configure your **username** and **password**. You can create an account on [account.ui.com](https://account.ui.com/) or create an account locally.
 
@@ -338,7 +338,7 @@ nixos-rebuild switch
 
 The **Unifi Network** needs to adopt your **Unifi AP**. Since the application is running on **Podman** under an **IP Address** which is not accessible by other devices. So far, everything what we did would allow new devices to be automatically adoptable by the application, but if not, try as described below:
 
-Change the **Inform IP Address**. This is done by going to **Settings** > **System** > **Advanced** and setting the **Inform Host** to a **hostname**, in that case, `macmini` or the **IP address** `10.1.1.1`. Additionally the checkbox **"Override"** has to be checked, so that devices can connect to the controller during adoption. More detailed information at the [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+Change the **Inform IP Address**. This is done by going to **Settings** > **System** > **Advanced** and setting the **Inform Host** to a **hostname**, in that case, `macmini` or the **IP address** `10.1.78.1`. Additionally the checkbox **"Override"** has to be checked, so that devices can connect to the controller during adoption. More detailed information at the [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
 
 ### Troubleshooting Adoption Problems
 
@@ -353,7 +353,7 @@ If all the adjustaments did not made your **Unifi** device being adopted, maybe 
 
 ```bash
 ssh ubnt@$AP-IP
-set-inform http://10.1.1.1:8080/inform
+set-inform http://10.1.78.1:8080/inform
 ```
 
 Check the IP address of **AP** by looking at the `DHCP server` file at `/var/lib/kea/dhcp4.leases`.
