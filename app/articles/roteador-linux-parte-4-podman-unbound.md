@@ -269,15 +269,15 @@ spec:
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.1.1 # Rede LAN
+          hostIP: 10.1.78.1 # Rede LAN
         - containerPort: 53
           protocol: UDP
           hostPort: 53
-          hostIP: 10.1.30.1 # Rede Guest
+          hostIP: 10.30.17.1 # Rede Guest
         - containerPort: 90
           protocol: UDP
           hostPort: 90
-          hostIP: 10.1.90.1 # Rede IoT
+          hostIP: 10.90.85.1 # Rede IoT
       volumeMounts:
         - name: var-lib-kea-dhcp4.leases-host
           mountPath: /dhcp.leases
@@ -310,9 +310,9 @@ Você pode colocar arquivos de configuração adicionais no diretório `volumes/
 server:
   private-domain: "example.com."
   local-zone: "example.com." static
-  local-data: "macmini.example.com. IN A 10.1.1.1"
-  local-data: "macmini.example.com. IN A 10.1.30.1"
-  local-data: "macmini.example.com. IN A 10.1.90.1"
+  local-data: "macmini.example.com. IN A 10.1.78.1"
+  local-data: "macmini.example.com. IN A 10.30.17.1"
+  local-data: "macmini.example.com. IN A 10.90.85.1"
 ```
 
 ### 4. Criar uma rede Podman para o Unbound
@@ -375,9 +375,9 @@ podman kube play --replace \
 O **Podman** roteou as portas configuradas no arquivo `pod.yaml`, e nesse momento, o **Unbound** já resolve nomes de servidores no Gateway. Qualquer host em sua rede agora pode usar o gateway como servidor DNS. Você pode testar executando seguinte comando:
 
 ```bash
-dig @10.1.1.1 google.com
+dig @10.1.78.1 google.com
 
-; <<>> DiG 9.18.28 <<>> @10.1.144.1 google.com
+; <<>> DiG 9.18.28 <<>> @10.1.7844.1 google.com
 ; (1 server found)
 ;; global options: +cmd
 ;; Got answer:
@@ -393,7 +393,7 @@ dig @10.1.1.1 google.com
 ; google.com.  170  IN  A 142.251.129.78
 
 ;; Query time: 286 msec
-;; SERVER: 10.1.144.1#53(10.1.144.1) (UDP)
+;; SERVER: 10.1.7844.1#53(10.1.7844.1) (UDP)
 ;; WHEN: Wed Oct 16 12:41:21 UTC 2024
 ;; MSG SIZE  rcvd: 55
 ```
@@ -434,19 +434,19 @@ Configure o `servidor DHCP` para anunciar o servidor `DNS`. Lembre-se de que na 
       {
         "interface" : "lan",
         "option-data": [
-          { "name": "domain-name-servers", "data": "10.1.1.1" },
+          { "name": "domain-name-servers", "data": "10.1.78.1" },
         ]
       },
       {
         "interface" : "guest",
         "option-data": [
-          { "name": "domain-name-servers", "data": "10.1.30.1" },
+          { "name": "domain-name-servers", "data": "10.30.17.1" },
         ]
       },
       {
         "interface" : "iot",
         "option-data": [
-          { "name": "domain-name-servers", "data": "10.1.90.1" },
+          { "name": "domain-name-servers", "data": "10.90.85.1" },
         ]
       }
     ]

@@ -204,8 +204,8 @@ table inet filter {
 table ip nat {
   ...
   chain ingress_redirect {
-    ip daddr { 10.1.1.1, 10.1.30.1, 10.1.90.1 } tcp dport  80 redirect to 1080
-    ip daddr { 10.1.1.1, 10.1.30.1, 10.1.90.1 } tcp dport 443 redirect to 1443
+    ip daddr { 10.1.78.1, 10.30.17.1, 10.90.85.1 } tcp dport  80 redirect to 1080
+    ip daddr { 10.1.78.1, 10.30.17.1, 10.90.85.1 } tcp dport 443 redirect to 1443
     iifname "ppp0" tcp dport  80 redirect to 1080
     iifname "ppp0" tcp dport 443 redirect to 1443
   }
@@ -718,9 +718,9 @@ My domain set on **Cloudflare**. To resolve my local DNS's, I will need to retri
 server:
   ...
   #Add the lines below. Leave the rest as is.
-  local-data: "unifi.example.com. IN A 10.1.1.1"
-  local-data: "nextcloud.example.com. IN A 10.1.1.1"
-  local-data: "jellyfin.example.com. IN A 10.1.1.1"
+  local-data: "unifi.example.com. IN A 10.1.78.1"
+  local-data: "nextcloud.example.com. IN A 10.1.78.1"
+  local-data: "jellyfin.example.com. IN A 10.1.78.1"
 ```
 
 Restart Ingress:

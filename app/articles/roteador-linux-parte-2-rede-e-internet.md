@@ -104,9 +104,9 @@ Teremos as seguintes redes:
 
 | Network      | Interface | VLAN      |
 |--------------|-----------|----------:|
-|10.1.1.0/24   | Lan       | untagged  |
-|10.1.30.0/24  | GUEST     | 30        |
-|10.1.90.0/24  | IoT       | 90        |
+|10.1.78.0/24  | Lan       | untagged  |
+|10.30.17.0/24 | GUEST     | 30        |
+|10.90.85.0/24 | IoT       | 90        |
 |PPPoE         | PPP0      | 2         |
 
 Por hora vamos configurar apenas IPv4. Posteriormente endereçamos IPv6.
@@ -140,9 +140,9 @@ Como este Mac Mini só tem uma porta Ethernet, as demais redes serão configurad
 
 #### Redes
 
-- `10.1.1.0/24` é uma bridge vinculada à placa de rede. No meu caso, `enp4s0f0`. Essa será untagged para facilitar o acesso do computador pela rede sem a necessidade de configurar uma VLAN em outro host.
-- `10.1.30.0/24` é `enp4s0f0.30` (VLAN 30) como rede `guest`.
-- `10.1.90.0/24` é `enp4s0f0.90` (VLAN 90) como rede `iot`.
+- `10.1.78.0/24` é uma bridge vinculada à placa de rede. No meu caso, `enp4s0f0`. Essa será untagged para facilitar o acesso do computador pela rede sem a necessidade de configurar uma VLAN em outro host.
+- `10.30.17.0/24` é `enp4s0f0.30` (VLAN 30) como rede `guest`.
+- `10.90.85.0/24` é `enp4s0f0.90` (VLAN 90) como rede `iot`.
 - `PPPoE` é `enp4s0f0.2` como rede `wan` para conexões PPPoE.
 
 ## Configuração do NixOS
@@ -260,9 +260,9 @@ in
       "${nic}".useDHCP = false;
       # Handle VLANs
       wan.useDHCP = false;
-      lan = { ipv4.addresses = [{ address = "10.1.1.1";  prefixLength = 24; } ]; };
-      guest = { ipv4.addresses = [{ address = "10.1.30.1"; prefixLength = 24; }]; };
-      iot = { ipv4.addresses = [{ address = "10.1.90.1"; prefixLength = 24; } ]; };
+      lan = { ipv4.addresses = [{ address = "10.1.78.1";  prefixLength = 24; } ]; };
+      guest = { ipv4.addresses = [{ address = "10.30.17.1"; prefixLength = 24; }]; };
+      iot = { ipv4.addresses = [{ address = "10.90.85.1"; prefixLength = 24; } ]; };
     };
     firewall.enable = false;
     nftables = {
@@ -400,10 +400,10 @@ A configuração do serviço **DHCP** será feita pelo `kea.dhcp4`.
       {
         "id": 1,
         "interface" : "lan",
-        "subnet": "10.1.1.0/24",
-        "pools": [ { "pool": "10.1.1.100 - 10.1.1.200" } ],
+        "subnet": "10.1.78.0/24",
+        "pools": [ { "pool": "10.1.78.100 - 10.1.78.200" } ],
         "option-data": [
-          { "name": "routers", "data": "10.1.1.1" },
+          { "name": "routers", "data": "10.1.78.1" },
           { "name": "domain-name-servers", "data": "8.8.8.8" },
           { "name": "domain-search", "data": "example.com" }
         ]
@@ -411,20 +411,20 @@ A configuração do serviço **DHCP** será feita pelo `kea.dhcp4`.
       {
         "id": 2,
         "interface" : "guest",
-        "subnet": "10.1.30.0/24",
-        "pools": [ { "pool": "10.1.30.100 - 10.1.30.200" } ],
+        "subnet": "10.30.17.0/24",
+        "pools": [ { "pool": "10.30.17.100 - 10.30.17.200" } ],
         "option-data": [
-          { "name": "routers", "data": "10.1.30.1" },
+          { "name": "routers", "data": "10.30.17.1" },
           { "name": "domain-name-servers", "data": "8.8.8.8" },
         ]
       },
       {
         "id": 3,
         "interface" : "iot",
-        "subnet": "10.1.90.0/24",
-        "pools": [ { "pool": "10.1.90.100 - 10.1.90.200" } ],
+        "subnet": "10.90.85.0/24",
+        "pools": [ { "pool": "10.90.85.100 - 10.90.85.200" } ],
         "option-data": [
-          { "name": "routers", "data": "10.1.90.1" },
+          { "name": "routers", "data": "10.90.85.1" },
           { "name": "domain-name-servers", "data": "8.8.8.8" },
         ]
       }

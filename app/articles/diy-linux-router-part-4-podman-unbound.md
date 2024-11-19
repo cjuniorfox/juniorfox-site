@@ -296,9 +296,9 @@ Hosts with **fixed IP**, **fixed leases**, and their own **Router identification
 server:
   private-domain: "example.com."
   local-zone: "macmini.home.example.com." static
-  local-data: "macmini.home.example.com. IN A 10.1.1.1"
-  local-data: "macmini.home.example.com. IN A 10.1.30.1"
-  local-data: "macmini.home.example.com. IN A 10.1.90.1"
+  local-data: "macmini.home.example.com. IN A 10.1.78.1"
+  local-data: "macmini.home.example.com. IN A 10.30.17.1"
+  local-data: "macmini.home.example.com. IN A 10.90.85.1"
 ```
 
 ### 5. Start the unbound pod and check its status
@@ -404,7 +404,7 @@ table nat {
     # Redirect all DNS requests to any host to Unbound
     iifname "br0" udp dport 53 redirect to 1053 
     # Redirect DNS to unbound, allow third-party DNS servers
-    ip daddr {10.1.30.1, 10.1.90.1 } udp dport 53 redirect to 1053 
+    ip daddr {10.30.17.1, 10.90.85.1 } udp dport 53 redirect to 1053 
   }
   ...
   chain prerouting {
