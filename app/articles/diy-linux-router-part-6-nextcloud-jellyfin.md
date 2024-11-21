@@ -18,6 +18,7 @@ This is the sixth part of a multi-part series describing how to build your own L
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
+- [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
 In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, and set up Firewall and Unbound as DNS Servers.
 In this chapter, let's do something more useful with our server by installing some good services like Jellyfin and Nextcloud.

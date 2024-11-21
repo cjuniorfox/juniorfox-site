@@ -18,6 +18,8 @@ This is the second part of a multi-part series describing how to build your own 
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
+
 
 In the first part, we covered the hardware setup and installed a basic Linux system using NixOS on top of a ZFS filesystem.
 In this part, we will configure VLANs and their networks, set up a PPPoE connection, configure the DHCP server, and implement basic firewall rules.

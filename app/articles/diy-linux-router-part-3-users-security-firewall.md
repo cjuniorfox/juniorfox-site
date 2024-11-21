@@ -18,6 +18,7 @@ This is the third part of a multi-part series describing how to build your own L
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
 In the first and second parts, we installed the operating system, configured the network, and set up the Mac Mini to work as a router.
 In this part, we will increase security by creating users, changing SSH authentication, and hardening the firewall configuration.
@@ -94,6 +95,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
   users.users = {
     # Admin user
     admin = {
+      uid = 1000;
       isNormalUser = true;
       description = "Administrator User";
       home = "/home/admin"; # Home directory
@@ -106,6 +108,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
 
     # Podman User for rootless pods
     podman = {
+      uid = 1001;
       isNormalUser = true;
       description = "Podman Rootless";
       home = "/home/podman";
@@ -118,6 +121,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
 
     # Git user
     git = {
+      uid = 1002;
       isNormalUser = true;
       description = "Git";
       home = "/home/git";
@@ -126,12 +130,15 @@ Create your users. Replace the `authorization.keys` with the one generated above
       ];
     };
   };
-  users.groups.containers.members = [ "podman" ];
+  users.groups.containers = {
+    gid = 993;
+    members = [ "podman" ];
+  }
 
   # Enable sudo for users in the 'wheel' group
   security.sudo = {
     enable = true;
-    wheelNeedsPassword = true;  # Optional: require a password for sudo. Set as false to allow passwordless sudo or you had not specified a password for the admin user.
+    wheelNeedsPassword = true;  # Optional: require a password for sudo. Set as false to allow passwordless sudo or if you not set a password for the admin user.
   };
 }
 ```
@@ -147,7 +154,7 @@ Disable password authentication and `root` login through **SSH**.
   ...
     openssh = {
       enable = true;
-      settings.PermitRootLogin = "no";
+      settings.PermitRootLogin = "no"; # Was "yes". Change to "no" to disable
       settings.PasswordAuthentication = false;
     };
   ...

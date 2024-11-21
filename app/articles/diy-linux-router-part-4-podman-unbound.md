@@ -18,6 +18,7 @@ This is the fourth part of a multi-part series describing how to build your own 
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
 In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, and made security adjustments by setting up authentication methods and configuring the firewall.
 
@@ -62,32 +63,15 @@ For this project, I'll use a Docker image of **Unbound** that I created some tim
 
 ## Podman Setup
 
-### 1. Create a pool and a dataset for Podman
+### 1. Create the dataset for Podman
 
-If you choose to create a separate **ZFS pool**, create a partition for it, the **ZFS Pool** and an intended dataset for **Podman**.
-
-As we don't have `parted` installed on our system, we can open a `nix-shell` containing `parted` utility to use it for now.
+Create the intended dataset for **Podman**. I will do this on the `zdata` dataset created at [part 1](/articles/diy-linux-router-part-1-initial-setup).
 
 ```bash
-nix-shell parted
-```
-
-```bash
-DISK=/dev/disk/by-id/scsi-SATA_disk1
 ZDATA=zdata
 ```
 
-```bash
-parted ${DISK} mkpart ZFS 16G 100%
-#Assuming the data partition is the partition 4.
-DATA_PART="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part5)
-zpool create -O mountpoint=/mnt/${ZDATA} \
-  -o ashift=12 -O atime=off \
-  -O compression=lz4 -O xattr=sa \-O acltype=posixacl \
-  ${ZDATA} ${DATA_PART}
-```
-
-Assuming the new pool is **zdata** let's create mountpoints considering `/mnt/zdata/containers` as the default container path. The idea is to store the **Rootfull Containers** on /mnt/zdata/containers/root and for **rootless**, store at /mnt/zdata/containers/podman
+Assuming the data pool is **zdata** let's create mountpoints considering `/mnt/zdata/containers` as the default container path. The idea is to store the **Rootfull Containers** on `/mnt/zdata/containers/root` and for **rootless**, store on `/mnt/zdata/containers/podman`
 
 ```bash
 zfs create -o canmount=off ${ZDATA}/containers
@@ -100,9 +84,9 @@ zfs create -o canmount=off ${ZDATA}/containers/podman/storage/volumes
 chown -R podman:containers /mnt/${ZDATA}/containers/podman
 ```
 
-To make new new pool available during boot, you have to add a boot entry into `configuration.nix`
+Make sure that the additional `zdata` pool is set on `hardware-configuration.nix`
 
-`/etc/nixos/configuration.nix`
+`/etc/nixos/hardware-configuration.nix`
 
  ```nix
  ...
