@@ -18,6 +18,7 @@ This is the fifth part of this series, we will configure our wireless network us
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
 Já temos um roteador de internet funcional e confiável, mas ainda não configuramos nossa rede **Wifi** e este capítulo enderecerá isso.
 
@@ -65,7 +66,6 @@ ssh router-podman
 ### 1. Create the `unifi-secret.yaml` file
 
 The **Unifi Network Application** uses a **MongoDB Database** to persist information, which demands setting up **usernames** and **passwords**. We could create a generic password as plain text, but this would be a security risk. It is better to use a complex password and store it securely. **Podman** offers a functionality of this which is the `secrets repository`. I made a simple script that generates the intended passwords randomly and then creates the `unifi-secret.yaml` file with it file for deployment.
-
 
 ```sh
 cd /home/podman/deployments/

@@ -18,6 +18,7 @@ This is the first part of a multi-part series describing how to build your own L
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
 With this old **Mac Mini**, that is currently sitting in the corner and making it a Linux Router would give it a new life. It is a capable, stable machine. So let's do it.
 
@@ -136,6 +137,7 @@ Define your tank name. For this tutorial, I will use the name `rpool`.
 
 ```bash
 ZROOT=zroot
+ZDATA=zdata
 ```
 
 Wipe the disk entirely. Be aware that will erase all existing data.
@@ -153,13 +155,15 @@ blkdiscard -f ${DISK}
 Create the partition schema. On this example, I'm creating a partition of `8Gb` to be the rpool ZFS pool. I prefer to have a discrete **ZFS Pool** for `root` and another one for data to ease the maintability, but if you prefer to keep everything at the same pool, just replace the `8G` to `100%`. For now I'll just create the `rpool` ZFS pool.
 
 ```bash
-parted ${DISK} mklabel gpt
-parted ${DISK} mkpart primary 1MiB 2MiB
-parted ${DISK} set 1 bios_grub on
-parted ${DISK} mkpart EFI 2MiB 514MiB
-parted ${DISK} set 2 esp on
-parted ${DISK} mkpart ZFS 514MiB 8GiB
-parted ${DISK} mkpart Swap 8GiB 16GiB
+
+parted ${DISK} mklabel gpt \
+  mkpart primary 1MiB 2MiB \
+  set 1 bios_grub on \
+  mkpart EFI 2MiB 514MiB \
+  set 2 esp on \
+  mkpart Swap 514MiB 8GiB \
+  mkpart ZFS-Root 8GiB 16GiB \
+  mkpart ZFS-Data 16GiB 100%
 
 sleep 1
 mkfs.msdos -F 32 -n EFI ${DISK}-part2
@@ -169,8 +173,9 @@ Get the `UUID` for partitions
 
 ```bash
 BOOT="/dev/disk/by-uuid/"$(blkid -s UUID -o value ${DISK}-part2)
+SWAP="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part3)
 ROOT="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part3)
-SWAP="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
+DATA="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
 ```
 
 ### 5. Create ZFS Datasets
@@ -189,33 +194,20 @@ zpool create -O canmount=off -O mountpoint=/ \
   -o ashift=12 -O atime=off -O compression=lz4 \
   -O xattr=sa -O acltype=posixacl \
   ${ZROOT} ${ROOT} -R ${MNT}
+
+zpool create -O canmount=off -O mountpoint=/mnt \
+  -o ashift=12 -O atime=off -O compression=lz4 \
+  -O xattr=sa -O acltype=posixacl \
+  ${ZDATA} ${ROOT} -R ${MNT}
 ```
 
 ### Create the filesystem
 
-On **NixOS**, the operating system is installed on `/nix` directory. **NixOS** makes all the references to this directory and creates the other directories during initialization for compatibility. So if you want to do so, you can mount the **root** filesystem as `tmpfs` being an ephemeral storage. Everything in this directory will vanish after the shutdown.
-
-So, with that in mind, we can have everything ephemeral using `tmpfs` for the root filesystem, or we create a **ZFS** dataset for this mountpoint.
-
-#### Advantages of ephemeral storage
-
-Guarantees that any change on the system apart from what **NixOS** is configured to do will vanish during reboot
-
-#### Disadvantages
-
-As there are files on those ephemeral montpoints, this approach consumes a bit of RAM.
-
-#### ROOT as ephemeral
-
-To install as ephemeral, let's mount a `tmpfs` filesystem for `root` and create only the necessary datasets to let **NixOS** work properly.
-
-```bash
-mount -t tmpfs tmpfs -o,size=2G ${MNT}
-```
-
-#### ROOT as filesystem
+On **NixOS**, the operating system is installed on `/nix` directory. **NixOS** makes all the references to this directory and creates the other directories during initialization for compatibility. So if you want to do so, you can mount the **root** filesystem as `tmpfs` as **impermanence storage**, you should read about on [NixOS's wiki](https://nixos.wiki/wiki/Impermanence). I'll do the setup as impermanent on the article [DIY Linux Router with Impermanence](/articles/diy-linux-router-impermanence-storage).
 
 If you want to create a filesystem for `root`, do as follows:
+
+Root filesystem.
 
 ```bash
 zfs create -o mountpoint=none -o canmount=off ${ZROOT}/root
@@ -223,23 +215,35 @@ zfs create -o mountpoint=/ -o canmount=noauto ${ZROOT}/root/nixos
 zfs mount ${ZROOT}/root/nixos
 ```
 
-#### Other datasets
+Nix Filesystem.
 
-Create the following datasets for eather persistent or ephemeral `root` filesystem.
+```bash
+
+zfs create -o canmount=noauto ${ZROOT}/nix
+zfs mount ${ZROOT}/nix
+
+
+
+```
+
+If you wish to have the **NixOS configuration** and log on a distinct filesystem:
 
 ```bash
 zfs create -o canmount=off ${ZROOT}/etc
 zfs create ${ZROOT}/etc/nixos
-zfs create -o canmount=noauto ${ZROOT}/nix
-zfs mount ${ZROOT}/nix
 zfs create -o canmount=off ${ZROOT}/var
 zfs create ${ZROOT}/var/log
-zfs create ${ZROOT}/home
 ```
 
-You can use `tmpfs` or a **ZFS dataset** for **temporary files**. Remember that if you are using the ephemeral `root` filesystem, does not make sense mount **temporary directories** as filesystem, so, in that case, just jump to the **Swap** step if you want to use swap.
+Home filesytem will be created at the `zdata` pool.
 
-##### ZFS Dataset
+```bash
+zfs create -o mountpoint=/home ${ZDATA}/home
+```
+
+You can use `tmpfs` or a **ZFS dataset** for **temporary files**. Remember that if want to use the impermanent `root` filesystem, does not make sense mount **temporary directories** as filesystem, so, in that case, just jump to the **Swap** step if you want to use swap.
+
+#### ZFS Dataset
 
 ```bash
 zfs create -o com.sun:auto-snapshot=false ${ZROOT}/tmp
@@ -419,29 +423,32 @@ chmod 600 /etc/nixos/modules/users.nix
 The command `nixos-generate-config` scans your hardware and creates all the mount points your system needs. You can check if everything is ok with it.
 You don't need to keep the mountpoints managed by **ZFS**. Only let the following mountpoints:
 
-- `/`: Adding options `[ "defaults" "size=1G" "mode=755" ]` to if, if you choose to leave `root`as ephemeral with `tmpfs`.
+- `/`: Leave as is.
 - `/nix`: Leave as is.
-- `/boot`: Becase is not a **ZFS** Filesystem, but a **FAT32** for booting.
-- `/tmp` and `/var/tmp`: If you choose to create those being `tmpfs` as well.
+- `/boot`: Becase is not a **ZFS** Filesystem, but a **FAT32** for booting, leave it on configuration file as well.
+- `/tmp` and `/var/tmp`: If you choose to create those as `tmpfs`.
 
-Also, It creates all mounpoints created by `zfs`. Maintain mountpoints `/`, `/nix` `/boot/efi` (or `/boot` if you took the **BIOS** path) and delete the mountpoints `/home` and (**UEFI** installation) `/boot`.
+As **ZFS** manages theirs own mountpoints, you can remove all remaining mountpoints.
+
+Also, to allow NixOS to import the additional dataset, add the configuration `boot.zfs.extraPools` as described below.
 
 You can check the hardware-configuration file at the following path: `${MNT}/etc/nixos/hardware-configuration.nix`
 
 ```nix
 {
-...boot
-  ## Root as filesystem
+  ...
+  
+  boot.zfs.extraPools = [ "zdata" ]; # Check if this line exists. If not. Add it.
+
   fileSystems."/" =
     { device = "zroot/root/nixos";
       fsType = "zfs";
     };
-  ## Root as tmpfs
-  fileSystems."/" = {
-    device = "tmpfs";
-    fsType = "tmpfs";
-    options = [ "defaults" "size=2G" "mode=755" ];
-  };
+  
+  fileSystems."/nix" =
+    { device = "zroot/nix";
+      fsType = "zfs";
+    };
   
   fileSystems."/boot/" =
     { device = "/dev/disk/by-uuid/3E83-253D";
