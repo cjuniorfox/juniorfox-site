@@ -316,7 +316,6 @@ Precisaremos criar um **segredo** para o serviço **Nextcloud**. Este segredo se
 <details>
   <summary>Clique para expandir o arquivo <b>create_secret.sh</b>.</summary>
   
-
 `/opt/podman/nextcloud/create_secret.sh`
 
 ```sh
