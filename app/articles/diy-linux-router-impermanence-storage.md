@@ -20,7 +20,7 @@ This is part of a multi-part series describing how to build your own Linux route
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 
-In the part 1 of this series, the initial setup was installing **NixOS** on the **Mac Mini** as usual. We configured our partitions, and as we are doing everything using ZFS, we created our datasets. But as our server will be connected directly to the internet, there are security measures I have to take to keep our server secure as possible and an optional step we can do as configuring the `root` filesystem as impermanent storage.
+In the [part 1](/article/diy-linux-router-part-1-initial-setup) of this series, the initial setup was installing **NixOS** on the **Mac Mini** as usual. We configured our partitions, and as we are doing everything using **ZFS**, we created our **Datasets**. But as our server will be connected directly to the internet, there are security measures I have to take to keep our server secure as possible and an optional step we can do as configuring the `root` filesystem as **impermanent storage**.
 
 ![Hard Disk](/assets/images/diy-linux-router/hard-disk.webp)
 *Source:[Deskdecode.com](https://www.deskdecode.com/)*
