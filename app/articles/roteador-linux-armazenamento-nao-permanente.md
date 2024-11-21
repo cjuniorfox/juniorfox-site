@@ -20,9 +20,10 @@ Esta é parte de uma série multi-parte que descreve como construir seu próprio
 - Parte 5: [Wifi](/article/roteador-linux-parte-5-wifi)
 - Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
 
-Neste artigo, estamos na parte 6 da série, onde continuamos a construir nosso roteador Linux. Na parte anterior, configuramos o armazenamento persistente usando o ZFS e o NFS. Nesta parte, vamos focar em uma característica interessante do **NixOS**, que é a capacidade de tornar o sistema de arquivos raiz temporário, ou seja, não permanente.
+Na [parte 1](/article/roteador-linux-parte-1-configuracao-inicial) desta série, a configuração inciial foi instalar o **NixOS** no **Mac Mini** de forma padrão. Configuramos nossas partições, e como fizemos tudo usando **ZFS**, criamos nossos Datasets. Mas como nosso servicdor será conectado diretamente a intenet, há medidas de segurança que gostaria de tomar para manter o servidor o mais seguro possível e um passo adicional nessa direção é configurar o sistema de arquivos `root` como **armazenamento não permanente**.
 
-![Macmini como Roteador](/assets/images/diy-linux-router/hard-disk.webp)
+![HD](/assets/images/diy-linux-router/hard-disk.webp)
+*Fonte:[Deskdecode.com](https://www.deskdecode.com/)*
 
 ## Sumário
 

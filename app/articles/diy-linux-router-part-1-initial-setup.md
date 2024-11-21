@@ -174,8 +174,8 @@ Get the `UUID` for partitions
 ```bash
 BOOT="/dev/disk/by-uuid/"$(blkid -s UUID -o value ${DISK}-part2)
 SWAP="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part3)
-ROOT="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part3)
-DATA="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
+ROOT="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
+DATA="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part5)
 ```
 
 ### 5. Create ZFS Datasets
@@ -465,7 +465,7 @@ You can check the hardware-configuration file at the following path: `${MNT}/etc
 Run the installation command:
 
 ```bash
-nixos-install
+nixos-install --root ${MNT}
 ```
 
 ### 10. Umount the filesystem
