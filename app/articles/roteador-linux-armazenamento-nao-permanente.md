@@ -1,7 +1,7 @@
 ---
 title: "Roteador Linux - Armazenamento Não Permanente"
 articleId: "roteador-linux-armazenamento-nao-permanente"
-date: "2024-10-05"
+date: "2024-11-21"
 author: "Carlos Junior"
 category: "Linux"
 brief: "Dando uma nova vida a um antigo Mac Mini como um roteador Linux e homelab. Configurando armazenamento para não permanência."
