@@ -20,7 +20,6 @@ This is the second part of a multi-part series describing how to build your own 
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
-
 In the first part, we covered the hardware setup and installed a basic Linux system using NixOS on top of a ZFS filesystem.
 In this part, we will configure VLANs and their networks, set up a PPPoE connection, configure the DHCP server, and implement basic firewall rules.
 
@@ -143,7 +142,7 @@ This Mac Mini only has one Gigabit Ethernet port, this NIC will be tied to VLANs
 
 #### Networks
 
-- **Home**: `10.1.78.0/24` is a bridge `br0`. I leave it untagged to make it easy to reach the computer over the network.
+- **LAN**: `10.1.78.0/24` is a bridge `br0`. I leave it untagged to make it easy to reach the computer over the network.
 - **Guest**: `10.30.17.0/24` is `vlan30` (VLAN 30).
 - **IoT**: `10.90.85.0/24` is `vlan90` (VLAN 90).
 - **WAN**: `PPPoE` is `wan` network to **PPPoE** connection.
@@ -282,36 +281,42 @@ let
   nic = "enge0";
   mac_addr_prefix = "c4:2c:03:36:46";  
   mac_addr = "${mac_addr_prefix}:38";
+  wan="wan"; # Matches with pppoe.nix
+  guest="vlan30";
+  iot="vlan90";
+  ip_lan="10.1.78.1";
+  ip_guest="10.30.17.1";
+  ip_iot="10.30.85.1";
 in
 {
 systemd.network = {
     enable = true;
     # Rename NIC
-    links."10-ge0" = {
+    links."10-${nic}" = {
       matchConfig.MACAddress = "${mac_addr}";
       linkConfig.Name = "${nic}";
     };
 
     netdevs = {
-      "10-br0".netdevConfig = {
-        Name = "br0";
+      "10-${lan}".netdevConfig = {
+        Name = "${lan}";
         Kind = "bridge";
         MACAddress = "${mac_addr_prefix}:ff";
       };
-      "10-wan" = {
-        netdevConfig.Name = "wan";
+      "10-${wan}" = {
+        netdevConfig.Name = "${wan}";
         netdevConfig.Kind = "vlan";
         netdevConfig.MACAddress = "${mac_addr_prefix}:02";
         vlanConfig.Id = 2;
       };
-      "10-vlan30" = {
-        netdevConfig.Name = "vlan30";
+      "10-${guest}" = {
+        netdevConfig.Name = "${guest}";
         netdevConfig.Kind = "vlan";
         netdevConfig.MACAddress = "${mac_addr_prefix}:30";
         vlanConfig.Id = 30;
       };
-      "10-vlan90" = {
-        netdevConfig.Name = "vlan90";
+      "10-${iot}" = {
+        netdevConfig.Name = "${iot}";
         netdevConfig.Kind = "vlan";
         netdevConfig.MACAddress = "${mac_addr_prefix}:90";
         vlanConfig.Id = 90;
@@ -320,32 +325,34 @@ systemd.network = {
    
     # Connect the bridge device to NIC
     networks = {
-      "10-ge0" = {
+      "10-${nic}" = {
         matchConfig.Name = "${nic}";
         networkConfig = {
           LinkLocalAddressing = "no";
-          Bridge = "br0";
-          VLAN = [ "wan" "vlan30" "vlan90" ];
+          Bridge = "${lan}";
+          VLAN = [ "${wan}" "${guest}" "${iot}" ];
         };
       };
-     "10-wan" = {
-        matchConfig.Name = "wan";
+     "10-${wan}" = {
+        matchConfig.Name = "${wan}";
         networkConfig.LinkLocalAddressing = "no";
       };
-     "10-vlan30" = {
-        matchConfig.Name = "vlan30";
-        networkConfig.Address = "10.30.17.1/24";
+     "10-${guest}" = {
+        matchConfig.Name = "${guest}";
+        networkConfig.Address = "${ip_guest}/24";
+        networkConfig.DHCPServer = "yes";
+        dhcpServerConfig.DNS = [ "${ip_iot}" ];
       };
-     "10-vlan90" = {
-        matchConfig.Name = "vlan90";
-        networkConfig.Address = "10.90.85.1/24";
+     "10-${iot}" = {
+        matchConfig.Name = "${iot}";
+        networkConfig.Address = "${ip_iot}/24";
+        networkConfig.DHCPServer = "yes";
+        dhcpServerConfig.DNS = [ "${ip_iot}" ];
       };
-      "10-br0" = {
-        matchConfig.Name = "br0";
-        networkConfig = {
-          Address = "10.1.78.1/24";
-          DHCPServer = "yes";
-        };
+      "10-${lan}" = {
+        matchConfig.Name = "${lan}";
+        networkConfig.Address = "${ip_lan}/24";
+        networkConfig.DHCPServer = "yes";
         dhcpServerConfig = {
           PoolOffset = 20;
           PoolSize = 150;
@@ -355,14 +362,15 @@ systemd.network = {
             "15:string:home.example.com" // Replace with your own 
             "119:string:\x04home\x09example\x03com\x00" # To generate 119, https://jjjordan.github.io/dhcp119/
           ];
-          DNS = [ "10.1.78.1" "8.8.8.8" "1.1.1.1" ];
-        };
+          DNS = [ "${ip_lan}" ];
+        }; 
       };
     };
   };
   
   networking = {
     useDHCP = false;
+    hostName = "macmini";
     firewall.enable = false;
     nftables = {
       enable = true;
@@ -414,7 +422,7 @@ We'll set up the PPPoE (Point-to-Point Protocol over Ethernet) connection for in
 
 ### 5. Firewall
 
-The Firewall configuration is done with `nftables`. We will do a basic but secure firewall configuration. It will prevent any connection incoming from the internet, as well as from the **guest** and **IoT** Network while keeping everything open on the **Home** network. I not doing the **Flow Offloading** setup as didn't end up working for me. You can try it yourself [here](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).
+The Firewall configuration is done with `nftables`. We will do a basic but secure firewall configuration. It will prevent any connection incoming from the internet, as well as from the **Guest** and **IoT** Network while keeping everything open on the **LAN** network. I not doing the **Flow Offloading** setup as didn't end up working for me. You can try it yourself [here](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).
 
 `/etc/nixos/modules/nftables.nft`
 

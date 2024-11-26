@@ -35,6 +35,7 @@ In this chapter, let's do something more useful with our server by installing so
   - [Setup Subdomains](#setup-subdomains)
   - [Podman Network for Ingress](#podman-network-for-ingress)
   - [Ingress pod](#ingress-pod)
+  - [Firewall](#firewall)
   - [Let's Encrypt](#lets-encrypt)
 - [Nextcloud](#nextcloud)
 - [Jellyfin](#jellyfin)
@@ -73,8 +74,8 @@ chown -R podman:podman /mnt/${ZDATA}/containers/podman/storage/volumes/nextcloud
 ### Create another dataset for storing media files
 
 ```bash
-zfs create -o canmount=off ${ZDATA}/shares
-zfs create ${ZDATA}/shares/media
+zfs create -o canmount=off -o mountpoint=/srv ${ZDATA}/srv
+zfs create ${ZDATA}/srv/media
 ```
 
 ## Ingress
@@ -171,81 +172,7 @@ spec:
       claimName: certificates
 ```
 
-As you can see, because of the limitation to open ports below `1024` on `rootless` mode, the `HTTP` and `HTTPS` ports will be redirect. `80` to `1080` and `443` to `1443`.
-
-We need to open these ports and redirect them on Firewall back to `80` and `443` to make it work as intended.
-With `sudo`, let's adjust our `nftables` configuration. Remember to after that, login back to the `podman` user, as there's other things needed to be done with **podman** user.
-
-##### Table inet Filter
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-table inet filter {
-  ...
-  chain ingress_dns_input {
-    tcp dport 1080 ct state { new, established } counter accept comment "Ingress HTTP"
-    tcp dport 1443 ct state { new, established } counter accept comment "Ingress HTTPS"
-  }
-
-  chain input {
-    ...
-    jump ingress_dns_input  
-
-    # Allow returning traffic from ppp0 and drop everything else
-    iifname "ppp0" ct state { established, related } counter accept
-    iifname "ppp0" drop
-  }
-}
-```
-
-##### Table NAT
-
-`/etc/nixos/modules/nftables.nft`
-table ip nat {
-  ...
-  chain ingress_redirect {
-    ip daddr { 10.1.78.1, 10.30.17.1, 10.90.85.1 } tcp dport  80 redirect to 1080
-    ip daddr { 10.1.78.1, 10.30.17.1, 10.90.85.1 } tcp dport 443 redirect to 1443
-    iifname "ppp0" tcp dport  80 redirect to 1080
-    iifname "ppp0" tcp dport 443 redirect to 1443
-  }
-  chain prerouting {
-    type nat hook prerouting priority filter; policy accept;
-    tcp flags syn tcp option maxseg size set 1452
-    jump unbound_redirect
-    jump ingress_redirect
-  }
-}
-`
-
-We can also close the port `8443` used by **Unifi Network** as we will access these service through **ingress**.
-
-`/etc/nixos/modules/nftables.nft`
-
-```conf
-table inet filter {
-  chain unifi_network_input {
-    iifname "br0" udp dport 3478 ct state { new, established } counter accept comment "Unifi STUN"
-    iifname "br0" udp dport 10001 ct state { new, established } counter accept comment "Unifi Discovery"
-    iifname "br0" tcp dport 8080 ct state { new, established } counter accept comment "Unifi Communication"
-    # Remove the
-    # Allow returning traffic from ppp0 and drop everything else
-    iifname "ppp0" ct state { established, related } counter accept
-    iifname "ppp0" drop
-  }
-}
-```
-
-##### What we did?
-
-- On **input**, we accepted every connection to ingress ports, at this case `1080` and `1443` regardless of the interface.
-- On **rerouting** we have:
-  - **Redirected** any connection comming from `ppp0` to the `ingress` pod from ports `80` and `443` to `1080` and `1443` respectively.
-  - **Redirected** any connection from local network intended to reach the server to **ingress** pod.
-  - **Removed** the `8443` port access from network, as is not needed anymore.
-
-#### 4. Start the Ingress Pod and Enalbe Systemd Unit
+#### 4. Start the Ingress Pod and Enable Systemd Unit
 
 Start the Ingress Pod by running:
 
@@ -260,6 +187,73 @@ systemctl --user enable podman-pod@ingress.service --now
 ```
 
 The Ingress pod creates additional volumes, like `ingress-www` and `certificates` that will be used to validate the **SSL Certificates**, to be created at the next step. You can check it's creations by running `podman volume list`.
+
+### Firewall
+
+As you can see, because of the limitation to open ports below `1024` on `rootless` mode, the `HTTP` and `HTTPS` ports will be redirect. `80` to `1080` and `443` to `1443`.
+
+We need to open these ports and redirect them on Firewall back to `80` and `443` to make it work as intended.
+With `sudo`, let's adjust our `nftables` configuration. Remember to after that, login back to the `podman` user, as there's other things needed to be done with **podman** user.
+
+`/etc/nixos/nftables/services.nft`
+
+```conf
+...
+  chain ingress_input {
+    tcp dport 1080 ct state { new, established } counter accept comment "Ingress HTTP"
+    tcp dport 1443 ct state { new, established } counter accept comment "Ingress HTTPS"
+  }
+...
+```
+
+`/etc/nixos/nftables/zones.nft`
+
+```conf
+  chain LAN_INPUT {
+    jump ingress_input
+    ...
+  }
+  ...
+  chain WAN_INPUT {
+    jump ingress_input
+    ...
+  }
+```
+
+`/etc/nixos/nftables/nat_chains.nft`
+
+```conf
+  ...
+  chain ingress_redirect {
+    ip daddr { $ip_lan, $ip_guest, $ip_iot } tcp dport  80 redirect to 1080
+    ip daddr { $ip_lan, $ip_guest, $ip_iot } tcp dport 443 redirect to 1443
+  }
+
+  chain ingress_redirect_wan {
+    tcp dport  80 redirect to 1080
+    tcp dport 443 redirect to 1443
+  }
+  ...
+```
+
+`/etc/nixos/nftables/nat_zones.nft`
+
+```conf
+  chain LAN_PREROUTING {
+    jump ingress_redirect
+    ...
+  }
+  ...
+  chain WAN_PREROUTING {
+    jump ingress_redirect_wan
+  }
+```
+
+#### Rebuild NixOS configuration
+
+```bash
+nixos-rebuild switch
+```
 
 ### Let's Encrypt
 
@@ -539,7 +533,7 @@ spec:
         - mountPath: /cache
           name: jellyfin-cache-pvc
         - mountPath: /media
-          name: mnt-zdata-shares-media-host
+          name: srv-media-host
   volumes:
     - name: jellyfin-config-pvc
       persistentVolumeClaim:
@@ -547,9 +541,9 @@ spec:
     - name: jellyfin-cache-pvc
       persistentVolumeClaim:
         claimName: jellyfin-cache
-    - name: mnt-zdata-shares-media-host
+    - name: srv-media-host
       hostPath:
-        path: /mnt/zdata/shares/media
+        path: /srv/media
 ```
 
 Start **JellyFin** Pod and enable its `systemd` service:

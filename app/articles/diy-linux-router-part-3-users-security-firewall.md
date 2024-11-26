@@ -30,6 +30,10 @@ In this part, we will increase security by creating users, changing SSH authenti
 
 - [Users](#users)
 - [Firewall](#firewall)
+  - [Current Setup](#current-setup)
+  - [Planned Enhancements](#planned-enhancements)
+  - [Organizing the Firewall Configuration](#organizing-the-firewall-configuration)
+  - [Set up files](#set-up-files)
 - [Conclusion](#conclusion)
 
 ## Users
@@ -212,54 +216,326 @@ Lock the `root` account increases the security of our server. It's not mandatory
 passwd -l root
 ```
 
+Certainly! Here's the improved version as Markdown:
+
 ## Firewall
 
-We configured our users, and now let's increase Firewall security.
+With our user configurations complete, it's time to enhance our firewall security.
 
-So far, what we did on our firewall was:
+### Current Setup
 
-- Allow all traffic incoming from the **Home** network.
-- Block any traffic incoming from **Internet**, **Guest**, and **IoT** except the internet access.
+So far, our firewall configuration includes:
 
-The server is quite secure this way, but a more granular control over traffic is desirable, as it ensures that if any of the configured services open an additional port on our server, traffic to that port will not be automatically initiated. With this in mind, let's update our Firewall allowing only the necessary traffic. For **Home**, **Guest**, and **IoT** networks, we'll enable only the **DHCP** service. For the **Home** network, in addition to **DHCP**, we'll allow access to **SSH**. We'll also enable **SSH** on **the Internet** to allow remote access. Update our `nftables.nft` file.
+- Allowing all incoming traffic from the **LAN** network.
+- Blocking all incoming traffic from **WAN**, **Guest**, and **IoT** networks except for internet access.
 
-`/etc/nixos/modules/nftables.nft`
+While this setup provides a basic level of security, we can achieve better protection through more granular traffic control. By doing so, we ensure that if any service unintentionally opens additional ports on the server, unauthorized traffic will not be allowed through.
 
-```conf
+### Planned Enhancements
+
+We will refine our firewall to allow only the traffic necessary for each network:
+
+- **LAN** network: Allow **DHCP** and **SSH** services.
+- **Guest** and **IoT** networks: Allow only **DHCP** service.
+- **WAN**: Enable **SSH** for remote access.
+
+### Organizing the Firewall Configuration
+
+To simplify management and ensure scalability, we will structure our firewall configuration into logical sections. This approach divides interfaces, rules, and services into **zones** and organizes the configuration across multiple files. The structure will look as follows:
+
+#### **INET Table** (Main firewall rules)
+
+- **`sets.nft`**: Map **interfaces** to their respective **zones**.
+- **`services.nft`**: Define chains for **service** ports, such as **SSH** and **HTTP**.
+- **`zones.nft`**: Specify which **services** are allowed in each **zone**.
+- **`rules.nft`**: Configure **rules** for zones and manage traffic flow.
+
+#### **NAT Table** (Network Address Translation rules)
+
+- **`nat_sets.nft`**: Map **interfaces** to their respective **zones**.
+- **`nat_chains.nft`**: Define NAT chains for tasks like port redirection.
+- **`nat_zones.nft`**: Associate NAT chains with **zones**.
+- **`nat_rules.nft`**: Configure NAT rules for zones.
+
+This modular approach will make the firewall configuration more organized, easier to understand, and simpler to maintain or extend in the future.
+
+### Set up files
+
+#### 1. Remove the nftables.nft file
+
+As we will split the nftables into discrete files, there's no need to use this file anymore. You can delete or just let inactive.
+
+```bash
+rm /etc/nixos/modules/nftables.nft
+```
+
+#### 2. Create the the NFTables Configuration Files
+
+Create the directory and all **NFTables** files needed.
+
+```bash
+mkdir -p /etc/nixos/nftables
+touch /etc/nixos/nftables/{nat_chains,nat_rules,nat_sets,nat_zones,rules,services,sets,zones}.nft
+```
+
+Configure every intended **NFTable** file.
+
+##### sets.nft
+
+Let's make use of variables to address the interfaces name dinamically.
+
+```bash
+cat << EOF > /etc/nixos/nftables/sets.nft 
 table inet filter {
-  # Keep the rest of the rules as is.
-
-  # Add the following chains to `inet filter` table.
-  chain ssh_input {
-    iifname "br0" tcp dport 22 ct state { new, established } counter accept comment "Allow SSH on LAN"
-    iifname "ppp0" tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic from ppp0 interface with rate limiting"
+  set WAN {
+    type ifname;
+    elements = { \$if_wan }
   }
 
+  set LAN {
+    type ifname;
+    elements = { \$if_lan }
+  }
+
+  set GUEST {
+    type ifname;
+    elements = { \$if_guest }
+  }
+
+  set IOT {
+    type ifname;
+    elements = { \$if_iot }
+  }
+}
+EOF
+```
+
+##### services.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/services.nft
+table inet filter {
   chain dhcp_input {
     iifname { "br0", "enge0.30", "enge0.90" } udp dport 67 ct state { new, established } counter accept comment "Allow DHCP on LAN, Guest and IoT networks"
   }
 
-  chain input {
-    type filter hook input priority filter; policy drop;
-
-    iifname "lo" counter accept
-    
-    jump ssh_input
-    jump dhcp_input
-    
-    # Remove the following rule:
-    # iifname "lan" counter accept
-     
-    iifname "ppp0" ct state { established, related } counter accept
-    iifname "ppp0" counter drop
+  chain echo_input {
+    icmp type echo-request accept
+    icmp type echo-reply accept
   }
-  
-  #Let `chain output`, `chain forward` and `table ip nas` as is.
-...
+
+  chain public_ssh_input {
+    tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic with rate limiting"
+  }
+
+  chain ssh_input {
+    iifname "br0" tcp dport 22 ct state { new, established } counter accept comment "Allow SSH on LAN"
+    iifname "ppp0" tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic from ppp0 interface with rate limiting"
+  }
 }
+EOF 
 ```
 
-### Rebuild the configuration and test
+##### zones.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/zones.nft
+table inet filter {
+  chain LAN_INPUT {
+    jump dhcp_input
+    jump echo_input
+    jump ssh_input
+  }
+
+  chain GUEST_INPUT {
+    jump dhcp_input
+    jump echo_input
+  }
+
+  chain IOT_INPUT {
+    jump dhcp_input
+    jump echo_input
+  }
+
+  chain WAN_INPUT {
+    jump public_ssh_input
+  }
+}
+EOF 
+```
+
+##### rules.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/rules.nft
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+    iifname "lo" counter accept
+
+    iifname @LAN jump LAN_INPUT 
+    iifname @GUEST jump GUEST_INPUT
+    iifname @IOT jump IOT_INPUT
+    iifname @WAN jump WAN_INPUT
+ 
+  
+    # Allow returning traffic from ppp0 and drop everything else
+    iifname @WAN ct state { established, related } counter accept
+  }
+
+  chain output {
+    type filter hook output priority 100; policy accept;
+  }
+
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+    iifname @LAN  oifname @WAN counter accept comment "Allow trusted LAN to WAN"
+    iifname @WAN oifname @LAN ct state established,related counter accept comment "Allow established back to LANs"
+    
+    iifname @GUEST  oifname @WAN counter accept comment "Allow trusted GUEST to WAN"
+    iifname @WAN oifname @GUEST ct state established,related counter accept comment "Allow established back to GUEST"
+  
+    iifname @IOT  oifname @WAN counter accept comment "Allow trusted IOT to WAN"
+    iifname @WAN oifname @IOT ct state established,related counter accept comment "Allow established back to IOT"
+
+    #Drop traffic between networks
+    iifname @GUEST oifname @LAN drop comment "Drop connections from GUEST to LAN"
+    iifname @IOT oifname @LAN drop comment "Drop connections from IOT to LAN"
+    iifname @GUEST oifname @IOT drop comment "Drop connections from GUEST to IOT"
+    iifname @IOT oifname @GUEST drop comment "Drop connection from IOT to GUEST"
+    
+    #MSS Clamp
+    oifname @WAN tcp flags syn tcp option maxseg size set 1452
+  }
+}
+EOF 
+```
+
+##### nat_sets.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/nat_sets.nft
+table nat {
+  set WAN {
+    type ifname;
+    elements = { \$if_wan }
+  }
+
+  set LAN {
+    type ifname;
+    elements = { \$if_lan }
+  }
+
+  set GUEST {
+    type ifname;
+    elements = { \$if_guest }
+  }
+
+  set IOT {
+    type ifname;
+    elements = { \$if_iot }
+  }
+}
+EOF
+```
+
+##### nat_chains.nft
+
+**NAT Chains** will be created as empty for now.
+
+```bash
+cat << EOF > /etc/nixos/nftables/nat_chains.nft 
+table ip nat {
+}
+EOF
+```
+
+##### nat_zones.nft
+
+As far as there's no **redirect chains**, **NAT zones** will be created with empty chains for now.
+
+```bash
+cat << EOF > /etc/nixos/nftables/nat_zones.nft
+table ip nat {
+  chain LAN_PREROUTING {
+  }
+
+  chain GUEST_PREROUTING {
+  }
+
+  chain IOT_PREROUTING {
+  }
+
+  chain WAN_PREROUTING {
+  }
+}
+EOF
+```
+
+##### nat_rules.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/nat_rules.nft
+table ip nat {
+  chain prerouting {
+    type nat hook prerouting priority filter; policy accept;
+    iifname @LAN jump LAN_PREROUTING 
+    iifname @GUEST jump GUEST_PREROUTING 
+    iifname @IOT jump IOT_PREROUTING 
+    iifname @WAN jump WAN_PREROUTING 
+  }
+
+  chain postrouting {
+    type nat hook postrouting priority filter; policy accept;
+    oifname @WAN tcp flags syn tcp option maxseg size set 1452
+    oifname @WAN masquerade
+  }
+}
+EOF
+```
+
+#### 3. Update the networking.nix Configuration File
+
+Edit the **network** section of **networking.nix** configuration file as follows:
+*Update just the **networking** section. Let the remaining of the file as is.*
+
+`/etc/nixos/modules/networking.nix`
+
+```nix
+...
+  networking = {
+    useDHCP = false;
+    firewall.enable = false;
+    nftables = {
+      enable = true;
+      rulesetFile = pkgs.writeText "ruleset.conf" ''
+        define if_wan = "ppp0"
+        define if_lan = "${lan}"
+        define if_guest = "${guest}"
+        define if_iot =  "${iot}"
+        define ip_lan = "${ip_lan}"
+        define ip_guest = "${ip_guest}"
+        define ip_iot = "${ip_iot}"
+        
+        # Inet filter, services and rules
+        include "${../nftables/sets.nft}"
+        include "${../nftables/services.nft}"
+        include "${../nftables/zones.nft}"
+        include "${../nftables/rules.nft}"
+
+        # Nat & redirect
+        include "${../nftables/nat_sets.nft}"
+        include "${../nftables/nat_chains.nft}"
+        include "${../nftables/nat_zones.nft}"
+        include "${../nftables/nat_rules.nft}"
+      '';
+      flattenRulesetFile = true;
+    };
+  };
+...
+```
+
+#### 4. Rebuild the configuration and test
 
 ```bash
 nixos-rebuild switch

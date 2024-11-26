@@ -57,9 +57,9 @@ Tanto o Jellyfin quanto o Nextcloud armazenam e acessam arquivos. Poderíamos si
 ```bash
 zfs create -o canmount=off -o mountpoint=none rpool/mnt
 zfs create -o canmount=off -o mountpoint=none rpool/mnt/container-volumes
-zfs create -o canmount=off -o mountpoint=none rpool/mnt/shares
+zfs create -o canmount=off -o mountpoint=none rpool/mnt/srv
 zfs create -o mountpoint=/mnt/container-volumes/nextcloud rpool/mnt/container-volumes/nextcloud
-zfs create -o mountpoint=/mnt/shares/media rpool/mnt/shares/media
+zfs create -o mountpoint=/mnt/srv/media rpool/mnt/srv/media
 ```
 
 ## Ingress
@@ -525,7 +525,7 @@ spec:
         claimName: jellyfin_cache
     - name: mnt-shares-media-host
       hostPath:
-        path: /mnt/shares/media
+        path: /mnt/srv/media
 ```
 
 </details> <!-- markdownlint-enable MD033 -->

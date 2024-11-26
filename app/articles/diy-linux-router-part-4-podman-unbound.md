@@ -350,50 +350,94 @@ podman-pod@unbound.service - Run podman workloads via podman pod start
 
 ## Firewall Rules
 
-By default, **Linux** does not allow opening ports lower than port 1024 as rootless. As the default DNS port is 53, We have to forward port 1053 to 53.
+By default, **Linux** does not allow opening ports lower than port 1024 as rootless. As the default DNS port is 53, We have to redirect port **1053** to **53**.
 
-Edit the `nftables.nft` file by adding the following:
+Update firewall rules as follows:
 
-## Open port
+### Services
 
-`/etc/nixos/modules/nftables.nft`
+Add `unbound_dns_input` **chain** to `services.nft` file. Leave the remaining **services chains** as is.
+
+`/etc/nixos/nftables/services.nft`
+
+```conf 
+ ...
+ chain unbound_dns_input {
+    udp dport 1053 ct state { new, established } counter accept comment "Allow Unbound DNS server"
+    tcp dport 1853 ct state { new, established } counter accept comment "Allow Unbound TLS-DNS server"
+  }
+...
+```
+
+Do not forget to add the service to intended zones. At that case **LAN**, **GUEST** and **IOT**.
+Just add `jump unbound_dns_input` to the intended **zone chains**.
+
+`/etc/nixos/nftables/zones.nft`
 
 ```conf
-table 
-...
-table inet filter {
-  ...
-  chain unbound_dns_input {
-    iifname {"br0", "vlan30", "vlan90" } udp dport 1053 ct state { new, established } counter accept comment "Allow Unbound DNS server"
-  } 
-  ...
-  chain input {
+chain LAN_INPUT {
     ...
     jump unbound_dns_input
     ...
   }
 
-}
+  chain GUEST_INPUT {
+    ...
+    jump unbound_dns_input
+    ...
+  }
+
+  chain IOT_INPUT {
+    ...
+    jump unbound_dns_input
+    ...
+  }
+...
 ```
 
 ### NAT Redirect
 
-`/etc/nixos/modules/nftables.nft`
+As far as rootless pods can't open ports below `1024` and DNS works on ports `53` and `853`, we need to redirect any request from `53` and `853` to `1053` and `1853` respectively.
+
+#### NAT Chains
+
+`/etc/nixos/nftables/nat_chains.nft`
 
 ```conf
-table 
-...
-table nat {
+table ip nat {
   chain unbound_redirect {
-    # Redirect all DNS requests to any host to Unbound
-    iifname "br0" udp dport 53 redirect to 1053 
-    # Redirect DNS to unbound, allow third-party DNS servers
-    ip daddr {10.30.17.1, 10.90.85.1 } udp dport 53 redirect to 1053 
+    ip daddr { $ip_lan, $ip_guest, $ip_iot } udp dport 53 redirect to 1053 
+    ip daddr { $ip_lan, $ip_guest, $ip_iot } tcp dport 853 redirect to 1853 
   }
-  ...
-  chain prerouting {
-    ...
-    jump unbound_redirect 
+  
+  chain unbound_redirect_lan {
+    udp dport 53 redirect to 1053 
+    tcp dport 853 redirect to 1853 
+  }
+}
+```
+
+- `unbound_redirect_lan` redirects any request to port `53` to unbound, no matter what host is wanted by the client. This is to avoid some hosts that uses other **DNS servers** than **Unbound** on **LAN**.
+- `unbound_redirect` only redirect connections to **Gateway IPs**, allowing the use of other **DNS server** if the client wanted to do so.
+
+#### NAT Zones
+
+Add intended chains to **NAT Zones**.
+
+`/etc/nixos/nftables/nat_zones.nft`
+
+```conf
+   table ip nat {
+  chain LAN_PREROUTING {
+    jump unbound_redirect_lan
+  }
+
+  chain GUEST_PREROUTING {
+    jump unbound_redirect
+  }
+
+  chain IOT_PREROUTING {
+    jump unbound_redirect
   }
 }
 ```

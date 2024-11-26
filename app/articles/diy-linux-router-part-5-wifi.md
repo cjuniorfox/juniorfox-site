@@ -294,32 +294,31 @@ To make **Unifi Network** available to the network, it's necessary to open firwa
 - **8080/TCP** - HTTP port for communication between Unifi devices.
 - **8443/TCP** - HTTPS Web port. Will keep it open temporarely.
 
-### Edit `nftables.nft`
+### Add Unbound service chain
 
-Edit the file `nftables.nft` as described. You have to switch from user `podman` to user `admin` and do the firewall changes with `sudo`:
+Edit the file `services.nft` adding the `unifi_network_input` service chain. You have to switch from user `podman` to user `admin` and do the firewall changes with `sudo`:
 
-`/etc/nixos/modules/nftables.nft`
+`/etc/nixos/nftables/services.nft`
 
 ```conf
-table inet filter {
   ...
   chain unifi_network_input {
-    iifname "br0" udp dport 3478 ct state {new, established } counter accept comment "Unifi STUN"
-    iifname "br0" udp dport 10001 ct state {new, established } counter accept comment "Unifi Discovery"
-    iifname "br0" tcp dport 8080 ct state {new, established } counter accept comment "Unifi Communication"
-    iifname "br0" tcp dport 8443 ct state {new, established } counter accept comment "Unifi Webmanager"
-  }
-  chain input {
-    ...
-    jump unbound_dns_input
-    jump unifi_network_input   
- 
-    # Allow returning traffic from ppp0 and drop everything else
-    iifname "ppp0" ct state { established, related } counter accept
-    iifname "ppp0" drop
-  }
+    udp dport 3478 ct state { new, established } counter accept comment "Unifi STUN"
+    udp dport 10001 ct state { new, established } counter accept comment "Unifi Discovery"
+    tcp dport 8080 ct state { new, established } counter accept comment "Unifi Communication"
+  }  
   ...
-}
+```
+
+Add the service `unifi_network_input` **chain** to `LAN` **zone**. Just add the service node.
+
+`/etc/nixos/nftables/zones.nft`
+
+```conf
+chain LAN_INPUT {
+    ...
+    jump unifi_network_input   
+  }
 ```
 
 Rebuild **NixOS**
@@ -355,8 +354,6 @@ If all the adjustaments did not made your **Unifi** device being adopted, maybe 
 ssh ubnt@$AP-IP
 set-inform http://10.1.78.1:8080/inform
 ```
-
-Check the IP address of **AP** by looking at the `DHCP server` file at `/var/lib/kea/dhcp4.leases`.
 
 The default username and password is `ubnt`. If the device was previously adopted, check on their previous panel what is the `username` and `password` set under **Settings** > **System** > **Advanced**. Generally, the `username` and `password` are the **Unifi account's** one. It's valuable to mention that every time you want to replace your Ubiquiti Network Application, is a good measure to remove your devices before decommissioning that panel. Making backups for your configuration is also a good measure to prevent headaches re-adopting devices—more details on [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
 
