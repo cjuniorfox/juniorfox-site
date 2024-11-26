@@ -21,7 +21,7 @@ This is the seventh part of a multi-part series describing how to build your own
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
-In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, DNS server with unbound and configured resources like Jellyfin and Nextcloud.
+In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, DNS server with unbound and configured resources like Jellyfin and Nextcloud.  
 It's time to add file sharing capabilities to our server.
 
 ![File Sharing](/assets/images/file-sharing.webp)
@@ -39,14 +39,14 @@ It's time to add file sharing capabilities to our server.
 - [Avahi Daemon](#avahi-daemon)
   - [Firewall for Avahi Daemon](#firewall-for-avahi-daemon)
   - [Rebuild NixOS Configuration](#rebuild-nixos-configuration)
-- [SMB  Users](#smb-users)
+- [SMB Users](#smb-users)
 - [Conclusion](#conclusion)
 
 ## Introduction
 
 For an old **Core 2 Duo** with **two cores**, we have a fairly functional server running the latest **Linux Kernel** doing a lot and with space for doing more.
 
-One of the most requested functionality for a **homelab** is file sharing. Having a File Sharing server, there's some important stuff that needs to be addressed like **RAID** and **Backup**. Nobody wants to wake up in the mourning with a bloken SSD and realize that all important stuff you have on the server was lost. We don't approach backup and resilience in this article. Just the **File sharing**.
+One of the most requested functionality for a **homelab** is file sharing. Having a File Sharing server, there's some important stuff that needs to be addressed like **RAID** and **Backup**. Nobody wants to wake up in the mourning with a broken SSD and realize that all important stuff you have on the server was lost. We don't approach backup and resilience in this article. Just the **File sharing**.
 
 ## Requirements
 
@@ -89,7 +89,7 @@ Create all shares you need.
 
 ### Firewall for ZFS
 
-There's a set of ports that needs to be configured to have NFS working as intended. Let's add the intended **services** and ties it to the expected **zones**.
+There's a set of ports that needs to be configured to have NFS working as intended. Let's add the intended **services** and tie it to the expected **zones**.
 
 `/etc/nixos/nftables/services.nft`
 
@@ -140,7 +140,6 @@ In the example below, I make use of the **NFS** share created beforehand. You ca
   };
   services.samba-wsdd.enable = true;
 }
-
 ```
 
 Add the configuration file to `configuration.nix`
@@ -257,14 +256,24 @@ nixos-rebuild switch
 
 ## SMB Users
 
-To allow users to connect to SMB Shares, you need to define the **SMB Password** for the intended user. This can be achieved by the following command:
+To allow users to connect to SMB Shares, you need to add those users as SMB users.
 
 ```bash
-smbpasswd myuser
+sudo smbpasswd -a username
 ```
-
-Being `myuser` the user defined into `/etc/nixos/modules/users.nix`. At this tutorial, we have `admin`, `git` and `podman`. You can create other users as your needs.
 
 ## Conclusion
 
-This wraps up the File sharing configuration service. Our router is almost done. There's only some few tweaks that I want to add, like **ZFS maintenance**, **auto power on** and **Backup**.
+Now you can access your **File Server** from your **Windows** and **Linux** machines.
+
+### Windows SMB Access
+
+Simply access the SMB share by opening `\\[server_ip]\Files`.
+
+### Linux NFS Access
+
+Use the following command to mount an NFS share:
+
+```bash
+sudo mount -t nfs [server_ip]:/srv/Files /mnt
+```
