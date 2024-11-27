@@ -31,14 +31,14 @@ It's time to add file sharing capabilities to our server.
 
 - [Introduction](#introduction)
 - [Requirements](#requirements)
+- [Avahi Daemon](#avahi-daemon)
+  - [Firewall for Avahi Daemon](#firewall-for-avahi-daemon)
 - [NFS File Sharing Service](#nfs-file-sharing-service)
   - [Create ZFS Shares](#create-zfs-shares)
   - [Firewall for ZFS](#firewall-for-zfs)
 - [SMB File Sharing Service](#smb-file-sharing-service)
   - [Firewall for SMB](#firewall-for-smb)
-- [Avahi Daemon](#avahi-daemon)
-  - [Firewall for Avahi Daemon](#firewall-for-avahi-daemon)
-  - [Rebuild NixOS Configuration](#rebuild-nixos-configuration)
+- [Rebuild NixOS Configuration](#rebuild-nixos-configuration)
 - [SMB Users](#smb-users)
 - [Conclusion](#conclusion)
 
@@ -57,6 +57,52 @@ Before configuring our **File sharing server** there's some requirements, as fol
 - **SMB** File sharing service.
 - **NFS** File sharing service.
 - **Firewall** configuration.
+
+## Avahi-daemon
+
+To make the file sharing server discoverable on the network, we need to configure **avahi-daemon**.
+**Avahi-daemon** is a **mDNS** server that can make different services visible to the network. You can check what are the available services on the network using the command `avahi-browse -a`.
+
+Add `avahi-daemon` service to your `services.nix` file.
+
+`/etc/nixos/modules/services.nix`
+
+```nix
+  services = {
+    ...
+    avahi = {
+      publish.enable = true;
+      publish.userServices = true;
+      nssmdns4 = true;
+      enable = true;
+    };
+    ...
+  };
+```
+
+### Firewall for Avahi-daemon
+
+Open the ports for **mDNS** service `5353` and, optionally, **LLMNR** service `5355`.
+
+`/etc/nixos/nftables/services.nft`
+
+```conf
+  chain llmnr_input {
+    udp dport 5355 ct state {new, established } counter accept comment "LLMNR (Avahi Service Discovery)"
+  }
+  chain mdns_input {
+    udp dport 5353 ct state {new, established } counter accept comment "mDNS (Avahi Service Discovery)"
+  }
+```
+
+`/etc/nixos/nftables/zones.nft`
+
+```conf
+  chain LAN_INPUT {
+    jump llmnr_input
+    jump mdns_input
+  }
+```
 
 ## NFS File Sharing Service
 
@@ -82,14 +128,14 @@ As mentioned at the **ZFS** article on [NixOS wiki](https://nixos.wiki/wiki/ZFS)
 I'll assume that the **data pool** was named `zdata`. Replace by your **data pool** name.
 
 ```bash
-zfs create -o sharenfs="*(rw,sync,no_subtree_check,no_root_squash)" zdata/srv/Files
+zfs create -o sharenfs="rw,sync,no_subtree_check,no_root_squash" zdata/srv/Files
 ```
 
 Create all shares you need.
 
 ### Firewall for ZFS
 
-There's a set of ports that needs to be configured to have NFS working as intended. Let's add the intended **services** and tie it to the expected **zones**.
+There's a set of ports that needs to be configured to have NFS working as intended. Let's add the intended **services** and tie them to the expected **zones**.
 
 `/etc/nixos/nftables/services.nft`
 
@@ -139,6 +185,27 @@ In the example below, I make use of the **NFS** share created beforehand. You ca
     };
   };
   services.samba-wsdd.enable = true;
+  environment.etc."avahi/services/samba.service".text = ''
+  <?xml version="1.0" standalone='no'?>
+  <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+  <service-group>
+    <name replace-wildcards="yes">%h</name>
+    <service>
+      <type>_smb._tcp</type>
+      <port>445</port>
+    </service>
+    <service>
+      <type>_device-info._tcp</type>
+      <port>0</port>
+      <txt-record>model=Macmini</txt-record>
+    </service>
+    <service>
+      <type>_adisk._tcp</type>
+      <txt-record>dk0=adVN=timemachine,adVF=0x82</txt-record>
+      <txt-record>sys=waMa=0,adVF=0x100</txt-record>
+    </service>
+  </service-group>
+  '';
 }
 ```
 
@@ -194,59 +261,7 @@ Follows the configuration:
   }
 ```
 
-## Avahi-daemon
-
-So far, both **SMB services** and **NFS Shares** are enabled. Windows machines can see **SMB Shares** thanks to the **WSDD** service. But to make those shares discoverable to the network, we need to install another service named **avahi daemon**.
-
-`/etc/nixos/modules/services.nix`
-
-```nix
-{ config, pkgs, ... }:
-
-{
-  services = {
-    envfs.enable = true;
-    openssh = {
-      enable = true;
-      settings.PermitRootLogin = "no";
-      settings.PasswordAuthentication = false;
-    };
-    nfs.server.enable = true;
-    avahi = {
-      publish.enable = true;
-      publish.userServices = true;
-      nssmdns4 = true;
-      enable = true;
-    };
-  };
-}
-```
-
-### Firewall for Avahi-daemon
-
-Open the ports for **mDNS** service `5353` and, optionally, **LLMNR** service `5355`.
-
-`/etc/nixos/nftables/services.nft`
-
-```conf
-  chain llmnr_input {
-    udp dport 5355 ct state {new, established } counter accept comment "LLMNR (Avahi Service Discovery)"
-  }
-  chain mdns_input {
-    udp dport 5353 ct state {new, established } counter accept comment "mDNS (Avahi Service Discovery)"
-  }
-```
-
-`/etc/nixos/nftables/zones.nft`
-
-```conf
-  chain LAN_INPUT {
-    jump llmnr_input
-    jump mdns_input
-  }
-```
-
-### Rebuild NixOS configuration
+## Rebuild NixOS configuration
 
 Rebuild  **NixOS** configuration to enable installed services
 

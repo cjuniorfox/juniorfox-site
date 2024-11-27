@@ -31,14 +31,14 @@ Agora é hora de adicionar recursos de compartilhamento de arquivos ao nosso ser
 
 - [Introdução](#introdução)
 - [Requisitos](#requisitos)
+- [Avahi Daemon](#avahi-daemon)
+  - [Firewall para Avahi Daemon](#firewall-para-avahi-daemon)
 - [Serviço de Compartilhamento de Arquivos NFS](#serviço-de-compartilhamento-de-arquivos-nfs)
   - [Criar Compartilhamentos ZFS](#criar-compartilhamentos-zfs)
   - [Firewall para ZFS](#firewall-para-zfs)
 - [Serviço de Compartilhamento de Arquivos SMB](#serviço-de-compartilhamento-de-arquivos-smb)
   - [Firewall para SMB](#firewall-para-smb)
-- [Avahi Daemon](#avahi-daemon)
-  - [Firewall para Avahi Daemon](#firewall-para-avahi-daemon)
-  - [Reconstruir a Configuração do NixOS](#reconstruir-a-configuração-do-nixos)
+- [Reconstruir a Configuração do NixOS](#reconstruir-a-configuração-do-nixos)
 - [Usuários SMB](#usuários-smb)
 - [Conclusão](#conclusão)
 
@@ -57,6 +57,52 @@ Antes de configurarmos nosso **servidor de compartilhamento de arquivos**, exist
 - Serviço de **SMB**.
 - Serviço de **NFS**.
 - Configuração de **Firewall**.
+
+## Avahi-daemon
+
+Para tornar o servidor de arquivos visível na rede, precisamos configurar **avahi-daemon**.
+**Avahi-daemon** é um servidor **mDNS** que faz com que diferentes serviços sejam visíveis para a rede. Você pode verificar quais os serviços disponíveis na sua rede disponibilizados pelo **avahi-daemon** usando o comando `avahi-browse -a`.
+
+`/etc/nixos/modules/services.nix`
+
+```nix
+{ config, pkgs, ... }:
+
+{
+  services = {
+    ...
+    avahi = {
+      publish.enable = true;
+      publish.userServices = true;
+      nssmdns4 = true;
+      enable = true;
+    };
+    ...
+  };
+}
+```
+
+### Firewall para Avahi-daemon
+
+Abra as portas para o serviço **mDNS** na porta `5353` e, opcionalmente, o tráfego **Bonjour**.
+
+`/etc/nixos/nftables/services.nft`
+
+```conf
+  chain avahi_server_input {
+    udp dport 5353 ct state {new, established } counter accept comment "mDNS"
+  }
+```
+
+`/etc/nixos/nftables/zones.nft`
+
+```conf
+  chain LAN_INPUT {
+    ...
+    jump avahi_server_input
+    ...
+  }
+```
 
 ## Serviço de Compartilhamento de Arquivos NFS
 
@@ -139,6 +185,27 @@ No exemplo abaixo, faço uso do **compartilhamento NFS** criado anteriormente. V
     };
   };
   services.samba-wsdd.enable = true;
+  environment.etc."avahi/services/samba.service".text = ''
+  <?xml version="1.0" standalone='no'?>
+  <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+  <service-group>
+    <name replace-wildcards="yes">%h</name>
+    <service>
+      <type>_smb._tcp</type>
+      <port>445</port>
+    </service>
+    <service>
+      <type>_device-info._tcp</type>
+      <port>0</port>
+      <txt-record>model=Macmini</txt-record>
+    </service>
+    <service>
+      <type>_adisk._tcp</type>
+      <txt-record>dk0=adVN=timemachine,adVF=0x82</txt-record>
+      <txt-record>sys=waMa=0,adVF=0x100</txt-record>
+    </service>
+  </service-group>
+  '';
 }
 ```
 
@@ -194,57 +261,7 @@ Segue a configuração:
   }
 ```
 
-## Avahi-daemon
-
-Até agora, ambos os serviços **SMB** e os **compartilhamentos NFS** estão habilitados. As máquinas **Windows** podem ver os **compartilhamentos SMB** graças ao serviço **WSDD**. Mas para tornar esses compartilhamentos visíveis na rede, precisamos instalar outro serviço chamado **avahi daemon**.
-
-`/etc/nixos/modules/services.nix`
-
-```nix
-{ config, pkgs, ... }:
-
-{
-  services = {
-    envfs.enable = true;
-    openssh = {
-      enable = true;
-      settings.PermitRootLogin = "no";
-      settings.PasswordAuthentication = false;
-    };
-    nfs.server.enable = true;
-    avahi = {
-      publish.enable = true;
-      publish.userServices = true;
-      nssmdns4 = true;
-      enable = true;
-    };
-  };
-}
-```
-
-### Firewall para Avahi-daemon
-
-Abra as portas para o serviço **mDNS** na porta `5353` e, opcionalmente, o tráfego **Bonjour**.
-
-`/etc/nixos/nftables/services.nft`
-
-```conf
-  chain avahi_server_input {
-    udp dport 5353 ct state {new, established } counter accept comment "mDNS"
-  }
-```
-
-`/etc/nixos/nftables/zones.nft`
-
-```conf
-  chain LAN_INPUT {
-    ...
-    jump avahi_server_input
-    ...
-  }
-```
-
-### Reconstruir a Configuração do NixOS
+## Reconstruir a Configuração do NixOS
 
 Por fim, reconstrua a configuração do NixOS com o comando:
 
