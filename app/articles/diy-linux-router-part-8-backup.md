@@ -4,26 +4,25 @@ articleId: "diy-linux-router-part-8-backup"
 date: "2024-11-25"
 author: "Carlos Junior"
 category: "Linux"
-brief: "In the eight part of this series, making backup of our server."
+brief: "In the eighth part of this series, we set up a backup routine for our server."
 image: "/assets/images/diy-linux-router/backup.webp"
 keywords : ["macmini","router", "linux", "nixos", "file", "backup", "python", "raid", "sharing", "file-sharing"]
 lang : "en"
 other-langs : [{"lang":"pt","article":"roteador-linux-parte-8-backup"}]
 ---
 
-This is the seventh part of a multi-part series describing how to build your own Linux router.
+This is the eighth part of a multi-part series describing how to build your own Linux router.
 
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
-- Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
+- Part 3: [Users, Security, and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
-- Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
+- Part 5: [Wi-Fi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 - Part 7: [File Sharing](/article/diy-linux-router-part-7-file-sharing)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
-In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, DNS server with unbound and configured resources like Jellyfin and Nextcloud and create a file server.
-Let's define a backup routing.
+In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, set up a DNS server with Unbound, and deployed services like Jellyfin, Nextcloud, and a file server. Now, let’s establish a reliable backup routine.
 
 ![Backup](/assets/images/backup.webp)
 *Backup*
@@ -32,54 +31,59 @@ Let's define a backup routing.
 
 - [Introduction](#introduction)
 - [Automatic Backups](#automatic-backups)
-- [Set up Infrastructure](#set-up-infrastructure)
+- [Set Up Infrastructure](#set-up-infrastructure)
 - [Backup Routine](#backup-routine)
 
 ## Introduction
 
-Is quite impressive a lot of things that is being done with this, otherwise retired, **Mac Mini**, but everything can fall apart if something happens and we lost all the data, and far as there's important services, like **File Server**, **Nextcloud** and **Jellyfin** this could means losing the fotos for that travel, the newborn images of your son, important documents. So, having a good backup routing is essential to avoid losing important data.
+It’s quite impressive how much can be achieved with this otherwise retired **Mac Mini**. However, all your efforts could be in vain if something happens to your data. Important services like **File Server**, **Nextcloud**, and **Jellyfin** could mean losing cherished memories like travel photos, newborn pictures, or critical documents. Having a solid backup routine is essential to ensure your data is safe.
 
-Be aware that **Backup** is not equal **RAID**. **RAID**, especially **RAID-1** is a real-time mirroring for content of the disk. If one of the disks fails, the another one will let the system with the data working. This is great, but is not the only solution as a whole because other issues can happen. Example:
+Let’s clarify an important distinction: **Backup** is not the same as **RAID**. While **RAID-1**, for instance, provides real-time disk mirroring to prevent data loss from a single disk failure, it doesn’t address broader issues like:
 
-- Data corruption.
-- Catastrophic operating system failure.
-- Electric failure, damaging all storage devices.
-- Viruses.
-- Security hole, leading to an invasion and damaging the data.
+- Data corruption
+- Catastrophic operating system failure
+- Electrical failure damaging all storage devices
+- Malware or viruses
+- Security breaches leading to data loss
 
-**RAID** will not protect for none of these problems, so having extenal backup routine is fundamental to garantee that even on these situations, you don't lose important data. To have a reliable backup solution, I follow some guidelines:
+**RAID** alone won’t protect against these threats. External backup routines are critical to ensure data preservation in these scenarios. A good backup solution should follow these principles:
 
-- Make backups routinely.
-- Important data into at least three different locations.
-- The storage device being easlily detachable from the system.
-- Does not keep backup block devices always connected or mounted to this server.
+- Regularly scheduled backups.
+- Data stored in at least three different locations.
+- Backup devices that can be easily detached.
+- Avoid keeping backup devices always connected or mounted.
 
 ## Automatic Backups
 
-**ZFS** and **BTRFS** can easily take snapshots of it's filesystem, as also eases sending those snapshots to another **block storage** as a dataset (**ZFS**) or volume (**BTRFS**), or even as incremental backup file, that can be stored on wherever you have to store files, to be imported afterwards. You can do this process manually from time to time, or create a **script** that does this job for you.
+Modern filesystems like **ZFS** and **BTRFS** make snapshots and backups easy. These tools enable you to:
 
-Luckly, I did a **Python** script aimed to make backup for the whole **ZFS** or **BTRFS** filesystem. This script does as follows:
+1. Take snapshots of the filesystem.
+2. Send those snapshots to another block device, a dataset (ZFS), or a volume (BTRFS).
+3. Store incremental backups in compressed files for later restoration.
 
-1. Take snapshots of all **volumes/datasets**.
-2. Mount the target **block device**, this being a **External HDD**, **NFS server**,  whatever you want.
-3. Send those **snapshots** as incremental backups compressed as `gz`.
+This process can be manual, but automation is more practical. I’ve developed a **Python** script to streamline this, performing tasks such as:
 
-Because the incremental backup can end up creating too many files, there's also another script named `restore.py` which can restore of all the snapshots on a intended target disk.
+1. Taking snapshots of all **volumes/datasets**.
+2. Mounting the target **block device**, like an **external HDD** or **NFS server**.
+3. Sending incremental backups compressed as `gz`.
 
-Luckily, I also have a ancient **LaCie-NAS** that I don't use on daily basis, because is painfully slot for today standards, but still works and is a great target disk to store my backups.
+Since incremental backups can generate many files, I also wrote a `restore.py` script to restore all snapshots to a target disk.
 
-Be aware that having a backup of important data laying around can be a security hole. Mainly if you do your backups on **Network Storage**. If you do not take the correct precautions, this data can leak and be exploited for somone else.
+In my setup, I utilize an older **LaCie NAS**, which, despite being slow by today’s standards, is an excellent backup target.
 
-With that in mind, let's setup our backup routine as follows:
+> **Note:** Backups stored on network devices can be a security risk. Ensure your backups are secure to prevent unauthorized access.
 
-1. The backup will occur every **Sunday**, **Tuesday** and **Friday** at **1:00 AM**.
-2. The **target** will be a **NFS Share**.
-3. The **target** will be mounted only during the **backup** process and will be ejected after that, so I can shut down the **NAS** afterwards.
+### Backup Routine Plan
 
-## Set up infrastructure
+1. Backups will run every **Sunday**, **Tuesday**, and **Friday** at **1:00 AM**.
+2. The backup target is an **NFS share**.
+3. The target will only be mounted during the backup process, after which the NAS will be powered down.
 
-First of all, we need to set our backup target. In my case, a old **LaCie-d2** modified to run **Debian 12**. Is quite impressive see this 15-years-old low-spec NAS executing the latest version of **Debian**.
-The Nas already has their **NFS Shares** set. The **LaCie-d2** is connected to the ***LAN** network and obtain it's IP though **DHCP**. Let's define a **Static Lease** for it on **Mac Mini DHCP server's configuration**.
+## Set Up Infrastructure
+
+### Configure Backup Target
+
+I use an old **LaCie-d2 NAS** running **Debian 12**. Although it’s a 15-year-old device, it handles NFS shares reliably. The NAS is connected to the **LAN** network and receives its IP address via **DHCP**. I’ve assigned it a static lease in the **Mac Mini’s DHCP server configuration**.
 
 `/etc/nixos/modules/networking.nix`
 
@@ -91,12 +95,11 @@ systemd.network = {
     "10-${lan}" = {
       ...
       dhcpServerConfig = {
-        ## Just for orientation. 
-        ## Leave this content as is
+        ## Placeholder configuration
       };
       dhcpServerStaticLeases = [{
         dhcpServerStaticLeaseConfig = {
-          Address = "10.1.78.3"; ## Intended IP
+          Address = "10.1.78.3"; ## NAS's static IP
           MACAddress = "54:42:3b:27:31:41"; ## NAS's MAC Address
         };
       }];
@@ -106,32 +109,34 @@ systemd.network = {
 }
 ```
 
-If you do not know what is the Mac Adress of the NAS, you can check by running `arp -a [Current IP]`. Remember to ping to server first to register it at the `arp` table.
+To find your NAS’s MAC address, run the command below after pinging the device:
 
-## Backup routine
+```bash
+arp -a [current IP]
+```
 
-The script **Backup Daily** is public available on [cjuniorfox's Gibhub](https://github.com/cjuniorfox/backup-daily). Retrieve the **raw link** and extract the `sha256` for the file.
+### Backup Routine
 
-### 1. Extract the sha256 value
+The **Backup Daily** script is publicly available on [cjuniorfox’s GitHub](https://github.com/cjuniorfox/backup-daily). Retrieve the **raw link** and calculate its `sha256` hash:
+
+#### 1. Extract the `sha256` Value
 
 ```bash
 nix-prefetch-url https://raw.githubusercontent.com/cjuniorfox/backup-daily/main/opt/backup-daily/backup.py
 ```
+
+Output:
 
 ```txt
 path is '/nix/store/v7g4qc9dn86is33rcsgkk5z2h6sz1vq0-backup.py'
 12w37f5q5hm94g4hcd7acp7d734csjzazqgj78vgqm5s5x1wd414
 ```
 
-The value `12w37f5q5hm94g4hcd7acp7d734csjzazqgj78vgqm5s5x1wd414` is current `sha256` for `backup-daily.py` at the **main** repository. As this script is updated, this value can change. Extract it and copy the value.
+Copy the hash value `12w37f5q5hm94g4hcd7acp7d734csjzazqgj78vgqm5s5x1wd414`.
 
-### 2. Create the backup-daily.nix file
+#### 2. Create the `backup-daily.nix` File
 
-Let's create the service for the backup. With one file, we will:
-
-- Download the script from [this path](https://raw.githubusercontent.com/cjuniorfox/backup-daily/main/opt/backup-daily/backup.py).
-- Create the **Systemd's** `backup-daily.service` with the **backup command**.
-- Set up the timer to execute the every **Monday**, **Wednesday** and **Saturday** at **1:00 AM**.
+Create a service to download and run the backup script.
 
 `/etc/nixos/modules/backup-daily.nix`
 
@@ -167,25 +172,22 @@ in {
 }
 ```
 
-The `ExecStart` calls the backup routine with its arguments. The command I'm using is:
-`python3 backup-daily.py --fs-type=zfs --block-device 10.1.78.3:/srv/Backup --mountpoint /tmp/_backup`, but replacing `python3` with its **NixOS** package and `backup-daily.sh` with the content for the script downloaded at the step `backupScriptStore`.
+### Parameter Overview
 
-#### Understanding the parameters
+- `fs-type=zfs`: Filesystem type for the data to be backed up.
+- `--block-device`: Target device or share.
+- `--mountpoint`: Directory to mount the backup target.
 
-- `fs-type=zfs`: The intended filesystem. This script is capable to identify it you're using `zfs` or `btrfs`, but it does by checking the `root` filesystem. The filesystem for the data you want to backup differs from the filesystem for `root`, you have to set this value manually as I did.
-- `--block-device 10.1.78.3:/srv/Backup` : The **NFS** mountpoint I'm using to backup. It can be a block device for an **external HDD** , **Samba share**, whatever device your Linux is capable to mount as a **Block Device**.
-- `--mountpoint /tmp/_backup` : The **target folder** where the mountpoint for the device will be mounted on.
+Additional options include:
 
-There's also another parameters, like:
-
-- `--options` : Mount options if you need for **backup target**, like **Samba** **username** and **password** or some needed mount option.
-- `--print-fs-list` :  Does not make the backup. Just list what **volumes/datasets** will be backuped.
+- `--options`: Mount options for backup targets like SMB credentials.
+- `--print-fs-list`: Lists volumes/datasets to be backed up without performing the backup.
 
 ## Conclusion
 
-With this backup routine, we addressed two important things to do on our server as:
+This backup routine addresses two key needs:
 
-- Backup routines.
-- Automatic Snapshots.
+1. Automated backups.
+2. Snapshots for quick recovery.
 
-Maintaining your backup routine, you almost garantee that you never will lose data. You can create more than one backup routine to more targets or even additional steps, like saving the data in the Cloud. there's many possibilities. Thank you for reading this article. I expect to be helpful with your backup solution.
+By maintaining this routine, you greatly reduce the risk of data loss. For further protection, consider adding cloud backups or additional targets. Thank you for reading, and I hope this article helps you secure your data!
