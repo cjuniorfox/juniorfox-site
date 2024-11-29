@@ -18,6 +18,8 @@ This is the first part of a multi-part series describing how to build your own L
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- Part 7: [File Sharing](/article/diy-linux-router-part-7-file-sharing)
+- Part 8: [Backup](/article/diy-linux-router-part-8-backup)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
 With this old **Mac Mini**, that is currently sitting in the corner and making it a Linux Router would give it a new life. It is a capable, stable machine. So let's do it.
@@ -126,10 +128,10 @@ Although ZFS is resource-intensive, it offers several advantages that make it wo
 sudo -i
 ```
 
-Select the disk. You can check your disk by `ls /dev/disk/by-id/`
+Define your storage device. You can check your storage device is by `ls /dev/disk/by-id/`
 
 ```bash
-DISK=/dev/disk/by-id/scsi-SATA_disk1
+DISK=/dev/disk/by-id/scsi-STORAGE_DEVICE_ID
 MNT=$(mktemp -d)
 ```
 
@@ -152,10 +154,14 @@ For flash-based storage, if the disk was previously used, you may want to do a f
 blkdiscard -f ${DISK}
 ```
 
-Create the partition schema. On this example, I'm creating a partition of `8Gb` to be the rpool ZFS pool. I prefer to have a discrete **ZFS Pool** for `root` and another one for data to ease the maintability, but if you prefer to keep everything at the same pool, just replace the `8G` to `100%`. For now I'll just create the `rpool` ZFS pool.
+Create the partition scheme. In this example, I'll create two storage pools:
+
+- `zroot` with **8 Giga** of storage.
+- `zdata` with the rest of storage space.
+
+I prefer having discrete storage pools with one for **Root** and another for **Data**, Turning maintenance a lot easier, but if you prefer keeping everything in the same pool, it's just a matter of creating only the `zroot` storage pool with `100%`
 
 ```bash
-
 parted ${DISK} mklabel gpt \
   mkpart primary 1MiB 2MiB \
   set 1 bios_grub on \
@@ -180,8 +186,11 @@ DATA="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part5)
 
 ### 5. Create ZFS Datasets
 
-On ZFS, there's no much use of the term "partition" because really doesn't is. The equivalent is "Datasets" which has a similar approach as a **BTRFS Volumes** on BTRFS Filesystem.
-There's a bunch of commands we will use for creating our zpool and datasets.
+In both **ZFS** and **BTRFS**, data blocks are not usually separated into partitions, but rather into **datasets** in the case of **ZFS** or **Volumes** in the case of **BTRFS**. They work as if they were partitions, but sharing the same storage space and, often, the same file and directory structure.
+
+In this tutorial, I only covered the creation of **ZFS** pools, since the equivalent process in **BTRFS** is simpler and more intuitive.
+
+To create storage pools, we apply several parameters. They are:
 
 - **`ashift=12`**: improves performance when working with SSDs
 - **`atime=off`**: As mentioned in [this article](https://www.unixtutorial.org/atime-ctime-mtime-in-unix-filesystems/), modern Unix operating systems have special mount options to optimize `atime` usage.
@@ -203,11 +212,9 @@ zpool create -O canmount=off -O mountpoint=/mnt \
 
 ### Create the filesystem
 
-On **NixOS**, the operating system is installed on `/nix` directory. **NixOS** makes all the references to this directory and creates the other directories during initialization for compatibility. So if you want to do so, you can mount the **root** filesystem as `tmpfs` as **impermanence storage**, you should read about on [NixOS's wiki](https://nixos.wiki/wiki/Impermanence). I'll do the setup as impermanent on the article [DIY Linux Router with Impermanence](/articles/diy-linux-router-impermanence-storage).
+On **NixOS**, the operating system is installed on `/nix` directory. **NixOS** references this directory and creates the other directories during initialization for compatibility. So you can have the **root** filesystem as **impermanent storage**. you can read more about it on [NixOS's wiki](https://nixos.wiki/wiki/Impermanence). There's an alternative article regarding the impermanent storage approach in the link [DIY Linux Router with Impermanence](/articles/diy-linux-router-impermanence-storage).
 
-If you want to create a filesystem for `root`, do as follows:
-
-Root filesystem.
+This tutorial covers installation using a persistent root file system.
 
 ```bash
 zfs create -o mountpoint=none -o canmount=off ${ZROOT}/root
@@ -215,18 +222,14 @@ zfs create -o mountpoint=/ -o canmount=noauto ${ZROOT}/root/nixos
 zfs mount ${ZROOT}/root/nixos
 ```
 
-Nix Filesystem.
+Having a discrete `/nix` dataset is a good practice because it separates the NixOS installation from the rest of the system.
 
 ```bash
-
 zfs create -o canmount=noauto ${ZROOT}/nix
 zfs mount ${ZROOT}/nix
-
-
-
 ```
 
-If you wish to have the **NixOS configuration** and log on a distinct filesystem:
+Optionally, you can have your **NixOS configuration** and log into it's dataset.
 
 ```bash
 zfs create -o canmount=off ${ZROOT}/etc
@@ -243,7 +246,7 @@ zfs create -o mountpoint=/home ${ZDATA}/home
 
 You can use `tmpfs` or a **ZFS dataset** for **temporary files**. Remember that if want to use the impermanent `root` filesystem, does not make sense mount **temporary directories** as filesystem, so, in that case, just jump to the **Swap** step if you want to use swap.
 
-#### ZFS Dataset
+#### As ZFS Dataset
 
 ```bash
 zfs create -o com.sun:auto-snapshot=false ${ZROOT}/tmp
@@ -266,7 +269,7 @@ mount -t tmpfs tmpfs ${MNT}/var/tmp
 
 Using a swap on an **SSD** can reduce the drive's lifespan, but in some cases is necessary.
 
-Create the swap and start using it.
+Considering that the swap partition was already created.
 
 ```bash
 mkswap -f ${SWAP}
@@ -274,6 +277,8 @@ swapon ${SWAP}
 ```
 
 ### 6. Create and mount the Boot filesystem
+
+Because the operating system installation lies in the `/nix` directory, what mainly is `/boot/efi` on other Linux distributions is solely `/boot` on **NixOS**.
 
 ```bash
 mkdir ${MNT}/boot
@@ -286,9 +291,9 @@ mount ${BOOT} ${MNT}/boot
 nixos-generate-config --root ${MNT}
 ```
 
-### 8. Generate a password for the root user
+### 8. Define a password for the root user
 
-This step is only necessary if you use the root filesystem as `tmpfs`. With `/etc` being an ephemeral mountpoint, because the `/etc` directory resets to default on each reboot, setting the password with `mkpasswd` does not affect this kind of setup.
+This step is only necessary if you're using the impermanent storage for the **root** filesystem.
 
 ```bash
 PASS=$(mkpasswd --method=SHA-512)
@@ -296,11 +301,11 @@ PASS=$(mkpasswd --method=SHA-512)
 
 Type the password. It will be stored in the variable `PASS` for further use.
 
-### 8. Edit the Configuration
+### 9. Edit the Configuration
 
-Open the `${MNT}/etc/nixos/configuration.nix` file and make sure to enable ZFS support.There are two versions of this configuration file. One for `BIOS` and the other for `UEFI`.
+Open the `${MNT}/etc/nixos/configuration.nix` file and make sure to enable **ZFS** support.There are two versions of this configuration file. One for `BIOS` and the other for `UEFI`.
 
-For the **2010 Mac Mini**, there are some hardware issues that needs to be addressed. Fortunately, NixOS provides **hardware configuration** schemas, which helps to address those issues easily. On the **UEFI** file, there's a reference on imports for importing the profile for my machine. But first I have to add these channels. More details on [github.com/NixOS/nixos-hardware](https://github.com/NixOS/nixos-hardware).
+For the **2010 Mac Mini**, there are some hardware issues related to proprietary drivers that need to be addressed. Fortunately, NixOS provides the **hardware configuration** schemas, which helps to address those issues easily. On the **UEFI** file, there's a reference on imports for importing the profile for my machine. But first I have to add these channels. More details on [github.com/NixOS/nixos-hardware](https://github.com/NixOS/nixos-hardware).
 
 Do this step only if you intend to use the **hardware configuration** scheme.
 
@@ -421,18 +426,16 @@ chmod 600 /etc/nixos/modules/users.nix
 #### Hardware Configuration
 
 The command `nixos-generate-config` scans your hardware and creates all the mount points your system needs. You can check if everything is ok with it.
-You don't need to keep the mountpoints managed by **ZFS**. Only let the following mountpoints:
+You don't need to keep any mountpoints managed by **ZFS** with the except of `/nix` and `/` mountpoint. Also maintain only the following mount points.
 
 - `/`: Leave as is.
 - `/nix`: Leave as is.
 - `/boot`: Becase is not a **ZFS** Filesystem, but a **FAT32** for booting, leave it on configuration file as well.
 - `/tmp` and `/var/tmp`: If you choose to create those as `tmpfs`.
 
-As **ZFS** manages theirs own mountpoints, you can remove all remaining mountpoints.
+Additionally, you need to configure NixOS to import the `zdata` pool. Supplement the configuration file with `boot.zfs.extraPools = ["zdata" ];` as described below.
 
-Also, to allow NixOS to import the additional dataset, add the configuration `boot.zfs.extraPools` as described below.
-
-You can check the hardware-configuration file at the following path: `${MNT}/etc/nixos/hardware-configuration.nix`
+`${MNT}/etc/nixos/hardware-configuration.nix`
 
 ```nix
 {
@@ -460,7 +463,7 @@ You can check the hardware-configuration file at the following path: `${MNT}/etc
 }
 ```
 
-### 9. Install NixOS
+### 10. Install NixOS
 
 Run the installation command:
 
@@ -468,7 +471,7 @@ Run the installation command:
 nixos-install --root ${MNT}
 ```
 
-### 10. Umount the filesystem
+### 11. Umount the filesystem
 
 ```bash
 cd /
@@ -484,15 +487,13 @@ After checking if everything was successfully disconnected, you can restart your
 reboot
 ```
 
-### 11. Post-Installation Configuration
+### 12. Post-Installation Configuration
 
-Once **NixOS** is installed, you can start configuring the services that will run on your router. Here are some of the key services you'll want to set up:
+Once NixOS is installed, you can configure the services that will run on your router. Here are some of the main services we will configure in this series:
 
 - **Nextcloud**: For private cloud storage.
 - **Unbound DNS with Adblock**: To block ads across the network.
 - **VPN**: To allow secure remote access to your network.
-
-Each of these services can be configured in your NixOS configuration file (`/etc/nixos/configuration.nix`), making it easy to manage and reproduce your setup.
 
 ## Conclusion
 
