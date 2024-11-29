@@ -1,7 +1,7 @@
 ---
 title: "Roteador Linux - Parte 8 - Backup"
 articleId: "roteador-linux-parte-8-backup"
-date: "2024-11-25"
+date: "2024-11-29"
 author: "Carlos Junior"
 category: "Linux"
 brief: "Na oitava parte desta série, configuramos uma rotina de backup para o nosso servidor."
