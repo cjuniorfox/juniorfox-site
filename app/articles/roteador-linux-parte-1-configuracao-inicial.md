@@ -40,10 +40,10 @@ Com este velho **Mac Mini**, que está atualmente parado no canto, e transformá
   6. [Crie e montar o sistema de arquivos Boot](#6-crie-e-monte-o-sistema-de-arquivos-boot)
   7. [Gere configuração do NixOS](#7-gere-a-configuração-do-nixos)
   8. [Crie uma senha para o usuário root](#8-crie-uma-senha-para-o-usuário-root)
-  9. [Edite a configuração](#8-edite-a-configuração)
-  10. [Instale o NixOS](#9-instale-o-nixos)
-  11. [Desmonte o sistema de arquivos](#10-desmonte-o-sistema-de-arquivos)
-  12. [Configuração pós-instalação](#11-post-installation-configuration)
+  9. [Edite a configuração](#9-edite-a-configuração)
+  10. [Instale o NixOS](#10-instale-o-nixos)
+  11. [Desmonte o sistema de arquivos](#11-desmonte-o-sistema-de-arquivos)
+  12. [Configuração pós-instalação](#12-configuração-pós-instalação)
 - [Conclusão](#conclusão)
 
 ## Ideia
@@ -58,7 +58,7 @@ O que desejo fazer com esse Mac Mini:
 - **Servidor de mídia**: Um servidor de mídia permitirá que você transmita conteúdo para dispositivos na rede.
 - **VPN privada**: Uma VPN será configurada para permitir acesso remoto seguro à rede.
 
-## O Hardware
+## Hardware
 
 Para este projeto, usaremos:
 

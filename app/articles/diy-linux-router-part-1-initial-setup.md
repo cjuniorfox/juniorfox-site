@@ -41,12 +41,11 @@ With this old **Mac Mini**, that is currently sitting in the corner and making i
    5. [Create ZFS Datasets](#5-create-zfs-datasets)
    6. [Create and mount the Boot filesystem](#6-create-and-mount-the-boot-filesystem)
    7. [Generate NixOS Configuration](#7-generate-nixos-configuration)
-   8. [Generate a password for the root user](#8-generate-a-password-for-the-root-user)
-   9. [Edit the Configuration](#8-edit-the-configuration)
-      - [Hardware Configuration](#hardware-configuration)
-   10. [Install NixOS](#9-install-nixos)
-   11. [Umount the filesystem](#10-umount-the-filesystem)
-   12. [Post-Installation Configuration](#11-post-installation-configuration)
+   8. [Define a password for the root user](#8-define-a-password-for-the-root-user)
+   9. [Edit the Configuration](#9-edit-the-configuration)
+   10. [Install NixOS](#10-install-nixos)
+   11. [Umount the filesystem](#11-umount-the-filesystem)
+   12. [Post-Installation Configuration](#12-post-installation-configuration)
 - [Conclusion](#conclusion)
 
 ## The Idea
