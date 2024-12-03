@@ -19,6 +19,7 @@ Esta é a primeira parte de uma série de várias partes que descrevem como cons
 - Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
 - Parte 7: [Compartilhamento de Arquivos](/article/roteador-linux-parte-7-compartilhamento-de-arquivos)
 - Parte 8: [Backup](/article/roteador-linux-parte-8-backup)
+- [Armazenamento não permanente](/article/roteador-linux-armazenamento-nao-permanente)
 
 Com este velho **Mac Mini**, que está atualmente parado no canto, e transformá-lo em um Roteador Linux daria a ele uma nova vida. É uma máquina capaz e estável. Então, vamos lá.
 
