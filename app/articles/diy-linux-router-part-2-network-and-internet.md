@@ -190,7 +190,7 @@ Below is the directory structure for our configuration:
       └── nftables.nft         # NFTables ruleset
 ```
 
-### Step 1: Create Configuration Files and Directories
+### 1. Create Configuration Files and Directories
 
 First, create the necessary directories and placeholder files:
 
@@ -200,7 +200,7 @@ touch /etc/nixos/modules/{networking,pppoe,services}.nix
 touch /etc/nixos/modules/nftables.nft
 ```
 
-### Step 2: Update the Main Configuration File
+### 2. Update the Main Configuration File
 
 We will divide the `configuration.nix` file into separate modules for better organization. Instead of overwriting the entire file, append the following lines.
 
@@ -267,7 +267,7 @@ As shown, there are three interfaces:
 2. `wlp3s0` (Wireless interface)
 3. `enp4s0f0` (Ethernet interface)
 
-We will rename the Ethernet interface to `enge0` for clarity, using the MAC address `c4:2c:03:36:46:38`. The new name `enge0` follows a more consistent naming scheme and avoids the default names like `enoX`, `enpX`, `ensX`, or `ethX`. This naming convention is inspired by the blog post: [www.apalrd.net/posts/2023/tip_link/](https://www.apalrd.net/posts/2023/tip_link/#solution).
+We will rename the Ethernet interface to `enge0` for clarity, using the MAC address `c4:2c:03:36:46:38`. The new name `enge0` follows a more consistent naming scheme. Avoids the default names like `enoX`, `enpX`, `ensX`, or `ethX`. This naming convention is inspired by the blog post: [www.apalrd.net/posts/2023/tip_link/](https://www.apalrd.net/posts/2023/tip_link/#solution).
 
 Additionally, we will assign unique MAC addresses to each network interface:
 
@@ -442,7 +442,7 @@ We'll set up the PPPoE (Point-to-Point Protocol over Ethernet) connection for in
 
 ### 5. Firewall
 
-The firewall configuration is managed with **nftables**. We'll set up a basic yet secure firewall that blocks all incoming connections from the internet and the **Guest** and **IoT** networks while allowing full access within the **LAN** network. I won’t be covering **Flow Offloading** here, as I encountered issues with it that couldn't be resolved. However, if you're interested, you can attempt the configuration yourself following [this discussion](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).
+The firewall configuration is managed with **nftables**. We'll set up a basic yet secure firewall that blocks all incoming connections from the internet and the **Guest** and **IoT** networks while allowing full access within the **Home** network. I won’t be covering **Flow Offloading** here, as I encountered issues with it that couldn't be resolved. However, if you're interested, you can attempt the configuration yourself following [this discussion](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).
 
 `/etc/nixos/modules/nftables.nft`
 
