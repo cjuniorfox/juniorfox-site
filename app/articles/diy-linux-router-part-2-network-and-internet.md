@@ -40,7 +40,7 @@ In this part, we will configure VLANs and their networks, set up a PPPoE connect
 - [Network topology](#network-topology)
 - [Mac Mini](#mac-mini)
   - [Networks](#networks)
-- [NixOS config](#nixos-config)
+- [NixOS configuration](#nixos-configuration)
 - [Conclusion](#conclusion)
 
 ## VLANs
