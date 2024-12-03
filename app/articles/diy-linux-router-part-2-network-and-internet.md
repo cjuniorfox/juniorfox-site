@@ -31,12 +31,12 @@ In this part, we will configure VLANs and their networks, set up a PPPoE connect
 
 - [VLANs](#vlans)
   - [The OSI model](#the-osi-model)
-  - [What is VLAN](#what-is-vlan)
+  - [What is VLAN?](#what-is-a-vlan)
     - [Untagged VLANs](#untagged-vlans)
     - [Tagged VLANs](#tagged-vlans)
-    - [Tagged on one port, Untagged on another](#tagged-on-one-port-untagged-on-another)
-  - [Advantages](#advantages)
-  - [Drawbacks](#drawbacks)
+    - [Hybird Configuration (tagged and untagged)](#hybrid-configuration-tagged-and-untagged)
+  - [Advantages of VLANs](#advantages-of-vlans)
+  - [Drawbacks of VLANs](#drawbacks-of-vlans)
 - [Network topology](#network-topology)
 - [Mac Mini](#mac-mini)
   - [Networks](#networks)
@@ -45,108 +45,94 @@ In this part, we will configure VLANs and their networks, set up a PPPoE connect
 
 ## VLANs
 
-In this setup, I am using the **TP-Link TL-SG108E** and will make use of its VLAN capabilities.
+In this setup, I am using the **TP-Link TL-SG108E** managed switch to take advantage of its VLAN capabilities.
 
-### The OSI model
+### The OSI Model
 
-The network stack is split into 7 layers.
+The OSI model defines a network's communication architecture across seven layers:
 
-- **Layer 1**: Physical layer. Cables, NICs, and connectors.
-- **Layer 2**: Data link layer, MAC Address, bridges, switches, and **VLANs**.
-- **Layer 3**: Network layer, where the **IP Address** resides.
-- **Layer 4**: Transport layer, like **TCP** and **UDP**.
-- **Layer 5**: Session layer. The connection between a server application and the client.
-- **Layer 6**: Presentation layer. Data formatting and character encoding.
-- **Layer 7**: Application layer. The end-user application that consumes the data transferred and processed by the previous layers.
+- **Layer 1: Physical Layer** – Handles physical connections like cables, NICs, and connectors.
+- **Layer 2: Data Link Layer** – Manages MAC addresses, bridges, switches, and **VLANs**.
+- **Layer 3: Network Layer** – Responsible for IP addressing and routing.
+- **Layer 4: Transport Layer** – Facilitates data transport using protocols like **TCP** and **UDP**.
+- **Layer 5: Session Layer** – Manages connections between client and server applications.
+- **Layer 6: Presentation Layer** – Handles data formatting and encoding.
+- **Layer 7: Application Layer** – Provides end-user applications with access to the network.
 
-More details about the OSI Model [at this link](https://www.freecodecamp.org/news/osi-model-networking-layers-explained-in-plain-english/).
+You can learn more about the OSI model [here](https://www.freecodecamp.org/news/osi-model-networking-layers-explained-in-plain-english/).
 
-### What is VLAN
+### What Is a VLAN?
 
-The role of VLANs is to segment the network without the need for physical segmentation. Without VLANs, to split a structure into various networks, you would need to use distinct switches and network adapters. We can call physical segmentation **Layer 1 segmentation**, while relying on VLANs to segment the network is known as **Layer 2 segmentation**.
+A VLAN (Virtual Local Area Network) segments a network logically rather than physically. Without VLANs, network segmentation would require separate switches and network interfaces. This method is referred to as **Layer 1 segmentation**, while VLAN-based segmentation operates at **Layer 2**.
 
-**Layer 2** transports data as frames. These frames contain the **frame data** and the **frame header**, with various information like **Target MAC Address** and, optionally, a **VLAN tag**. The **VLAN** tag ensures that, on an appropriately configured smart switch, the **data frame** will reach the intended target network interface, identified by its **MAC Address**, to the intended network, or **PVID** as some switches name the segmented networks configured on them.
+In Layer 2, data is transported in **frames**, each containing a **frame header** and **frame data**. The frame header includes key information such as the **target MAC address** and, optionally, a **VLAN tag**. A VLAN tag ensures that data frames are delivered to their intended network segment, as configured on a smart switch.
 
-When you talk about VLANs, you are talking about segmenting the network. It prevents hosts on one network from reaching hosts on another network.
+VLANs isolate traffic between different segments, ensuring that devices in one VLAN cannot directly communicate with those in another. To use VLANs effectively, follow these principles:
 
-To use **VLANs**, you need to follow some guidelines:
-
-- Each VLAN is intended to communicate with its intended network, identified as **PVID**.
-- You can assign many *tagged* VLANs to a single port.
-- Every **VLAN** will behave as a distinct **network adapter** on a host that the VLAN is associated with.
-- Untagged traffic will be handled by the default **network** for its port. By default, this network tends to be **PVID 1**.
+- Each VLAN is identified by a **PVID** (Port VLAN ID).
+- Ports can be configured to accept traffic from multiple **tagged** VLANs.
+- Untagged traffic on a port is assigned to its default VLAN, typically **PVID 1**.
 
 #### Untagged VLANs
 
-On a managed switch, it is possible to create two or more **VLANs**, identified by their **PVIDs** (Physical VLAN ID), and split the network. This is like having two separate switches within the same physical hardware. For example, let's say we want to create two isolated networks that cannot communicate with each other. We can assign `PVID 1` to **ports 1 to 4** and `PVID 2` to **ports 5 to 8**. Any traffic from **port 1** will be able to reach **ports 2, 3, and 4**, but it will not reach any device connected to **ports 5, 6, 7, or 8**. The same applies the other way around. It's like having two 4-port switches within the same physical hardware.
+An untagged VLAN divides a switch into isolated segments. For instance, assigning:
+
+- **Ports 1-4** to **PVID 1**
+- **Ports 5-8** to **PVID 2**
+
+will create two separate networks where devices connected to **Ports 1-4** cannot communicate with those on **Ports 5-8**.
 
 #### Tagged VLANs
 
-If you want to allow a device to reach two or more networks from the same port, you can tag this port using **VLAN tags**. The switch will look for the **VLAN Tag** in the **frame header** and direct this traffic to the intended **Network**. In practice, this is just like having two or more distinct network adapters connected to two or more network switches, but sharing the same physical network interface, cable, switch, and switch port, effectively segmenting this traffic over different networks without needing to physically segment it.
+Tagged VLANs allow a single port to handle traffic from multiple VLANs. The switch examines the VLAN tag in the frame header to route traffic appropriately. This is similar to connecting multiple network adapters to different switches but using a single physical interface.
 
 For example:
 
-**Port 1** and **Port 3** are *tagged* to `VLAN 30` and `VLAN 90`.
+- **Ports 1 and 3** are tagged for **VLAN 30** and **VLAN 90**.
+- Traffic tagged as **VLAN 30** or **VLAN 90** from **Port 1** will only reach **Port 3**, and vice versa.
 
-- Any traffic from **port 1** tagged as `VLAN 30` or `VLAN 90` will only reach port 3.
-- This traffic will be delivered as **tagged** to its VLAN on each side of the switch.
-- The device connected to **port 3** needs to have the **VLAN tag** properly configured to handle this traffic. If not, the traffic is supposed to be rejected by the host.
+Devices connected to tagged ports must be configured to recognize VLAN tags; otherwise, the traffic will be discarded.
 
-#### Tagged on One Port, Untagged on Another
+#### Hybrid Configuration (Tagged and Untagged)
 
-If the switch is smart enough, it can have a **tagged** frame on one port, to reach any device on some network as **untagged**. Effectively, what the switch does in that situation is receive this tagged **frame**, remove the **VLAN tag** from the **frame header**, and deliver it to some host on the intended **Network** as untagged.
+A smart switch can strip VLAN tags from frames before forwarding them to a port. For example:
 
-In this setup, we will make use of this feature because my **ISP's PPPoE** connection does not expect to receive tagged **frames**. So I have to configure my switch as:
+- **Port 1** is tagged for **VLAN 2**.
+- **Port 2** is assigned to **PVID 2** as untagged.
 
-- Tag **Port 1** to **VLAN 2**.
-- Assign **Port 2** to **PVID 2** as **untagged**.
+Traffic sent from **Port 1** tagged as **VLAN 2** will be delivered to **Port 2** as untagged. This is useful for scenarios where a device, such as an ISP modem, does not support VLAN tagging.
 
-Any **PPPoE** traffic from the **Mac Mini** will be delivered to the switch tagged as **VLAN 2**, the switch will strip out the **VLAN tag** from the **frame header** and deliver this frame on **Port 2** as untagged.
+### Advantages of VLANs
 
-### Advantages
+- **Cost-Effective**: Reduces the need for additional network interfaces and cables.
+- **Simplified Cabling**: Logical segmentation eliminates the need for separate physical connections.
+- **Flexible Reassignment**: Easily reconfigure VLANs through a network management interface.
 
-- **Cost-effective**: You can share one NIC, one cable, and one switch port across multiple networks.
-- **Less cabling** because you don't need to rely on physical cabling and physical switches to split your network.
-- **Easy to reassign**, as it is just a matter of reconfiguring the assignments on a network administrator panel.
+### Drawbacks of VLANs
 
-### Drawbacks
+- **Shared Bandwidth**: All VLAN traffic on the same physical interface shares the bandwidth.
+- **Increased Complexity**: Requires careful management of VLAN configurations.
+- **Host Configuration**: Devices on tagged ports must support VLANs and be properly configured.
 
-- **Shared bandwidth**: You can have up to 4095 VLANs on the same cable, but as this traffic shares the same physical interface, the bandwidth for its VLAN connections will be shared too.
-- **Complexity**: You need to keep track of which ports are assigned to which VLANs.
-- **Host configuration**: Devices connected to tagged ports must be configured to handle the appropriate VLANs.
+### Network Topology
 
-As this **Mac Mini** relies on a single network interface, in this setup, we will use VLANs to create our four intended networks.
-
-You can argue that by sharing the same network interface, you are sharing the bandwidth for its interface, and this is true. Let's see what happens when I start downloading some content from a host on the **Home** network from the internet.
-
-1. This host requests to download the content to the Mac Mini.
-   - This traffic will reach the Mac Mini as **untagged** on **Port 1**.
-2. The **Mac Mini** will request to download the content over PPPoE.
-   - This traffic will be transferred over PPPoE as **tagged** **VLAN 2** on **Port 1**.
-3. The **Mac Mini** will receive this traffic, perform **NAT** (Network Address Translation), and deliver it to the intended host on the **Home** network as **untagged** on **Port 1**.
-
-Effectively, when downloading some content, the traffic will come and go over the same interface. It will **download** the content over **VLAN 2** and, at the same time, **upload** it as untagged to the **Home** network using the same interface.
-
-On my 700 Mbps download and 150 Mbps upload connection, I haven't noticed any performance impact. **Speedtest** reports my download speed above 700 Mbps, around 720 Mbps at most, and upload at **150 Mbps**, better and more stable than through the router that my ISP provides me.
-
-## Network topology
-
-Let's have the following networks:
+The **Mac Mini** serves as a router with the following VLAN configuration:
 
 | Network      | Interface | VLAN      |
 |--------------|-----------|----------:|
-|10.1.78.0/24  | Home      | untagged  |
-|10.30.17.0/24 | Guest     | 30        |
-|10.90.85.0/24 | IoT       | 90        |
-|PPPoE         | ppp0      | 2         |
+| **Home**     | br0       | Untagged  |
+| **Guest**    | vlan30    | 30        |
+| **IoT**      | vlan90    | 90        |
+| **WAN**      | ppp0      | 2         |
 
-Unfortunately, my **ISP** does not provide me with an **IPv6** connection. So let's focus solely on IPv4 for now, but I want to have an **IPv6** connection.
+#### Switch Configuration
 
-- The switch has 8 ports.
-- **VLAN 1**: Ports 1, 3 to 8 are untagged.
-- **VLAN 2**: Ports 1 and 2 are tagged.
-- **VLAN 30**: Port 1 and 3 are tagged.
-- **VLAN 90**: Port 1 and 3 are tagged.
+The switch has 8 ports configured as follows:
+
+- **VLAN 1**: Ports 1, 3–8 (Untagged)
+- **VLAN 2**: Ports 1 and 2 (Tagged)
+- **VLAN 30**: Ports 1 and 3 (Tagged)
+- **VLAN 90**: Ports 1 and 3 (Tagged)
 
 ```txt
     ┌─────────────► Mac Mini
@@ -159,83 +145,87 @@ Unfortunately, my **ISP** does not provide me with an **IPv6** connection. So le
 | │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ |
 | └───┴───┴───┴───┴───┴───┴───┴───┘ |
 └───┬───┬───┬───┬───────────────────┘
-    │   │   │   └─► 4-8 Untagged VLAN 1
-    │   │   └─────► Untagged VLAN 1, Tagged VLAN 30, 90
+    │   │   │   └─► Ports 4–8 Untagged VLAN 1
+    │   │   └─────► Tagged VLANs 30, 90; Untagged VLAN 1
     │   └─────────► Untagged VLAN 2
-    └─────────────► Untagged VLAN 1, Tagged VLAN 2, 30, 90
+    └─────────────► Tagged VLANs 2, 30, 90; Untagged VLAN 1
 ```
 
 ## Mac Mini
 
-Let's state how we will configure the networks on the **Mac Mini**:
+This section outlines how we configure networks on the **Mac Mini** for optimal organization and reliability.
 
 ### Networks
 
-- **Home**: `10.1.78.0/24` is a bridge `br0`. I leave it untagged to make it easy to reach the computer over the network.
-- **Guest**: `10.30.17.0/24` is `vlan30` (VLAN 30).
-- **IoT**: `10.90.85.0/24` is `vlan90` (VLAN 90).
-- **WAN**: `PPPoE` is the `wan` network for the PPPoE connection.
+- **Home**: `10.1.78.0/24` is assigned to a bridge, `br0`. It is left untagged for straightforward network access.
+- **Guest**: `10.30.17.0/24` is configured as `vlan30` (VLAN 30).
+- **IoT**: `10.90.85.0/24` is configured as `vlan90` (VLAN 90).
+- **WAN**: `PPPoE` serves as the `wan` network for the internet connection.
 
-### Renaming Network Interface
+### Renaming the Network Interface
 
-In the past, network interfaces were arbitrarily named `eth0`, `eth1`, etc. The order of interfaces was defined during kernel initialization, which caused many problems. Today, the network card is identified by its physical connection on the bus. It works, but sometimes, during kernel updates or firmware upgrades, the network interface identification changes, causing problems. To address this, I wanted to rename my interface to something more persistent. All network cards have a MAC Address. I'll define the network card name by its address.
+In earlier systems, network interfaces were named arbitrarily (e.g., `eth0`, `eth1`), with the order determined by kernel initialization. This could lead to inconsistencies, especially after kernel or firmware updates, causing interface identification to change and disrupting network configurations.
 
-My network interface was previously named `enp4s0f0`. I'll rename it to `enge0` tied to the **MAC Address**.
+Modern systems use predictable names based on the hardware's physical connection to the bus (e.g., `enp4s0f0`). While this approach is more reliable, it can still be affected by system updates.
 
-## NixOS config
+To ensure consistent naming, I assigned a persistent name to my primary network interface based on its **MAC Address**. This renaming ties the interface (`enp4s0f0`) to `enge0`, making it easier to manage across updates.
 
-*Some parts I took from [Francis Blog](https://francis.begyn.be/blog/nixos-home-router)*.
+## NixOS Configuration
 
-Let's configure our server by editing the `.nix` files accordingly. To maintain the organization, let's create discrete files for its sections:
+*Note: Parts of this setup are inspired by [Francis Blog](https://francis.begyn.be/blog/nixos-home-router).*
+
+We will configure our NixOS server as a router by organizing the configuration into modular `.nix` files. This approach improves maintainability and clarity.
+
+### File Structure
+
+Below is the directory structure for our configuration:
 
 ```bash
 /etc/nixos
-├── configuration.nix 
+├── configuration.nix        # Main NixOS configuration file
 └── modules/ 
-      ├── networking.nix       # Network settings/ enable NFTables
+      ├── networking.nix       # Network settings and enabling NFTables
       ├── pppoe.nix            # PPPoE connection setup
-      ├── services.nix         # Other services
-      └── nftables.nft         # NFT Rules
+      ├── services.nix         # Service configurations
+      └── nftables.nft         # NFTables ruleset
 ```
 
-### 1. Configuration files and folders
+### Step 1: Create Configuration Files and Directories
 
-Create all the necessary folders and files:
+First, create the necessary directories and placeholder files:
 
 ```bash
-touch /etc/nixos/modules/{{networking,pppoe,services}.nix,nftables.nft}
+mkdir -p /etc/nixos/modules
+touch /etc/nixos/modules/{networking,pppoe,services}.nix
+touch /etc/nixos/modules/nftables.nft
 ```
 
-### 2. Basic config
+### Step 2: Update the Main Configuration File
 
-Let's split our `configuration.nix` file into parts for better organization and maintainability.
-Do not replace the entire file, but add the following lines.
+We will divide the `configuration.nix` file into separate modules for better organization. Instead of overwriting the entire file, append the following lines.
 
-To act as a router, add **forwarding** instruction to the kernel as well.
-
-`/etc/nixos/configuration.nix`
+#### File: `/etc/nixos/configuration.nix`
 
 ```nix
 { config, pkgs, ... }:
+
 {
-  ...
-    ...
-    [ 
-      <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
-      ./hardware-configuration.nix
-      ./modules/networking.nix
-      ./modules/services.nix
-      ./modules/pppoe.nix
-      ./modules/users.nix
-    ];
-  
-  # Add  ipv4 and ipv6 forwarding to act as a router
+  imports = [
+    <nixos-hardware/apple/macmini/4> # Specific hardware configuration for the Mac Mini 2010
+    ./hardware-configuration.nix
+    ./modules/networking.nix
+    ./modules/services.nix
+    ./modules/pppoe.nix
+    ./modules/users.nix
+  ];
+
+  # Enable IPv4 and IPv6 forwarding to configure the server as a router
   boot.kernel.sysctl = {
     "net.ipv4.conf.all.forwarding" = true;
     "net.ipv6.conf.all.forwarding" = true;
   };
-  ...
 
+  # Install essential packages for administration and debugging
   environment.systemPackages = with pkgs; [
     bind
     conntrack-tools
@@ -247,25 +237,22 @@ To act as a router, add **forwarding** instruction to the kernel as well.
     tmux
     vim
   ];
-
-  ...
-
 }
 ```
 
-### 3. Networking
+### 3. Networking Configuration
 
-We have our **network configuration** on `modules/networking.nix`.
-As mentioned, this **Mac Mini** only has one NIC. To handle more than one Network, this setup relies on VLANs.
+The **network configuration** is defined in `modules/networking.nix`. Since the **Mac Mini** only has one physical NIC, we’ll leverage VLANs to manage multiple networks.
 
-This NIC is identified `enp4s0f0`. from kernel.Check yours by following:
+The NIC in the system is identified as `enp4s0f0`. You can verify your NIC's name by running:
 
 ```bash
 ip link show
 ```
 
+Example output:
+
 ```txt
-ip link show 
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 2: wlp3s0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
@@ -274,35 +261,34 @@ ip link show
     link/ether c4:2c:03:36:46:38 brd ff:ff:ff:ff:ff:ff
 ```
 
-As you can see, there are three interfaces:
+As shown, there are three interfaces:
 
-1. `lo` which is the **Loopback interface,**
-2. `wlp3s0` which is the **Wireless interface**
-3. `enp4s0f0` being the **Ethernet interface**
+1. `lo` (Loopback interface)
+2. `wlp3s0` (Wireless interface)
+3. `enp4s0f0` (Ethernet interface)
 
-To rename the interface, I'll use its **MAC Address** `c4:2c:03:36:46:38`. The new name will be `enge0`, meaning **Ethernet Gigabit 0**. Avoid names like `enoX`, `enpX`, `ensX`, or `ethX`.
-The name pattern was chosen by following the naming mentioned in this blog post: [www.apalrd.net/posts/2023/tip_link/](https://www.apalrd.net/posts/2023/tip_link/#solution)
+We will rename the Ethernet interface to `enge0` for clarity, using the MAC address `c4:2c:03:36:46:38`. The new name `enge0` follows a more consistent naming scheme and avoids the default names like `enoX`, `enpX`, `ensX`, or `ethX`. This naming convention is inspired by the blog post: [www.apalrd.net/posts/2023/tip_link/](https://www.apalrd.net/posts/2023/tip_link/#solution).
 
-I would also define discrete **Mac addresses** by interface as this:
+Additionally, we will assign unique MAC addresses to each network interface:
 
-- A **Mac address** is 6 bytes or 6 segments of 1 byte each segment.
-- Every interface will have its **MAC address** defined by the first **5 bytes** followed by its **Network ID**:
-  - **br0** : `c4:2c:03:36:46`**`:ff`**
-  - **wan** : `c4:2c:03:36:46`**`:02`**
-  - **vlan30** : `c4:2c:03:36:46`**`:30`**
-  - **vlan90** : `c4:2c:03:36:46`**`:90`**
+- **br0**: `c4:2c:03:36:46:ff`
+- **wan**: `c4:2c:03:36:46:02`
+- **vlan30**: `c4:2c:03:36:46:30`
+- **vlan90**: `c4:2c:03:36:46:90`
 
-To achieve that, create these **variables**:
+Here’s the approach we’ll use to configure these settings in `networking.nix`:
 
-- `mac_addr`: The real **Mac address**, in my case `c4:2c:03:36:46:38`.
-- `mac_addr_refix:`: The four left bytes of the **Mac address**, `c4:2c:03:36:46`
-- `nic`: Intended interface name, `enge0` at this case.
+Define some variables:
 
-For configuring the network. I'll use **[systemd-network](https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html)** which there's a plan of resources on a single piece of software.
+- `mac_addr`: The actual MAC address for the interface, in this case, `c4:2c:03:36:46:38`.
+- `mac_addr_prefix`: The first 5 bytes of the MAC address, `c4:2c:03:36:46`.
+- `nic`: The interface name, here we use `enge0`.
 
-My `network.nix` ended up like this:
+We will configure the network using **systemd-network**, which provides a unified and efficient solution for managing networking.
 
-`/etc/nixos/modules/networking.nix`
+Here’s the configuration for `networking.nix`:
+
+`/etc/nixos/modules/networking.nix`:
 
 ```nix
 { config, pkgs, ... }:
@@ -310,28 +296,24 @@ let
   nic = "enge0";
   mac_addr_prefix = "c4:2c:03:36:46";  
   mac_addr = "${mac_addr_prefix}:38";
-  wan="wan"; # Matches with pppoe.nix
-  guest="vlan30";
-  iot="vlan90";
-  ip_lan="10.1.78.1";
-  ip_guest="10.30.17.1";
-  ip_iot="10.30.85.1";
+  wan = "wan"; # Matches with pppoe.nix
+  guest = "vlan30";
+  iot = "vlan90";
+  ip_lan = "10.1.78.1";
+  ip_guest = "10.30.17.1";
+  ip_iot = "10.30.85.1";
 in
 {
-systemd.network = {
+  systemd.network = {
     enable = true;
-    # Rename NIC
+    
+    # Rename the NIC based on MAC address
     links."10-${nic}" = {
       matchConfig.MACAddress = "${mac_addr}";
       linkConfig.Name = "${nic}";
     };
 
     netdevs = {
-      "10-${lan}".netdevConfig = {
-        Name = "${lan}";
-        Kind = "bridge";
-        MACAddress = "${mac_addr_prefix}:ff";
-      };
       "10-${wan}" = {
         netdevConfig.Name = "${wan}";
         netdevConfig.Kind = "vlan";
@@ -350,9 +332,14 @@ systemd.network = {
         netdevConfig.MACAddress = "${mac_addr_prefix}:90";
         vlanConfig.Id = 90;
       };
+      "10-${lan}" = {
+        netdevConfig.Name = "${lan}";
+        netdevConfig.Kind = "bridge";
+        MACAddress = "${mac_addr_prefix}:ff";
+      };
     };
-   
-    # Connect the bridge device to NIC
+
+    # Configure the network interfaces and assign IP addresses
     networks = {
       "10-${nic}" = {
         matchConfig.Name = "${nic}";
@@ -362,22 +349,26 @@ systemd.network = {
           VLAN = [ "${wan}" "${guest}" "${iot}" ];
         };
       };
-     "10-${wan}" = {
+
+      "10-${wan}" = {
         matchConfig.Name = "${wan}";
         networkConfig.LinkLocalAddressing = "no";
       };
-     "10-${guest}" = {
+
+      "10-${guest}" = {
         matchConfig.Name = "${guest}";
         networkConfig.Address = "${ip_guest}/24";
         networkConfig.DHCPServer = "yes";
         dhcpServerConfig.DNS = [ "${ip_iot}" ];
       };
-     "10-${iot}" = {
+
+      "10-${iot}" = {
         matchConfig.Name = "${iot}";
         networkConfig.Address = "${ip_iot}/24";
         networkConfig.DHCPServer = "yes";
         dhcpServerConfig.DNS = [ "${ip_iot}" ];
       };
+
       "10-${lan}" = {
         matchConfig.Name = "${lan}";
         networkConfig.Address = "${ip_lan}/24";
@@ -387,16 +378,16 @@ systemd.network = {
           PoolSize = 150;
           DefaultLeaseTimeSec = 3600;
           MaxLeaseTimeSec = 7200;
-          SendOption=[
-            "15:string:home.example.com" // Replace with your own 
-            "119:string:\x04home\x09example\x03com\x00" # To generate 119, https://jjjordan.github.io/dhcp119/
+          SendOption = [
+            "15:string:home.example.com" # Replace with your own domain
+            "119:string:\x04home\x09example\x03com\x00" # For DHCP Option 119
           ];
           DNS = [ "${ip_lan}" ];
-        }; 
+        };
       };
     };
   };
-  
+
   networking = {
     useDHCP = false;
     hostName = "macmini";
@@ -451,7 +442,7 @@ We'll set up the PPPoE (Point-to-Point Protocol over Ethernet) connection for in
 
 ### 5. Firewall
 
-The Firewall configuration is done with `nftables`. We will do a basic but secure firewall configuration. It will prevent any connection incoming from the internet, as well as from the **Guest** and **IoT** Network while keeping everything open on the **LAN** network. I not doing the **Flow Offloading** setup as didn't end up working for me. You can try it yourself [here](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).
+The firewall configuration is managed with **nftables**. We'll set up a basic yet secure firewall that blocks all incoming connections from the internet and the **Guest** and **IoT** networks while allowing full access within the **LAN** network. I won’t be covering **Flow Offloading** here, as I encountered issues with it that couldn't be resolved. However, if you're interested, you can attempt the configuration yourself following [this discussion](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).
 
 `/etc/nixos/modules/nftables.nft`
 
@@ -477,15 +468,11 @@ table inet filter {
   chain forward {
     type filter hook forward priority filter; policy drop;
 
-    # enable flow offloading for better throughput
-    ip protocol { tcp, udp } flow offload @ftable
-
     # Allow trusted network WAN access
     iifname "br0" oifname "ppp0" counter accept comment "Allow trusted LAN to WAN"
-    # Allow established WAN to return
+    # Allow established WAN connections to return
     iifname "ppp0" oifname "br0" ct state established,related counter accept comment "Allow established back to LANs"
-    # https://samuel.kadolph.com/2015/02/mtu-and-tcp-mss-when-using-pppoe-2/
-    # Clamp MSS to PMTU for TCP SYN packets
+    # Clamp MSS for TCP SYN packets (important for PPPoE)
     oifname "ppp0" tcp flags syn tcp option maxseg size set 1452
   }
 }
@@ -495,7 +482,7 @@ table ip nat {
     type nat hook prerouting priority filter; policy accept;
     tcp flags syn tcp option maxseg size set 1452
   }
-  # Setup NAT masquerading on the ppp0 interface
+  # NAT masquerading on the ppp0 interface
   chain postrouting {
     type nat hook postrouting priority filter; policy accept;
     oifname "ppp0" masquerade
@@ -505,7 +492,7 @@ table ip nat {
 
 ### 6. Services
 
-To maintain organization, remove the **services** section from `configuration.nix` and place it on its file.
+For better organization, we separate the **services** configuration into its own file rather than keeping it in `configuration.nix`.
 
 `/etc/nixos/modules/services.nix`
 
@@ -515,26 +502,26 @@ To maintain organization, remove the **services** section from `configuration.ni
 {
   services = {
     envfs.enable = true;
-    # Enable SSH Service
+    # Enable SSH service
     openssh = {
       enable = true;
-      settings.PermitRootLogin = "yes"; # Allow root login (optional, for security reasons, you may want to disable this)
+      settings.PermitRootLogin = "yes"; # Allow root login (optional, but consider disabling it for security)
       settings.PasswordAuthentication = true; # Enable password authentication
     };
   };
 }
 ```
 
-### 8. Apply changes
+### 7. Apply Changes
 
-In the case of **Mac Mini**, there's an additional `hardware-configuration` set. Because is the first time rebuilding the configuration, add its channel as did during the installation process.
+For the **Mac Mini**, there is an additional `hardware-configuration` set. As this is the first time rebuilding the configuration, add its channel as you did during the installation process.
 
 ```bash
 sudo nix-channel --add https://github.com/NixOS/nixos-hardware/archive/master.tar.gz nixos-hardware
 sudo nix-channel --update
 ```
 
-To make changes take effect, apply it with the following command:
+To apply all changes and rebuild the system, run the following command:
 
 ```bash
 nixos-rebuild switch
@@ -542,6 +529,6 @@ nixos-rebuild switch
 
 ## Conclusion
 
-That's all for now! In the next part, we'll enhance security by disabling `root` account login, enabling **SSH access** via key-based authentication, and further hardening the **Firewall** with more granular rules and permissions.
+That’s all for this part! In the next installment, we’ll focus on enhancing security by disabling root login, enabling **SSH key-based authentication**, and further strengthening the **firewall** with more detailed rules and permissions.
 
-- Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
+- Part 3: [Users, Security, and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
