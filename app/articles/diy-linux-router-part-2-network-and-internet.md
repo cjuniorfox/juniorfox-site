@@ -45,89 +45,89 @@ In this part, we will configure VLANs and their networks, set up a PPPoE connect
 
 ## VLANs
 
-In this setup, I am using the **TP-Link TL-SG108E** and will make use its VLAN capabilities.
+In this setup, I am using the **TP-Link TL-SG108E** and will make use of its VLAN capabilities.
 
 ### The OSI model
 
-The Network stack is slit in 7 layers.
+The network stack is split into 7 layers.
 
-- **Layer 1**: Phisical layer. Cables, NIC and connectors.
-- **Layer 2**: Logical layer, MAC Address, bridges, switches e **VLANs**.
-- **Layer 3**: Network layer, where the **IP Address** relies on.
+- **Layer 1**: Physical layer. Cables, NICs, and connectors.
+- **Layer 2**: Data link layer, MAC Address, bridges, switches, and **VLANs**.
+- **Layer 3**: Network layer, where the **IP Address** resides.
 - **Layer 4**: Transport layer, like **TCP** and **UDP**.
 - **Layer 5**: Session layer. The connection between a server application and the client.
 - **Layer 6**: Presentation layer. Data formatting and character encoding.
 - **Layer 7**: Application layer. The end-user application that consumes the data transferred and processed by the previous layers.
 
-More details about OSI Model [at this link](https://www.freecodecamp.org/news/osi-model-networking-layers-explained-in-plain-english/).
+More details about the OSI Model [at this link](https://www.freecodecamp.org/news/osi-model-networking-layers-explained-in-plain-english/).
 
 ### What is VLAN
 
-The rule of VLAN is segment the network without the necessity to physically segmenting it. Without VLANs, to split some structure into various networks, you would need use distinct Switches and network adapters. We can call the physical segmentation as **Layer 1 segmentation**, while relying on VLANs to segment the network we can call as **Layer 2 segmentation**.
+The role of VLANs is to segment the network without the need for physical segmentation. Without VLANs, to split a structure into various networks, you would need to use distinct switches and network adapters. We can call physical segmentation **Layer 1 segmentation**, while relying on VLANs to segment the network is known as **Layer 2 segmentation**.
 
-The **layer 2** transports data as frames. Those frames contains the **frame data** and the **frame header**, with various informations like **Target MAC Address** and, optionally, **VLAN tag**. The **VLAN** tag ensures that, on an appropriately configured smart switch, the **data frame** will reach the intended target Network interface, identified by its **MAC Address** to the intended network, or **PVID** as some switches names the segmented networks configured on it.
+**Layer 2** transports data as frames. These frames contain the **frame data** and the **frame header**, with various information like **Target MAC Address** and, optionally, a **VLAN tag**. The **VLAN** tag ensures that, on an appropriately configured smart switch, the **data frame** will reach the intended target network interface, identified by its **MAC Address**, to the intended network, or **PVID** as some switches name the segmented networks configured on them.
 
-So, when you talk about VLANs, we talks about segmenting the network. Do not allow some host on some network to reach other host from another network.
+When you talk about VLANs, you are talking about segmenting the network. It prevents hosts on one network from reaching hosts on another network.
 
-To use **VLANs** is needed to follow some guidelines:
+To use **VLANs**, you need to follow some guidelines:
 
-- Each VLAN is intended to communicate with it's intended network, identified as **PVID**.
+- Each VLAN is intended to communicate with its intended network, identified as **PVID**.
 - You can assign many *tagged* VLANs to a single port.
 - Every **VLAN** will behave as a distinct **network adapter** on a host that the VLAN is associated with.
-- Untagged traffic from will be handled by the default **network** for it's port. By default, this network tends to be the **PVID 1**
+- Untagged traffic will be handled by the default **network** for its port. By default, this network tends to be **PVID 1**.
 
 #### Untagged VLANs
 
-On a managed switch, it is possible to create two or more **VLANs**, identified by it's **PVIDs** (Physical VLAN ID) and split the network. This is like having two separate switches within the same physical hardware. For example, let's say we want to create two isolated networks that data cannot communicate with each other. We can assign `PVID 1` to **ports 1 to 4** and `PVID 2` to **ports 5 to 8**. Any traffic from **port 1** will be able to reach **ports 2, 3, and 4**, but it will not get any device connected to **ports 5, 6, 7, or 8**. The same applies to the other way around. Is like having two 4-port switches whithin the same physical hardware.
+On a managed switch, it is possible to create two or more **VLANs**, identified by their **PVIDs** (Physical VLAN ID), and split the network. This is like having two separate switches within the same physical hardware. For example, let's say we want to create two isolated networks that cannot communicate with each other. We can assign `PVID 1` to **ports 1 to 4** and `PVID 2` to **ports 5 to 8**. Any traffic from **port 1** will be able to reach **ports 2, 3, and 4**, but it will not reach any device connected to **ports 5, 6, 7, or 8**. The same applies the other way around. It's like having two 4-port switches within the same physical hardware.
 
 #### Tagged VLANs
 
-If you want to allow some device to reach two or more networks from the same port, you can tag this port using **VLAN tags**. The switch will look for the **VLAN Tag** at the **frame header** and take this traffic to the intended **Network**. In practice, this is just like having two or more distinct network adapters connected to two or more network switches, but sharing the same physical network interface, cable, switch, and switch port, effectively segmenting this traffic over different networks without needing to phisically segmenting it.
+If you want to allow a device to reach two or more networks from the same port, you can tag this port using **VLAN tags**. The switch will look for the **VLAN Tag** in the **frame header** and direct this traffic to the intended **Network**. In practice, this is just like having two or more distinct network adapters connected to two or more network switches, but sharing the same physical network interface, cable, switch, and switch port, effectively segmenting this traffic over different networks without needing to physically segment it.
 
 For example:
 
 **Port 1** and **Port 3** are *tagged* to `VLAN 30` and `VLAN 90`.
 
-- Any traffic from **port 1** tagged as `VLAN 30` or `VLAN 90` will only reach the port 3.
-- This traffic will be delivered as **tagged** to it's VLAN on each side of the switch.
-- The device connected to **port 3** needs to have **VLAN tag** properly configured to handle this traffic. If not, the traffic is supposed to be rejected by the host.
+- Any traffic from **port 1** tagged as `VLAN 30` or `VLAN 90` will only reach port 3.
+- This traffic will be delivered as **tagged** to its VLAN on each side of the switch.
+- The device connected to **port 3** needs to have the **VLAN tag** properly configured to handle this traffic. If not, the traffic is supposed to be rejected by the host.
 
 #### Tagged on One Port, Untagged on Another
 
-If the switch is smart enough, it can have a **tagged** frame on one port, to reach any device on some network as **untagged**. Effectively, what the Switch does on that situation, is receive this tagged **frame**, remove the **VLAN tag** from **frame header** and delivers to some host at the intended **Network** as untagged.
+If the switch is smart enough, it can have a **tagged** frame on one port, to reach any device on some network as **untagged**. Effectively, what the switch does in that situation is receive this tagged **frame**, remove the **VLAN tag** from the **frame header**, and deliver it to some host on the intended **Network** as untagged.
 
-On this setup, we will make use of this feature, because my **ISP's PPPoE** connection does not expect to receive tagged **frames**. So I have to configure my switch as:
+In this setup, we will make use of this feature because my **ISP's PPPoE** connection does not expect to receive tagged **frames**. So I have to configure my switch as:
 
 - Tag **Port 1** to **VLAN 2**.
-- Assign **Port 2** to **VPID 2** as **untagged**.
+- Assign **Port 2** to **PVID 2** as **untagged**.
 
-Any **PPPoE** traffic from **Mac mini** will be delivered to switch tagged as **VLAN 2**, the switch will strip out the **VLAN tag** from **frame header** and deliver this frame on **Port 2** as untagged.
+Any **PPPoE** traffic from the **Mac Mini** will be delivered to the switch tagged as **VLAN 2**, the switch will strip out the **VLAN tag** from the **frame header** and deliver this frame on **Port 2** as untagged.
 
 ### Advantages
 
 - **Cost-effective**: You can share one NIC, one cable, and one switch port across multiple networks.
-- **Less cabling** because you don't need to rely on phisical cablling and physical switches to split your network.
-- **Easy to reassign**, as is just a matter of reconfiguring the assigments on a network administrator panel.
+- **Less cabling** because you don't need to rely on physical cabling and physical switches to split your network.
+- **Easy to reassign**, as it is just a matter of reconfiguring the assignments on a network administrator panel.
 
 ### Drawbacks
 
-- **Shared bandwidth**: You can have until 4095 VLANs on the same cable, but far as this traffic shares the same physical interface, the bandwidth for it's VLANs connections will be shared too.
+- **Shared bandwidth**: You can have up to 4095 VLANs on the same cable, but as this traffic shares the same physical interface, the bandwidth for its VLAN connections will be shared too.
 - **Complexity**: You need to keep track of which ports are assigned to which VLANs.
 - **Host configuration**: Devices connected to tagged ports must be configured to handle the appropriate VLANs.
 
-As far as this **Mac Mini** relies on a single Network Interface, on this setup, we will use VLANs to create our four intended networks.
+As this **Mac Mini** relies on a single network interface, in this setup, we will use VLANs to create our four intended networks.
 
-You can argue that by sharing the same network interface is sharing the bandwitch for it's interface and this is true. Let's see what happens when I start downloading some content from some host at the network **Home** from the internet.
+You can argue that by sharing the same network interface, you are sharing the bandwidth for its interface, and this is true. Let's see what happens when I start downloading some content from a host on the **Home** network from the internet.
 
-1. This host request to download the content to Mac Mini.
-  a. This traffic will reach the Mac Mini as **untagged** on **Port 1**.
-2. The **Mac Mini** will asks download the content over PPPoE.
-  a. This traffic will be transferred over PPPoE as **tagged** **VLAN 2** on **Port 1**.
-3. The **Mac Mini** will receive this traffic, do the **NAT** (Network translation) and deliver it to the intended host on Network **Home** as **untagged** on **Port 1**.
+1. This host requests to download the content to the Mac Mini.
+   - This traffic will reach the Mac Mini as **untagged** on **Port 1**.
+2. The **Mac Mini** will request to download the content over PPPoE.
+   - This traffic will be transferred over PPPoE as **tagged** **VLAN 2** on **Port 1**.
+3. The **Mac Mini** will receive this traffic, perform **NAT** (Network Address Translation), and deliver it to the intended host on the **Home** network as **untagged** on **Port 1**.
 
-Effectivelly, when downloading some content, the traffic will come and go over the same interface. It will **download** the content over **VLAN 2** and, at the same time **upload** as Untagged to **Home** network using the same interface.
+Effectively, when downloading some content, the traffic will come and go over the same interface. It will **download** the content over **VLAN 2** and, at the same time, **upload** it as untagged to the **Home** network using the same interface.
 
-On my 700 Mbps download and 150 Mbps upload connection, I haven't noticed any performance impact, **Speedtest** reports my download ratio above 700 Mbps. Something around 720 Mbps at most, and upload as **150 Mbps**, better and more stable than through the Router that my ISP provides me.
+On my 700 Mbps download and 150 Mbps upload connection, I haven't noticed any performance impact. **Speedtest** reports my download speed above 700 Mbps, around 720 Mbps at most, and upload at **150 Mbps**, better and more stable than through the router that my ISP provides me.
 
 ## Network topology
 
@@ -140,7 +140,7 @@ Let's have the following networks:
 |10.90.85.0/24 | IoT       | 90        |
 |PPPoE         | ppp0      | 2         |
 
-Unfortunelly my **ISP** does not provide me **IPv6** connection. So let's focus solely on IPV4 for now, but I want to have **IPv6** connection.
+Unfortunately, my **ISP** does not provide me with an **IPv6** connection. So let's focus solely on IPv4 for now, but I want to have an **IPv6** connection.
 
 - The switch has 8 ports.
 - **VLAN 1**: Ports 1, 3 to 8 are untagged.
@@ -174,11 +174,11 @@ Let's state how we will configure the networks on the **Mac Mini**:
 - **Home**: `10.1.78.0/24` is a bridge `br0`. I leave it untagged to make it easy to reach the computer over the network.
 - **Guest**: `10.30.17.0/24` is `vlan30` (VLAN 30).
 - **IoT**: `10.90.85.0/24` is `vlan90` (VLAN 90).
-- **WAN**: `PPPoE` is the `wan` network to **PPPoE** connection.
+- **WAN**: `PPPoE` is the `wan` network for the PPPoE connection.
 
-#### Renaming Network Interface
+### Renaming Network Interface
 
-In the old days, the network interfaces were arbitrarily named `eth0`, `eth1`... The order of interfaces was defined during kernel initialization, which caused many problems. Today the network card is identified by their physical connection on the bus. It works, but sometimes, during kernel updates or firmware upgrades, the network interface identification changes, causing problems. Thinking about that, I wanted to rename my interface to something more persistent. All Network card has a **MAC Address**. I'll define the network card name by its address.
+In the past, network interfaces were arbitrarily named `eth0`, `eth1`, etc. The order of interfaces was defined during kernel initialization, which caused many problems. Today, the network card is identified by its physical connection on the bus. It works, but sometimes, during kernel updates or firmware upgrades, the network interface identification changes, causing problems. To address this, I wanted to rename my interface to something more persistent. All network cards have a MAC Address. I'll define the network card name by its address.
 
 My network interface was previously named `enp4s0f0`. I'll rename it to `enge0` tied to the **MAC Address**.
 
