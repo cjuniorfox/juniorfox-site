@@ -120,7 +120,7 @@ O **Mac Mini** atuará como um roteador usando a seguinte configuração de VLAN
 
 | Rede         | Interface | VLAN      |
 |--------------|-----------|----------:|
-| **Home**     | br0       | Untagged  |
+| **LAN**      | br0       | Untagged  |
 | **Guest**    | vlan30    | 30        |
 | **IoT**      | vlan90    | 90        |
 | **WAN**      | ppp0      | 2         |
@@ -157,7 +157,7 @@ Esta seção descreve como configuramos as redes no **Mac Mini** para organizaç
 
 ### Redes
 
-- **Home**: `10.1.78.0/24` é atribuída a uma ponte, `br0`. Ela é deixada sem tags para acesso direto à rede.
+- **LAN**: `10.1.78.0/24` é atribuída a uma ponte, `br0`. Ela é deixada sem tags para acesso direto à rede.
 - **Guest**: `10.30.17.0/24` é configurada como `vlan30` (VLAN 30).
 - **IoT**: `10.90.85.0/24` é configurada como `vlan90` (VLAN 90).
 - **WAN**: `PPPoE` serve como a rede `wan` para a conexão com a internet.
@@ -442,7 +442,7 @@ Vamos configurar a conexão PPPoE (Point-to-Point Protocol over Ethernet) para a
 
 ### 5. Firewall
 
-A configuração do firewall será gerenciada com **nftables**. Vamos configurar um firewall básico, mas seguro, que bloqueia todas as conexões de entrada da internet e das redes **Guest** e **IoT**, enquanto permite acesso total da rede **Home**. Não cobrirei o **Flow Offloading** aqui, pois encontrei problemas que não puderam ser resolvidos. No entanto, se você estiver interessado, pode tentar a configuração por conta própria de acordo com [esta thread de fórum](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).
+A configuração do firewall será gerenciada com **nftables**. Vamos configurar um firewall básico, mas seguro, que bloqueia todas as conexões de entrada da internet e das redes **Guest** e **IoT**, enquanto permite acesso total da rede **LAN**. Não cobrirei o **Flow Offloading** aqui, pois encontrei problemas que não puderam ser resolvidos. No entanto, se você estiver interessado, pode tentar a configuração por conta própria de acordo com [esta thread de fórum](https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031/3).
 
 `/etc/nixos/modules/nftables.nft`
 
