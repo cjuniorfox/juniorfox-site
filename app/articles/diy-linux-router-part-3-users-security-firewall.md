@@ -34,7 +34,7 @@ In this part, we will increase security by creating users, changing SSH authenti
   3. [Create `users.nix` in `/etc/nixos/modules/`](#3-create-usersnix-in-etcnixosmodules)
   4. [Disable password authentication over SSH](#4-disable-password-authentication-over-ssh)
   5. [Update the configuration and try to log in](#5-update-the-configuration-and-try-to-log-in)
-  6. [Add to SSH configuration file](#6-add-to-ssh-configuration-file)
+  6. [Create the SSH configuration file](#6-create-the-ssh-configuration-file)
   7. [Lock the root Account (optional)](#7-lock-the-root-account-optional)
 - [Firewall](#firewall)
   - [Current Setup](#current-setup)
@@ -55,7 +55,7 @@ Create intended users. You can create whatever user you need. In my case, I will
 
 This step is optional, as the intended way to authenticate on the server is through SSH using `SSH Keys`, but you can create a password if you want to ask for one when using `sudo` or authenticating locally.
 
-Create a password for the `admin` user. A password for the `git` user is not necessary, as it will be authenticated using an `ssh key`.
+Create the password for the users:
 
 ```bash
 mkpasswd --method=SHA-512
@@ -100,7 +100,7 @@ Repeat the same process for every user you want to create.
 
 Access the server via SSH using the user `root` and the `password` defined during the installation in [part 1](/article/diy-linux-router-part-1-initial-setup) of this tutorial and do as follows:
 
-Define intended users. Replace the `authorization.keys` with the one generated above as `~/.ssh/router.pub`.
+Set the intended users by replacing the values ​​in `openssh.authorizedKeys.keys`. In the example, the key for the `admin` user should be filled with the value from `~/.ssh/router-admin.pub`.
 
 `/etc/nixos/modules/users.nix`
 
@@ -190,9 +190,9 @@ Try to log in to the server using the `admin` using the private key generated ea
 ssh -i ~/.ssh/router-admin admin@10.1.78.1
 ```
 
-### 6. Add to SSH configuration file
+### 6. Create the SSH configuration file
 
-If you do not want to type `ssh -i ~/.ssh/router-admin admin@10.1.78.1` everytime to authenticate into the serverm, configure the file `~/.ssh/config` as following:
+If you do not want to type `ssh -i ~/.ssh/router-admin admin@10.1.78.1` everytime to authenticate into the serverm, on your computer, configure the file `~/.ssh/config` as following:
 
 ```yaml
 Host router-admin
@@ -236,7 +236,7 @@ With our user configurations complete, it's time to enhance our firewall securit
 
 So far, our firewall configuration includes:
 
-- Allowing all incoming traffic from the **Home** network.
+- Allowing all incoming traffic from the **LAN** network.
 - Blocking all incoming traffic from **WAN/PPPoE**, **Guest**, and **IoT** networks except for internet access.
 
 While this setup provides a basic level of security, we can achieve better protection through more granular traffic control. By doing so, we ensure that if any service unintentionally opens additional ports on the server, unauthorized traffic will not be allowed through.
@@ -245,7 +245,7 @@ While this setup provides a basic level of security, we can achieve better prote
 
 We will refine our firewall to allow only the traffic necessary for each network:
 
-- **Home** network: Allow **DHCP** and **SSH** services.
+- **LAN** network: Allow **DHCP** and **SSH** services.
 - **Guest** and **IoT** networks: Allow only **DHCP** service.
 - **WAN**: Enable **SSH** to remote access.
 
@@ -288,7 +288,7 @@ mkdir -p /etc/nixos/nftables
 touch /etc/nixos/nftables/{nat_chains,nat_rules,nat_sets,nat_zones,rules,services,sets,zones}.nft
 ```
 
-Configure every intended **NFTable** file.
+Configure every intended **NFTables** file.
 
 ##### sets.nft
 
