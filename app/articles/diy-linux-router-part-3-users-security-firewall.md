@@ -20,7 +20,7 @@ This is the third part of a multi-part series describing how to build your own L
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
-In the first and second parts, we installed the operating system, configured the network, and set up the Mac Mini to work as a router.
+In the first and second parts, we installed the operating system, configured the network, and set up the **Mac Mini** to work as a router.
 In this part, we will increase security by creating users, changing SSH authentication, and hardening the firewall configuration.
 
 ![Fire of wall](/assets/images/diy-linux-router/fire-of-wall.webp)
@@ -29,11 +29,22 @@ In this part, we will increase security by creating users, changing SSH authenti
 ## Table of Contents
 
 - [Users](#users)
+  1. [Generate Hashed Password (optional)](#1-generate-hashed-password-optional)
+  2. [SSH Keys](#2-ssh-keys)
+  3. [Create `users.nix` in `/etc/nixos/modules/`](#3-create-usersnix-in-etcnixosmodules)
+  4. [Disable password authentication over SSH](#4-disable-password-authentication-over-ssh)
+  5. [Update the configuration and try to log in](#5-update-the-configuration-and-try-to-log-in)
+  6. [Add to SSH configuration file](#6-add-to-ssh-configuration-file)
+  7. [Lock the root Account (optional)](#7-lock-the-root-account-optional)
 - [Firewall](#firewall)
   - [Current Setup](#current-setup)
   - [Planned Enhancements](#planned-enhancements)
   - [Organizing the Firewall Configuration](#organizing-the-firewall-configuration)
   - [Set up files](#set-up-files)
+    1. [Remove the nftables.nft file](#1-remove-the-nftablesnft-file)
+    2. [Create the NFTables Configuration Files](#2-create-the-the-nftables-configuration-files)
+    3. [Update the networking.nix Configuration File](#3-update-the-networkingnix-configuration-file)
+    4. [Rebuild the configuration and test](#4-rebuild-the-configuration-and-test)
 - [Conclusion](#conclusion)
 
 ## Users
@@ -57,7 +68,7 @@ $6$ZeLsWXraGkrm9IDL$Y0eTIK4lQm8D0Kj7tSVzdTJ/VbPKea4ZPf0YaJR68Uz4MWCbG1EJp2YBOfWH
 
 #### 2. SSH Keys
 
-You can generate your private and public key pair or use an existing one. For example, if you have a GitHub account, you can use the keys generated when you [create a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
+Generate the private and public key pair or use an existing one. More about it at this [Github's article](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
 
 Execute the following SSH key generation steps on your computer.
 
@@ -89,7 +100,7 @@ Repeat the same process for every user you want to create.
 
 Access the server via SSH using the user `root` and the `password` defined during the installation in [part 1](/article/diy-linux-router-part-1-initial-setup) of this tutorial and do as follows:
 
-Create your users. Replace the `authorization.keys` with the one generated above as `~/.ssh/router.pub`.
+Define intended users. Replace the `authorization.keys` with the one generated above as `~/.ssh/router.pub`.
 
 `/etc/nixos/modules/users.nix`
 
@@ -142,7 +153,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
   # Enable sudo for users in the 'wheel' group
   security.sudo = {
     enable = true;
-    wheelNeedsPassword = true;  # Optional: require a password for sudo. Set as false to allow passwordless sudo or if you not set a password for the admin user.
+    wheelNeedsPassword = false;  # Optional: Requires a password to be entered for the sudo command. Set to true if you choose to create the admin user with a password.
   };
 }
 ```
@@ -200,7 +211,7 @@ Host router-git
   IdentityFile ~/.ssh/router-git
 ```
 
-Teste o acesso **SSH** sem informar o arquivo de chaves.
+Try **ssh**ing to the server without providing the **identity file** as a parameter.
 
 ```bash
 ssh router-admin
@@ -208,15 +219,14 @@ ssh router-admin
 
 ### 7. Lock the root Account (optional)
 
-Lock the `root` account increases the security of our server. It's not mandatory, but it's a good practice.
+Since the **SSH** service is configured to prevent `root` logins, I don't see the need to lock the `root` account, but you can do so if you want.
+If you configured your server with [impermanence storage](/articles/diy-linux-router-impermanence-storage), remove the line `users.users.root.initialHashedPassword = "##HashedPa$$word"` from the `users.nix` to lock out the root password without further steps.
 
-**CAUTION** If you do not have a password for the `admin` account, locking the `root` account will prevent you from logging in locally, but only through **SSH**. Also, make sure you have created the `admin` account and added it to the `wheel` group.
+**CAUTION** Be aware that locking the `root` password without a password for the `admin` account will prevent you from logging in locally, but only via **SSH**. Also, make sure you have created the `admin` account and added it to the `wheel` group.
 
 ```bash
 passwd -l root
 ```
-
-Certainly! Here's the improved version as Markdown:
 
 ## Firewall
 
@@ -226,8 +236,8 @@ With our user configurations complete, it's time to enhance our firewall securit
 
 So far, our firewall configuration includes:
 
-- Allowing all incoming traffic from the **LAN** network.
-- Blocking all incoming traffic from **WAN**, **Guest**, and **IoT** networks except for internet access.
+- Allowing all incoming traffic from the **Home** network.
+- Blocking all incoming traffic from **WAN/PPPoE**, **Guest**, and **IoT** networks except for internet access.
 
 While this setup provides a basic level of security, we can achieve better protection through more granular traffic control. By doing so, we ensure that if any service unintentionally opens additional ports on the server, unauthorized traffic will not be allowed through.
 
@@ -235,9 +245,9 @@ While this setup provides a basic level of security, we can achieve better prote
 
 We will refine our firewall to allow only the traffic necessary for each network:
 
-- **LAN** network: Allow **DHCP** and **SSH** services.
+- **Home** network: Allow **DHCP** and **SSH** services.
 - **Guest** and **IoT** networks: Allow only **DHCP** service.
-- **WAN**: Enable **SSH** for remote access.
+- **WAN**: Enable **SSH** to remote access.
 
 ### Organizing the Firewall Configuration
 
@@ -316,7 +326,7 @@ EOF
 cat << EOF > /etc/nixos/nftables/services.nft
 table inet filter {
   chain dhcp_input {
-    iifname { "br0", "enge0.30", "enge0.90" } udp dport 67 ct state { new, established } counter accept comment "Allow DHCP on LAN, Guest and IoT networks"
+    udp dport 67 ct state { new, established } counter accept comment "Allow DHCP"
   }
 
   chain echo_input {
@@ -325,12 +335,11 @@ table inet filter {
   }
 
   chain public_ssh_input {
-    tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic with rate limiting"
+    tcp dport ssh ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic with rate limiting"
   }
 
   chain ssh_input {
-    iifname "br0" tcp dport 22 ct state { new, established } counter accept comment "Allow SSH on LAN"
-    iifname "ppp0" tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic from ppp0 interface with rate limiting"
+    tcp dport ssh ct state { new, established } counter accept comment "Allow SSH"
   }
 }
 EOF 
@@ -380,6 +389,7 @@ table inet filter {
  
   
     # Allow returning traffic from ppp0 and drop everything else
+    iifname @LAN ct state { established, related } counter accept
     iifname @WAN ct state { established, related } counter accept
   }
 
@@ -541,10 +551,12 @@ Edit the **network** section of **networking.nix** configuration file as follows
 nixos-rebuild switch
 ```
 
-Logout and try to log in to the server using the `admin` using the private key generated earlier.
-
 ## Conclusion
 
-This wraps up this subject. In the next part, it's time to install **POdman** and configure our **DNS Server** with Unbound on it.
+With this configuration, we have improved the security of this firewall. What has been done so far:
 
+- Reduced the need to use the `root` account for certain tasks.
+- Divided our firewall into zones, making it easier to manage.
+- Created more granular control over the traffic on our server.
+. In the next part, it is time to install **Podman** and configure our **DNS Server** with Unbound on it.
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
