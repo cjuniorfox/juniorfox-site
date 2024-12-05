@@ -19,29 +19,39 @@ Esta é a quinta parte de uma série multipartes que descreve como construir seu
 - Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
 - Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
 
-Já temos um roteador de internet funcional e confiável, mas ainda não configuramos nossa rede **Wifi** e este capítulo enderecerá isso.
+Nosso Mac Mini já funciona como um roteador muito funcional e confiável, mas ainda não temos Wi-Fi. Vamos configurar nossa rede sem fio utilizando o Unifi AP 6 neste capítulo.
 
-![Stephen Herber's Unifi Logo as a dinner plate](/assets/images/diy-linux-router/unifi-c6-lite.webp)
-*Stephen Herber's old blogpost about [DIY Linux as a router: Web archived link](https://web.archive.org/web/20240203171515/https://www.sherbers.de/diy-linux-router-part-7-wifi/)*
+![Logo Unifi de Stephen Herber como um prato de jantar](/assets/images/diy-linux-router/unifi-c6-lite.webp)
+*Post antigo de Stephen Herber sobre [Linux DIY como roteador: Link arquivado na web](https://web.archive.org/web/20240203171515/https://www.sherbers.de/diy-linux-router-part-7-wifi/)*
 
-- [Introdução](introdução)
+- [Introdução](#introdução)
 - [Conexão Física](#conexão-física)
 - [Configuração do Pod](#configuração-do-pod)
+  1. [Criar o arquivo unifi-secret.yaml](#criar-o-arquivo-unifi-secretyaml)
+  2. [Escrever o arquivo de pod `unifi.yaml`](#escrever-o-arquivo-de-pod-unifiyaml)
+  3. [Iniciar o Pod e habilitar o serviço no Systemd](#iniciar-o-pod-e-habilitar-o-serviço-no-systemd)
+  4. [Configurar o Unbound para resolver o nome `unifi`](#configurar-o-unbound-para-resolver-o-nome-unifi)
+- [Firewall](#firewall)
+  1. [Portas do serviço ao Unbound](#portas-do-serviço-do-unbound)
 - [Configuração](#configuração)
-  - [Adoção do dispositivo](#adoção-do-dispositivo)
-  - [Resolvendo problemas com adoção](#resolvendo-problemas-com-adoção)
-  - [Adoção manual](#adoção-manual)
+  1. [Adoção de Dispositivos](#adoção-de-dispositivos)
+  2. [Solucionando Problemas de Adoção](#solucionando-problemas-de-adoção)
+  3. [Adoção Manual](#adoção-manual)
 - [Conclusão](#conclusão)
 
-## Introdução
+---
 
-O **Mac mini**, assim como muitos computadores, possui uma interface de rede sem fio embutida que poderia ser utilizada para criar a nossa rede sem fio, mas na maioria dos casos, essas placas de rede sem fio não são lá muito confiáveis oferecendo uma péssima performance e baixa velocidade. Não vale a pena usa-las. Pensando nisso, escolhi uma abordagem diferente que é usar um **Access Point** dedicado e esses produzidos pela **Unifi** são extremamente confiáveis, com um bom custo-benefício e fácil de usar e configurar.
+## Introdução  
 
-## Conexão física
+Este **Mac mini**, como muitas máquinas, possui uma interface sem fio integrada que pode ser usada para criar a rede sem fio desejada. No entanto, na maioria dos casos, a placa é pouco confiável e, com desempenho insatisfatório e baixas velocidades, não vale a pena utilizá-la. Com isso em mente, optei por seguir uma abordagem diferente. Um **Access Point** adequado, fornecido pela **Unifi**, é confiável, econômico e fácil de usar e configurar.  
 
-Como mencionado na [parte 2](/articles/roteador-linux-parte-2-rede-e-internet), o **Access Point** da **Unifi** precisa ser conectado a **porta 3** do **switch**, já que esta porta foi configurada para operar nas **VLANs** esperadas.
+---
 
-Não se esqueça de instalar a **Fonte de alimentação PoE** para suprir energia para o **AP**. Verifique se tudo foi corretamente conectado checando se os LEDs se iluminam.
+## Conexão Física  
+
+Conforme mencionado na [parte 2](/articles/roteador-linux-parte-2-rede-e-internet), o **Unifi AP** deve ser conectado à **Porta 3** do **Switch**, pois esta porta já foi configurada para as **VLANs** desejadas.  
+
+Lembre-se de instalar o **injetor PoE** que alimentará o **AP**. Verifique se os LEDs acendem para confirmar que tudo está funcionando.  
 
 ```txt
             ┌─────► AP Unifi U6 Lite   
@@ -52,90 +62,78 @@ Não se esqueça de instalar a **Fonte de alimentação PoE** para suprir energi
 | └───┴───┴───┴───┴───┴───┴───┴───┘ |
 └───────────┬───────────────────────┘
             │  
-            └─────► Untagged VLAN 1, Tagged VLAN 30, 90
-```
+            └─────► VLAN 1 sem tag, VLANs 30 e 90 com tag
+```  
 
-## Configuração do Pod
+---
 
-Para gerenciar esse **AP** precisamos instalar o **Unifi Network Application**. Existe uma **Imagem Docker** disponibilizada pela [LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/) que atende nossa necessidade. Vamos então configurar um Pod com ela.
+## Configuração do Pod  
 
-Execute todos os comandos como `sudo`:
+Para gerenciar este **AP**, precisamos instalar o **Unifi Network Application**. Há uma **Imagem Docker** fornecida por [LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/) que atende a esse propósito. Vamos criar um pod com essa imagem.  
 
-```bash
-sudo -i
-```
-
-### 1 . Crie os diretórios para este Pod
-
-Crie um diretório para armazenar todos os arquivos a serem utilizados pelo pod:
+Execute todos os comandos como o usuário `podman`:  
 
 ```bash
-mkdir -p /opt/podman/unifi-network
-```
+ssh router-podman
+```  
 
-### 2. Crie o arquivo `secret.yaml`
+### Criar o arquivo `unifi-secret.yaml`  
 
-O **Unifi Network Application** utiliza o **Banco de dados MongoDB** para persistir dados, o que demanda configurar **usuários** e **senhas**. Poderíamos criar uma senha genérica em texto puro, mas isso é um risco à segurança. É muito melhor usar uma senha complexa e armazena-la de forma segura. **Podman** oferece uma funcionalidade para isso, o **repositório `secret`*. Desenvolvi um script simples que gera as senhas desejadas de forma aleatória e cria o arquivo `secret.yaml` com as mesmas para deploy.
-
-Crie um arquivo `sh` com o seguinte:
-
-`/opt/podman/unifi-network/create_secret.sh`
+O **Unifi Network Application** utiliza um **Banco de Dados MongoDB** para persistir informações, o que exige a configuração de **usuários** e **senhas**. Poderíamos criar uma senha genérica em texto simples, mas isso representa um risco de segurança. É melhor usar uma senha complexa e armazená-la de forma segura. O **Podman** fornece um recurso chamado `secrets repository`. Criei um script simples que gera senhas aleatórias e, em seguida, cria o arquivo `unifi-secret.yaml` para implantação.  
 
 ```sh
-#!/bin/bash
+cd /home/podman/deployments/
 
 export MONGO_INITDB_PASSWORD="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
 export MONGO_PASS="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;)"
 
-cat << EOF > secret.yaml
+cat << EOF > unifi-secret.yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: unifi-network-secret
+  name: unifi-secret
 data:
   mongoRootPassword: $(echo -n ${MONGO_INITDB_PASSWORD} | base64)
   mongoPassword: $(echo -n ${MONGO_PASS} | base64)
 EOF
 
-echo "Secret file created with the name secret.yaml"
-```
+echo "Arquivo de segredo criado com o nome unifi-secret.yaml"
+```  
 
-Atribua ao script a flag de execução (`-x`) e o rode:
-
-```bash
-chmod +x /opt/podman/unifi-network/create_secret.sh
-cd /opt/podman/unifi-network/
-./create_secret.sh
-```
-
-Um arquivo chamado `secret.yaml` será criado no diretório que você está. Faça seu deploy no `podman`:
+Este script cria o arquivo `unifi-secret.yaml` no diretório atual. Faça a implantação no `podman`:  
 
 ```bash
-podman kube play /opt/podman/unifi-network/secret.yaml
-```
+podman kube play /home/podman/deployments/unifi-secret.yaml
+```  
 
-Se tudo funcionou conforme esperado, Teremos realizado o deploy de um segredo novo no `podman`. Pode checar com o seguinte comando:
+Se tudo funcionar conforme o esperado, você terá implantado um novo segredo no `podman`. Você pode verificá-lo com:  
 
 ```bash
 podman secret list
-```
+```  
 
 ```txt
 ID                         NAME                  DRIVER      CREATED        UPDATED
-8aca9476dd8846f979b3f9054  unifi-network-secret  file        8 seconds ago  8 seconds ago
-```
+8aca9476dd8846f979b3f9054  unifi-secret          file        8 seconds ago  8 seconds ago
+```  
 
-### 3. Crie o arquivo `unifi-network.yaml` para deploy do pod
+Após implantar este segredo, é uma boa prática excluir o arquivo `secret.yaml`. Esteja ciente de que, ao fazer isso, você não poderá excluir e recriar este segredo usando a mesma senha criada anteriormente.  
 
-Como o **Podman** é capaz de implantar à partir de arquivos de deploy do **Kubernetes**, criaremos um arquivo de deploy nesse padrão para o **Unifi Network Application**.
+```bash
+rm /home/podman/deployments/unifi-secret.yaml
+```  
 
-`/opt/podman/unifi-network/unifi-network.yaml`
+### Escrever o arquivo de pod `unifi.yaml`  
+
+Este arquivo `yaml` destina-se a implantar a aplicação no **Podman**. Como o Podman oferece suporte para arquivos no estilo Kubernetes, vamos criar o arquivo dessa forma.  
+
+`/home/podman/deployments/unifi.yaml`
 
 ```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: unifi-network-initdb-mongo
+  name: unifi-initdb-mongo
 data:
   init-mongo.sh: |
     #!/bin/bash
@@ -160,14 +158,14 @@ data:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: unifi-network
+  name: unifi
   labels:
-    app: unifi-network
+    app: unifi
 spec:
   enableServiceLinks: false
   restartPolicy: Always
   containers:
-  # Application container
+  # Aplicação
   - name: application
     image: lscr.io/linuxserver/unifi-network-application:8.5.6
     resources:
@@ -180,7 +178,7 @@ spec:
         ephemeral-storage: 50Mi
     volumeMounts:
     - mountPath: /config
-      name: unifi-network-application-config-pvc
+      name: unifi-application-config-pvc
     env:
     - name: PGID
       value: "1000"
@@ -191,10 +189,10 @@ spec:
     - name: MONGO_PASS
       valueFrom:
         secretKeyRef:
-          name: unifi-network-secret
+          name: unifi-secret
           key: mongoPassword
     - name: MONGO_HOST
-      value: unifi-network-db
+      value: unifi-db
     - name: MONGO_PORT
       value: "27017"
     - name: MONGO_DBNAME
@@ -206,22 +204,18 @@ spec:
     ports:
     - containerPort: 3478
       hostPort: 3478
-      hostIP: 10.1.78.1
       protocol: UDP
     - containerPort: 10001
       hostPort: 10001
-      hostIP: 10.1.78.1
       protocol: UDP
     - containerPort: 8080
       hostPort: 8080
-      hostIP: 10.1.78.1
       protocol: TCP
     - containerPort: 8443
       hostPort: 8443
-      hostIP: 10.1.78.1
       protocol: TCP
 
-  # MongoDB container
+  # MongoDB
   - name: db
     image: docker.io/library/mongo:4.4
     resources:
@@ -236,19 +230,19 @@ spec:
       name: initdb-mongo-configmap
       readOnly: true
     - mountPath: /data/db
-      name: unifi-network-mongo-db-pvc
+      name: unifi-mongo-db-pvc
     - mountPath: /data/configdb
-      name: unifi-network-mongo-configdb-pvc 
+      name: unifi-mongo-configdb-pvc 
     env:
     - name: MONGO_PASS
       valueFrom:
         secretKeyRef:
-          name: unifi-network-secret
+          name: unifi-secret
           key: mongoPassword
     - name: MONGO_INITDB_ROOT_PASSWORD
       valueFrom:
         secretKeyRef:
-          name: unifi-network-secret
+          name: unifi-secret
           key: mongoRootPassword
     - name: MONGO_INITDB_ROOT_USERNAME
       value: root
@@ -262,58 +256,133 @@ spec:
   volumes:
   - name: initdb-mongo-configmap
     configMap:
-      name: unifi-network-initdb-mongo
-  - name: unifi-network-mongo-db-pvc
+      name: unifi-initdb-mongo
+  - name: unifi-mongo-db-pvc
     persistentVolumeClaim:
-      claimName: unifi-network-mongo-db
-  - name: unifi-network-mongo-configdb-pvc 
+      claimName: unifi-mongo-db
+  - name: unifi-mongo-configdb-pvc 
     persistentVolumeClaim:
-      claimName: unifi-network-mongo-configdb
-  - name: unifi-network-application-config-pvc
+      claimName: unifi-mongo-configdb
+  - name: unifi-application-config-pvc
     persistentVolumeClaim:
-      claimName: unifi-network-application-config
+      claimName: unifi-application-config
 ```
 
-#### 4. Faça o deploy do `unifi-network-application-pod`
+### Iniciar o Pod e habilitar o serviço no Systemd  
 
-O deploy do **Unifi Network Application** pode ser feito rodando o seguinte comando:
+Inicie o pod e verifique se está funcionando corretamente:  
 
 ```bash
-podman kube play --replace /opt/podman/unifi-network/unifi-network.yaml
+podman --log-level info kube play --replace /home/podman/deployments/unifi.yaml
+```  
+
+Habilite o serviço para o pod no `systemd`:  
+
+```bash
+systemctl --user enable --now podman-pod@unifi.service
+```  
+
+### Configurar o Unbound para resolver o nome `unifi`  
+
+Esses dispositivos da Unifi são projetados para se comunicar com máquinas da fabricante como o Dream Machine ou o Cloud Gateway, e fazem isso procurando o host `unifi` na rede. Se não encontram, o dispositivo reverte à operação stand alone, que é bastante limitada.  
+
+Portanto, para permitir que o **AP** seja adotado, adicione a entrada `unifi` no arquivo de configuração do Unbound `local.conf`.  
+
+`/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/local.conf`  
+
+```conf
+server:
+  private-domain: "home.example.com."
+  local-zone: "home.example.com." static
+  local-data: "macmini.home.example.com. IN A 10.1.78.1"
+  local-data: "macmini.home.example.com. IN A 10.30.17.1"
+  local-data: "macmini.home.example.com. IN A 10.90.85.1"
+  local-data: "unifi.home.example.com. IN A 10.1.78.1"
+  local-data: "unifi. IN A 10.1.78.1"
 ```
+
+---
+
+### Firewall
+
+Para tornar o **Unifi Network** disponível para a rede, é necessário abrir as portas no firewall. Como todas as portas estão acima de `1024`, basta liberá-las. As portas são:
+
+- **3478/UDP** - Porta STUN do Unifi.  
+- **10001/UDP** - Porta de descoberta do Unifi.  
+- **8080/TCP** - Porta HTTP para comunicação entre dispositivos Unifi.  
+- **8443/TCP** - Porta HTTPS Web. Será aberta apenas temporariamente.  
+
+### Portas do serviço do Unbound
+
+Edite o arquivo `services.nft` para adicionar a chain do serviço `unifi_network_input`. É necessário alternar do usuário `podman` para o usuário `admin` e realizar as alterações no firewall com `sudo`:
+
+`/etc/nixos/nftables/services.nft`
+
+```conf
+  ...
+  chain unifi_network_input {
+    udp dport 3478 ct state { new, established } counter accept comment "Unifi STUN"
+    udp dport 10001 ct state { new, established } counter accept comment "Descoberta Unifi"
+    tcp dport 8080 ct state { new, established } counter accept comment "Comunicação Unifi"
+  }  
+  ...
+```
+
+Adicione a chain do serviço `unifi_network_input` à zona **LAN**.
+
+`/etc/nixos/nftables/zones.nft`
+
+```conf
+chain LAN_INPUT {
+    ...
+    jump unifi_network_input   
+  }
+```
+
+Reconstrua o **NixOS**:
+
+```bash
+nixos-rebuild switch
+```
+
+---
 
 ## Configuração
 
-1. Acesse o **Unifi Network Application** no **Navegador Web** em [10.1.78.1:8443](https://10.1.78.1:8443). Futuramente colocaremos seu acesso por trás de um proxy **NGINX**.
-2. Configure seu `Server Name` (Nome do servidor) e `Country` (País).
-3. Configure seu **username** e **senha**. Você pode criar uma conta em [account.ui.com](https://account.ui.com/) ou criar uma conta local.
+1. Acesse a **Unifi Network Application** no **navegador** em [10.1.78.1:8443](https://10.1.78.1:8443). Porteriormente, colocaremos esse painel web por traz de um proxy **NGINX**.  
+2. Defina o `Nome do Servidor` e o `País`.  
+3. Configure seu **usuário** e **senha**. Você pode criar uma conta em [account.ui.com](https://account.ui.com/) ou criar uma conta localmente.  
 
-### Adoção do dispositivo
+### Adoção de Dispositivos
 
-O **Unifi Network** precisa adotar seu **Unifi AP**. Como a aplicação está em execução pelo **Podman** utilizando um **Endereço IP** inacessível à outros dispositivos, é preciso alterar a opção **Inform IP Address**. Esse é feito indo em: **Settings** > **System** > **Advanced** e configurando **Inform Host** com o **hostname**, no nosso caso `macmini` ou o **Endereço IP** `10.1.78.1`. Precisa-se também marcar a caixa de seleção **Override**. Dessa forma, os dispositivos **Unifi** serão capazes de se conectar ao controlador para adoção. Maiores detalhes na documentação disponibilizada pelo [LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+O **Unifi Network** precisa adotar seu **Unifi AP**. É esperado que, com tudo o que configuramos, novos dispositivos Unifi sejam automaticamente adotados pelo aplicativo.
 
-### Resolvendo problemas com adoção
+### Solucionando Problemas de Adoção
 
-Se estiver tendo problemas com a adoção automática, você pode checar novamente se as configurações esperadas estão corretas para funcionar corretamente:
+Se houver problemas na adoção do AP, siga as instruções abaixo:
 
-- As portas `8080/tcp` e `3478/udp` estarem abertas e acessíveis;
-- Alterado o **inform host** conforme mecionado [acima](#adoção-do-dispositivo);
+Altere o **Inform IP Address**. Isso pode ser feito acessando **Configurações** > **Sistema** > **Avançado** e configurando o **Inform Host** para **hostname**, como `macmini`, ou como o **endereço IP** `10.1.78.1`. Além disso, marque a checkbox **"Override"** para que os dispositivos possam se conectar ao controlador durante a adoção. Informações mais detalhadas na [documentação do LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).  
 
-### Adoção manual
+Se mesmo assim enfrentar dificuldades com a adoção automática, verifique se as configurações estão corretas:
 
-Se todos os ajustes realizados não fizeram seu dispositivo **Unifi** ser adotado, talvez seu dispositivo já tenha sido adotado por outro painel e precisa ser adotado manualmente. É possível faze-lo conforme abaixo:
+- As portas `8080/tcp` e `3478/udp` estão abertas e acessíveis.  
+- O **inform host** mencionado [acima](#adoção-de-dispositivos) foi alterado.  
+
+### Adoção Manual
+
+Se todos os ajustes não fizeram seu dispositivo **Unifi** ser adotado, talvez o dispositivo tenha sido adotado por outro painel Unifi e precise ser adotado manualmente. Você pode fazer isso seguindo os passos abaixo:
 
 ```bash
 ssh ubnt@$AP-IP
 set-inform http://10.1.78.1:8080/inform
 ```
 
-Verifique o endereço IP do **AP** no arquivo do `servidor DHCP` em `/var/lib/kea/dhcp4.leases`.
+O usuário e senha padrão são `ubnt`. Se o dispositivo tiver sido adotado anteriormente, verifique no painel anterior as credenciais definidas em **Configurações** > **Sistema** > **Avançado**. Geralmente, o `usuário` e a `senha` são os da conta **Unifi**. É importante mencionar que, sempre que você quiser substituir seu Unifi Network Application, é uma boa prática remover seus dispositivos antes de desativar o painel anterior. Fazer backups de sua configuração também é uma boa medida para evitar problemas ao readotar dispositivos—mais detalhes na [documentação do LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
 
-O nome de usuário e a senha padrão são `ubnt`. Se o dispositivo já foi adotado anteriormente, verifique no painel anterior qual é o `nome de usuário` e `senha` configurados em **Configurações** > **Sistema** > **Avançado**. Geralmente, o `nome de usuário` e a `senha` são os da **conta Unifi**. Vale mencionar que, sempre que você quiser substituir seu **Network Application**, remover seus dispositivos do mesmo antes de desativar a aplicação. Fazer backups de sua configuração também é uma boa medida para evitar dores de cabeça ao readotar dispositivos. Mais detalhes na [documentação LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+---
 
 ## Conclusão
 
-Se você chegou até aqui, você configurou com sucesso as principais funcionalidades do seu **Roteador Linux** e você pode utiliza-lo como o principal ponto de acesso a internet da sua casa. No próximo capítulo, configuraremos outros serviços como o **Jellyfin**, um serviço privado de streaming e o **Nextcloud**, uma solução privada de armazenamento em nuvem.
+Se você chegou até aqui, configurou com sucesso as principais funcionalidades do seu **roteador Linux** e pode usá-lo como sua principal conexão de internet para sua casa. No próximo capítulo, configuraremos outros serviços, como o **Jellyfin**, uma solução de streaming privado, e o **Nextcloud**, uma solução de nuvem privada.
 
 - Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
