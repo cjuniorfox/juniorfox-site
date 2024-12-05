@@ -18,6 +18,8 @@ This is the fifth part of this series, we will configure our wireless network us
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- Part 7: [File Sharing](/article/diy-linux-router-part-7-file-sharing)
+- Part 8: [Backup](/article/diy-linux-router-part-8-backup)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
 Our Mac Mini already works as a very functional and reliable router, but we still don't have Wifi. Let's set up our Wifi using the Unifi AP 6 in this chapter.

@@ -18,6 +18,9 @@ Esta é a quinta parte de uma série multipartes que descreve como construir seu
 - Parte 3: [Usuários, Segurança e Firewall](/article/roteador-linux-parte-3-usuarios-seguranca-firewall)
 - Parte 4: [Podman e Unbound](/article/roteador-linux-parte-4-podman-unbound)
 - Parte 6: [Nextcloud e Jellyfin](/article/roteador-linux-parte-6-nextcloud-jellyfin)
+- Parte 7: [Compartilhamento de Arquivos](/article/roteador-linux-parte-7-compartilhamento-de-arquivos)
+- Parte 8: [Backup](/article/roteador-linux-parte-8-backup)
+- [Armazenamento não permanente](/article/roteador-linux-armazenamento-nao-permanente)
 
 Nosso Mac Mini já funciona como um roteador muito funcional e confiável, mas ainda não temos Wi-Fi. Vamos configurar nossa rede sem fio utilizando o Unifi AP 6 neste capítulo.
 
