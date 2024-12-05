@@ -20,140 +20,179 @@ This is the fourth part of a multi-part series describing how to build your own 
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
-In the previous parts, we installed the operating system, configured the gateway's internet functionality using PPPoE, and made security adjustments by setting up authentication methods and configuring the firewall.
+## Introduction
 
-Now, it's time to install **Podman**, a drop-in replacement for Docker with some interesting features, and configure **Unbound** to run on it.
+In the previous sections, we covered installing the operating system, configuring internet connectivity using PPPoE, and securing our gateway by setting up authentication and a robust firewall. Now, it’s time to take our DIY Linux router to the next level by containerizing services with **Podman** and setting up **Unbound** for DNS resolution and ad-blocking.
 
-![Seal in front a rope](/assets/images/diy-linux-router/seal-pod-and-rope.webp)
-*AI-Generated image by Google's [Gemini](https://gemini.google.com/)*
+![Seal in front of a rope](/assets/images/diy-linux-router/seal-pod-and-rope.webp)  
+*AI-Generated image by Google's [Gemini](https://gemini.google.com/)*  
 
-## Table of Contents
+---
 
-- [About Podman](#about-podman)
-  - [Why Podman instead of Docker?](#why-podman-instead-of-docker)
-- [About Unbound](#about-unbound)
-- [Podman Setup](#podman-setup)
-- [Unbound Setup](#unbound-setup)
-- [Podman Setup](#podman-setup)
-- [Firewall Rules](#firewall-rules)
-- [Conclusion](#conclusion)
+### Table of Contents
 
-## About Podman
+1. [Introduction](#introduction)  
+2. [About Podman](#about-podman)  
+   - [Why Choose Podman?](#why-choose-podman)  
+3. [About Unbound](#about-unbound)  
+4. [Podman Setup](#podman-setup)  
+   - [Create the ZFS Dataset](#create-the-zfs-dataset)  
+   - [Update the NixOS Configuration](#update-the-nixos-configuration)  
+   - [Configure Podman Service](#configure-podman-service)  
+   - [Rebuild System Configuration](#rebuild-system-configuration)  
+5. [Unbound Setup](#unbound-setup)  
+   - [Prepare Directories and Volumes](#prepare-directories-and-volumes)  
+   - [Create Unbound Deployment File](#create-unbound-deployment-file)  
+   - [Configure Unbound](#configure-unbound)
+   - [Start Unbound](#start-unbound)
+   - [Enable Unbound as a Service](#enable-unbound-as-a-service)
+6. [Firewall Configuration](#firewall-configuration)  
+   - [Open Service Ports](#open-service-ports)  
+   - [Apply the Configuration](#apply-the-configuration)  
+   - [Reload Unbound Pod](#reload-unbound-pod)  
+7. [Conclusion](#conclusion)  
 
-Since **NixOS** is configured using `.nix` files, it might seem straightforward to install the necessary services directly, without containerization. In many cases, this approach makes sense, as the overhead and complexity of containerization may not always be justified. However, considering the vast number of pre-configured **Docker** images available that meet our needs, I see no reason not to take advantage of them by using **Podman**.
+---
 
-### Why Podman Instead of Docker?
+## About Podman  
 
-There are several advantages to using **Podman** over **Docker**. While this topic could warrant its article, here are a few key points:
+### Why Choose Podman?  
 
-1. **Daemonless Architecture**: Podman does not require a central daemon to run containers. Each container runs as a child process of the Podman command, improving security and reducing the risk of a single point of failure.
-2. **Rootless Containers**: Podman allows containers to be run without requiring root privileges, enhancing security by reducing the attack surface.
-3. **Kubernetes Compatibility**: Podman can generate Kubernetes YAML files directly from running containers or pods, making it easier to transition from local development to Kubernetes environments.
-4. **Docker-Compatible CLI**: Most Docker commands can be used with Podman without modification, making the transition from Docker to Podman seamless.
+While **NixOS** excels at directly managing services through configuration files, leveraging containerization offers additional flexibility, especially when using prebuilt Docker images tailored for specific needs. Enter **Podman**—a powerful, daemonless alternative to Docker. Here's why Podman is worth considering:  
 
-## About Unbound?
+1. **Daemonless Design**  
+   Unlike Docker, Podman doesn't rely on a central daemon. Each container runs as a separate process, eliminating a single point of failure and improving security.  
 
-**Unbound** is a local DNS server that caches DNS queries in a local repository, improving DNS resolution times, reducing internet traffic, and slightly increasing internet speed. Additionally, with some scripting, **Unbound** can function as an ad blocker by blacklisting as many ad-related hosts as possible.
+2. **Rootless Operation**  
+   Podman enables containers to run without requiring root privileges, reducing the risk of privilege escalation and making it ideal for multi-user systems.  
 
-For this project, I'll use a Docker image of **Unbound** that I created some time ago: [cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/). This image performs three main functions:
+3. **Kubernetes-Friendly**  
+   Podman can generate Kubernetes YAML files directly from your container setups, simplifying the migration to Kubernetes or hybrid environments.  
 
-- DNS name resolution.
-- Ad-blocking by applying the [StevenBlack/hosts](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts) list daily.
-- Name resolution for the local network by retrieving hostnames from the **DHCP Server** and assigning them to **Unbound's** nameserver addresses.
+4. **Docker-Compatible CLI**  
+   Transitioning from Docker is seamless, as Podman supports most Docker CLI commands with minimal adjustments.  
+
+5. **Lightweight and Flexible**  
+   Podman integrates well with Linux-native tools and provides tighter control over containerized services.  
+
+By combining Podman with **NixOS**, we can achieve a highly modular, secure, and easily reproducible infrastructure.  
+
+---
+
+## About Unbound  
+
+**Unbound** is a high-performance, recursive DNS resolver designed for privacy and security. It can significantly improve DNS resolution speeds, reduce internet traffic, and enhance privacy by preventing DNS queries from being logged by third parties.  
+
+In this project, we’ll use **Unbound** not only for DNS resolution but also for:  
+
+- **Caching DNS Queries**  
+   Speeds up repeated requests by storing resolved queries locally.  
+
+- **Ad Blocking**  
+   Incorporates blocklists like [StevenBlack’s hosts file](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts) to filter out advertisements and trackers.  
+
+- **Local DNS Resolution**  
+   Dynamically resolves local network hostnames by integrating with our DHCP server.  
+
+For this setup, we’ll use a prebuilt Docker image: [cjuniorfox/unbound](https://hub.docker.com/r/cjuniorfox/unbound/), designed to integrate seamlessly with the functionality mentioned above.  
+
+---
 
 ## Podman Setup
 
-### 1. Create the dataset for Podman
+### Create the ZFS Dataset
 
-Create the intended dataset for **Podman**. I will do this on the `zdata` dataset created at [part 1](/articles/diy-linux-router-part-1-initial-setup).
+We will create a dedicated dataset for **Podman** on the `zdata` pool (introduced in [Part 1](/articles/diy-linux-router-part-1-initial-setup)). The container storage structure will be organized as follows:
+
+- **Rootful containers**: `/mnt/zdata/containers/root`
+- **Rootless containers**: `/mnt/zdata/containers/podman`
+
+Run the following commands to create the required datasets and set permissions:
 
 ```bash
 ZDATA=zdata
-```
 
-Assuming the data pool is **zdata** let's create mountpoints considering `/mnt/zdata/containers` as the default container path. The idea is to store the **Rootfull Containers** on `/mnt/zdata/containers/root` and for **rootless**, store on `/mnt/zdata/containers/podman`
-
-```bash
+# Create container datasets
 zfs create -o canmount=off ${ZDATA}/containers
 zfs create ${ZDATA}/containers/root
 zfs create ${ZDATA}/containers/podman
+
+# Create storage subdirectories
 zfs create -o canmount=off ${ZDATA}/containers/root/storage
 zfs create -o canmount=off ${ZDATA}/containers/root/storage/volumes
 zfs create -o canmount=off ${ZDATA}/containers/podman/storage
 zfs create -o canmount=off ${ZDATA}/containers/podman/storage/volumes
+
+# Set ownership for rootless Podman
 chown -R podman:containers /mnt/${ZDATA}/containers/podman
 ```
 
-Make sure that the additional `zdata` pool is set on `hardware-configuration.nix`
+Ensure the `zdata` pool is listed in the `hardware-configuration.nix` file:
 
 `/etc/nixos/hardware-configuration.nix`
 
- ```nix
- ...
-   boot.zfs.extraPools = [ "zdata" ];
- ...
- ```
-
-Let's begin by installing **Podman** on our **NixOS** system.
-
-### 2. Update NixOS Configuration File
-
-*Note: Only update the relevant parts of the file. Do not replace the entire file with the content below.*
-
-Edit the `/etc/nixos/configuration.nix` file:
-
 ```nix
-{ config, pkgs, ... }:
-{
-  ...
-  boot.kernelParams = [ "systemd.unified_cgroup_hierarchy=1" ];  
-  ...
-  imports = [
-    ...
-    ./modules/podman.nix
-  ]
-}
+...
+boot.zfs.extraPools = [ "zdata" ];
+...
 ```
 
-Create `modules/podman.nix` file. In this file, we have the **Podman** configuration itself as `systemd`user service for starting rootless pods as **Podman User**.
+---
 
-`/etc/nixos/modules/podman.nix`
+### Update the NixOS Configuration
 
-```nix
-{ pkgs, config, ... }:
-{
-  virtualisation = {
-    containers.enable = true;
-    containers.storage.settings = {
-      storage = {
-        driver = "zfs";
-        graphroot = "/mnt/zdata/containers/root/storage";
-        runroot = "/run/containers/storage";
-        rootless_storage_path = "/mnt/zdata/containers/$USER/storage";
-      };
-    };
-    podman = {
-      enable = true;
-      defaultNetwork.settings.dns_enabled = true;
-    };
-  };
+We will configure Podman as a system service and set up storage paths. Open `/etc/nixos/configuration.nix` and make the following changes:
 
-  environment.systemPackages = with pkgs; [
-    dive # look into docker image layers
-    podman-tui # status of containers in the terminal
-  ];
-}
-```
+1. **Add kernel parameter** for the unified cgroup hierarchy:
 
-### 4. Create systemd unit to start Podman pods
+   ```nix
+   boot.kernelParams = [ "systemd.unified_cgroup_hierarchy=1" ];
+   ```
 
-By default, the **Podman** installation, install some `systemd` units by default, but there are none for dealing with **pods** properly. There's a `systemd` unit for deploying **Kubernetes Pods** that comes closer to what I need but demands an internet connection right at the moment to start Pods, which there's no way to guarantee during the system initialization. Also, my installation made use of the newer [Pasta Network provider](https://docs.podman.io/en/latest/markdown/podman-network.1.html#pasta), which is great if you compare it to the older [slirp4netns](https://github.com/rootless-containers/slirp4netns), but, at least on my setup, enabling the pod to start with the server gets me an issue because, during the pod's initialization, the **Pasta Network** is not ready yet, preventing containers to initiate. So, I wrote my parametrized systemd unit to deal with **rootless pods**, doing two things:
+2. **Include the Podman configuration module**:
 
-- On `ExecStartPre`, it tries to raise the `hello-word` container. If the lack of **Pasta Network** readiness prevents the container from starting, it waits 2 seconds and then it tries again.
-- Creates an `ExecStart` and `ExecStop` receiving the pod name as a parameter.
+   ```nix
+   imports = [
+     ...
+     ./modules/podman.nix
+   ];
+   ```
 
-So, let's write our `.nix` file to compose the intended unit service:
+3. **Create the Podman module**: `/etc/nixos/modules/podman.nix`
 
+   ```nix
+   { pkgs, config, ... }:
+   {
+     virtualisation = {
+       containers.enable = true;
+       containers.storage.settings = {
+         storage = {
+           driver = "zfs";
+           graphroot = "/mnt/zdata/containers/root/storage";
+           runroot = "/run/containers/storage";
+           rootless_storage_path = "/mnt/zdata/containers/$USER/storage";
+         };
+       };
+       podman = {
+         enable = true;
+         defaultNetwork.settings.dns_enabled = true;
+       };
+     };
+
+     environment.systemPackages = with pkgs; [
+       dive      # Inspect Docker image layers
+       podman-tui # Terminal-based Podman UI
+     ];
+   }
+   ```
+
+---
+
+### Configure Podman Service
+
+By default, Podman installs systemd units for containers, but these don’t handle pods effectively. A custom systemd unit will allow pods to start correctly, even if the Pasta network interface isn’t ready during system boot.
+
+Create a custom module for the Podman pod service:  
 `/etc/nixos/modules/podman-pod-systemd.nix`
 
 ```nix
@@ -161,23 +200,24 @@ So, let's write our `.nix` file to compose the intended unit service:
 
 let
   podman = "${config.virtualisation.podman.package}/bin/podman";
-  logLevel= "--log-level info";
-  podmanReadness = pkgs.writeShellScript "podman-readness.sh" ''
+  logLevel = "--log-level info";
+  podmanReadiness = pkgs.writeShellScript "podman-readiness.sh" ''
     #!/bin/sh
-    while ! ${podman} run --rm docker.io/hello-world:linux > /dev/null; do 
-      ${pkgs.coreutils}/bin/sleep 2; 
+    while ! ${podman} run --rm docker.io/hello-world:linux > /dev/null; do
+      ${pkgs.coreutils}/bin/sleep 2;
     done
     echo "Podman is ready."
-  ''; 
-in {
+  '';
+in
+{
   systemd.user.services."podman-pod@" = {
-    description = "Run podman workloads via podman pod start";
+    description = "Manage Podman pods";
     documentation = [ "man:podman-pod-start(1)" ];
     wants = [ "network.target" ];
     after = [ "network.target" ];
     serviceConfig = {
       Type = "oneshot";
-      ExecStartPre = "${podmanReadness}";
+      ExecStartPre = "${podmanReadiness}";
       ExecStart = "${podman} pod ${logLevel} start %I";
       ExecStop = "${podman} pod ${logLevel} stop %I";
       RemainAfterExit = "true";
@@ -187,28 +227,32 @@ in {
 }
 ```
 
-Add the new .nix file to the section `imports` from `configuration.nix` file.
+Include the new module in your `configuration.nix`:
 
 `/etc/nixos/configuration.nix`
 
 ```nix
-imports =
-    [ 
-      ...
-      ./modules/podman.nix
-      ./modules/podman-pod-systemd.nix
-      ...
-    ];
-
+imports = [
+  ...
+  ./modules/podman.nix
+  ./modules/podman-pod-systemd.nix
+  ...
+];
 ```
 
-### 5. Rebuild the system configuration
+---
 
-To made Podman available, rebuild the system configuration:
+### Rebuild System Configuration
+
+To apply the changes and make Podman available, rebuild the system configuration:
 
 ```bash
-nixos-rebuild switch
+sudo nixos-rebuild switch
 ```
+
+After the rebuild completes, Podman is installed and ready for further configuration.
+
+---
 
 ## Unbound Setup
 
@@ -218,7 +262,7 @@ Now that **Podman** is installed, it's time to set up **Unbound**. I'll be using
 ssh router-podman
 ```
 
-### 1. Create Directories and Volumes for Unbound
+### Prepare Directories and Volumes
 
 First, create a directory to store Podman's deployment **YAML** files and volumes. In this example, I'll create the directory under `/home/podman/deployments` and place an `unbound.yaml` inside it. Additionally, create the **container volume** `unbound-conf` to store extra configuration files.
 
@@ -227,7 +271,7 @@ mkdir -p /home/podman/deployments/
 podman volume create unbound-conf
 ```
 
-### 2. Build the YAML Deployment File
+### Create Unbound Deployment File
 
 Next, create a `unbound.yaml` file in `/home/podman/deployments/unbound/`. This file is based on the example provided in the **Docker** image repository [cjuniorfox/unbound](https://github.com/cjuniorfox/unbound/).
 
@@ -270,11 +314,16 @@ spec:
         claimName: unbound-conf
 ```
 
-### 4. Additional Configuration Files
+---
 
-Hosts with **fixed IP**, **fixed leases**, and their own **Router identification** itself can be placed on a customized configuration file that makes the **DNS Server** return properly DNS queries about. Let's put this configuration file into the newly created volume `unbound-conf`. You will find its path at `/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/`
+### Configure Unbound
 
+To handle **DNS queries** for hosts with **fixed IPs**, **static leases**, or **custom router identifiers**, you can use a customized Unbound configuration file. This file will ensure that DNS queries are resolved correctly for these hosts. The configuration file will be placed in the volume `unbound-conf`, created earlier.
+
+The path to the configuration file is:  
 `/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/local.conf`
+
+Example configuration (`local.conf`):
 
 ```conf
 server:
@@ -285,27 +334,39 @@ server:
   local-data: "macmini.home.example.com. IN A 10.90.85.1"
 ```
 
-### 5. Start the unbound pod and check its status
+This configuration defines the following:
 
-With everything set, start the Unbound Pod with the following command:
+- **Private-domain**: Restricts the scope of DNS queries to the domain `example.com`.
+- **Local-zone**: Marks the domain `macmini.home.example.com` as static, indicating no further lookups should be done outside the local configuration.
+- **Local-data**: Maps `macmini.home.example.com` to multiple IP addresses (`10.1.78.1`, `10.30.17.1`, and `10.90.85.1`).
+
+Make sure to place this file correctly in the specified path to ensure Unbound uses it during runtime.
+
+---
+
+### Start Unbound
+
+With the configuration complete, you can start the Unbound Pod using the following command:
 
 ```bash
-podman kube play --log-level info --replace /home/podman/deployments/unbound.yaml 
+podman kube play --log-level info --replace /home/podman/deployments/unbound.yaml
 ```
 
-Check it status by doing:
+To monitor the pod’s output and verify that it is running correctly, use:
 
 ```bash
 podman pod logs -f unbound
 ```
 
-You can also check if **DNS queries** are being properly processed by doing:
+You can also test if **DNS queries** are being processed by Unbound with the `dig` command:
 
 ```bash
 dig @localhost -p 1053 google.com
 ```
 
- ```txt
+Expected output:
+
+```txt
 ; <<>> DiG 9.18.28 <<>> @localhost -p 1053 google.com
 ; (2 servers found)
 ;; global options: +cmd
@@ -316,10 +377,10 @@ dig @localhost -p 1053 google.com
 ;; OPT PSEUDOSECTION:
 ; EDNS: version: 0, flags:; udp: 1232
 ;; QUESTION SECTION:
-;google.com.			IN	A
+;google.com.            IN      A
 
 ;; ANSWER SECTION:
-google.com.		48	IN	A	142.250.79.46
+google.com.     48      IN      A       142.250.79.46
 
 ;; Query time: 0 msec
 ;; SERVER: ::1#1053(localhost) (UDP)
@@ -327,107 +388,126 @@ google.com.		48	IN	A	142.250.79.46
 ;; MSG SIZE  rcvd: 55
 ```
 
-### 6. Enable Systemd Service for Unbound
+This confirms that Unbound is resolving DNS queries successfully.
 
-It's time to make use of the `systemd` unit created above, by enabling our Pod startup during system initialization. Do the following command:
+---
+
+### Enable Unbound as a Service
+
+To ensure the Unbound Pod starts automatically at boot, enable the `systemd` unit created earlier. Use the following command:
 
 ```bash
 systemctl --user enable --now podman-pod@unbound.service
 ```
 
-You can reboot the machine to see if the service starts up with no issues
+You can reboot the machine to verify that the service starts without any issues. After rebooting, check the service status with:
 
 ```bash
 systemctl --user status podman-pod@unbound.service
 ```
 
+Example output:
+
 ```txt
 podman-pod@unbound.service - Run podman workloads via podman pod start
      Loaded: loaded (/home/podman/.config/systemd/user/podman-pod@unbound.service; enabled; preset: enabled)
      Active: active (exited) since Thu 2024-11-14 16:48:04 -03; 1h 2min ago
-...
+     ...
 ```
 
-## Firewall Rules
+This indicates that the Unbound Pod is running and configured to start on system boot.
 
-By default, **Linux** does not allow opening ports lower than port 1024 as rootless. As the default DNS port is 53, We have to redirect port **1053** to **53**.
+---
 
-Update firewall rules as follows:
+## Firewall Configuration
 
-### Services
+By default, **Linux** does not allow rootless services to bind to ports below 1024. Since the DNS server typically listens on port 53, we need to redirect traffic from **port 53** to **port 1053** (used by Unbound in the rootless container). Similarly, DNS over TLS traffic on **port 853** needs to be redirected to **port 1853**.
 
-Add `unbound_dns_input` **chain** to `services.nft` file. Leave the remaining **services chains** as is.
+Follow these steps to configure the firewall rules:
+
+---
+
+### Open Service Ports
+
+First, add a new `unbound_dns_input` chain to the `services.nft` file. This chain allows traffic to Unbound’s DNS and DNS over TLS services. Keep the existing service chains unchanged.
 
 `/etc/nixos/nftables/services.nft`
 
-```conf 
- ...
- chain unbound_dns_input {
+```nft
+...
+chain unbound_dns_input {
     udp dport 1053 ct state { new, established } counter accept comment "Allow Unbound DNS server"
     tcp dport 1853 ct state { new, established } counter accept comment "Allow Unbound TLS-DNS server"
-  }
+}
 ...
 ```
 
-Do not forget to add the service to intended zones. At that case **LAN**, **GUEST** and **IOT**.
-Just add `jump unbound_dns_input` to the intended **zone chains**.
+Next, include this new chain in the relevant network zones (**LAN**, **GUEST**, and **IOT**) by adding a `jump` rule in the zone chains.
 
 `/etc/nixos/nftables/zones.nft`
 
-```conf
+```nft
 chain LAN_INPUT {
     ...
     jump unbound_dns_input
     ...
-  }
+}
 
-  chain GUEST_INPUT {
+chain GUEST_INPUT {
     ...
     jump unbound_dns_input
     ...
-  }
+}
 
-  chain IOT_INPUT {
+chain IOT_INPUT {
     ...
     jump unbound_dns_input
     ...
-  }
+}
 ...
 ```
 
-### NAT Redirect
+---
 
-As far as rootless pods can't open ports below `1024` and DNS works on ports `53` and `853`, we need to redirect any request from `53` and `853` to `1053` and `1853` respectively.
+### Configure NAT Rules
 
-#### NAT Chains
+Since rootless containers cannot bind to privileged ports, we need to redirect DNS traffic to higher, non-privileged ports. Specifically, **port 53** traffic will be redirected to **port 1053**, and **port 853** will be redirected to **port 1853**.
+
+---
+
+#### Defining NAT Chains
+
+Add the following NAT chains to handle redirection for both gateway IPs and unrestricted DNS requests.
 
 `/etc/nixos/nftables/nat_chains.nft`
 
-```conf
+```nft
 table ip nat {
   chain unbound_redirect {
-    ip daddr { $ip_lan, $ip_guest, $ip_iot } udp dport 53 redirect to 1053 
-    ip daddr { $ip_lan, $ip_guest, $ip_iot } tcp dport 853 redirect to 1853 
+    ip daddr { $ip_lan, $ip_guest, $ip_iot } udp dport 53 redirect to 1053
+    ip daddr { $ip_lan, $ip_guest, $ip_iot } tcp dport 853 redirect to 1853
   }
   
   chain unbound_redirect_lan {
-    udp dport 53 redirect to 1053 
-    tcp dport 853 redirect to 1853 
+    udp dport 53 redirect to 1053
+    tcp dport 853 redirect to 1853
   }
 }
 ```
 
-- `unbound_redirect_lan` redirects any request to port `53` to unbound, no matter what host is wanted by the client. This is to avoid some hosts that uses other **DNS servers** than **Unbound** on **LAN**.
-- `unbound_redirect` only redirect connections to **Gateway IPs**, allowing the use of other **DNS server** if the client wanted to do so.
+- **`unbound_redirect_lan`** ensures that all DNS requests on the LAN are redirected to Unbound, regardless of the requested host. This prevents clients from bypassing Unbound by using alternative DNS servers.
+- **`unbound_redirect`** redirects only requests targeted at gateway IPs, allowing clients to use alternative DNS servers if desired.
 
-#### NAT Zones
+---
 
-Add intended chains to **NAT Zones**.
+#### Setting Up NAT Zones
+
+To apply the NAT rules, update the NAT zone configuration by adding the corresponding chains for each zone.
 
 `/etc/nixos/nftables/nat_zones.nft`
 
-```conf
-   table ip nat {
+```nft
+table ip nat {
   chain LAN_PREROUTING {
     jump unbound_redirect_lan
   }
@@ -442,26 +522,34 @@ Add intended chains to **NAT Zones**.
 }
 ```
 
-### Rebuild NixOS
+---
+
+### Apply the Configuration
+
+Once all the changes are made, rebuild the NixOS configuration to apply the updated firewall rules:
 
 ```bash
 nixos-rebuild switch
 ```
 
+---
+
 ### Reload Unbound Pod
 
-Every time **Firewall rules** are reloaded, is good to reload Pods, so they can reconfigure the expected forward ports.
-
-Run as `podman` user:
+Whenever firewall rules are reloaded, it’s a good practice to restart the Unbound Pod to ensure it properly reconfigures its port bindings:
 
 ```bash
 systemctl --user restart unbound.service
 ```
 
+---
+
 ## Conclusion
 
-In this part of the series, we successfully installed Podman as a container engine and configured **Unbound** to run within it, providing DNS resolution and ad-blocking capabilities for our network. By leveraging **Podman**, we benefit from a more secure, rootless container environment while still utilizing the vast ecosystem of pre-configured Docker images. Additionally, we set up firewall rules to ensure that all DNS traffic is routed through our **Unbound** server, further enhancing the security of our network.
+In this part of the series, we configured **Podman** as our container engine and set up **Unbound** to provide DNS resolution and ad-blocking capabilities within a rootless container. By utilizing **Podman**, we achieved a more secure and flexible environment compared to traditional root-based containers while leveraging a pre-built image to simplify the deployment process.
 
-Next, we will configure our wireless network using a **Ubiquiti UniFi AP**.
+We also implemented custom **firewall rules** to ensure all DNS traffic, including DNS over TLS, is routed through our **Unbound** server, enhancing the security and control of our network traffic. 
 
-- Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
+In the next part, we will extend our setup to configure a wireless network using a **Ubiquiti UniFi Access Point**.
+
+- Part 5: [Wi-Fi Configuration](/article/diy-linux-router-part-5-wifi)
