@@ -18,6 +18,8 @@ This is the third part of a multi-part series describing how to build your own L
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- Part 7: [File Sharing](/article/diy-linux-router-part-7-file-sharing)
+- Part 8: [Backup](/article/diy-linux-router-part-8-backup)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
 In the first and second parts, we installed the operating system, configured the network, and set up the **Mac Mini** to work as a router.

@@ -18,6 +18,8 @@ This is the fourth part of a multi-part series describing how to build your own 
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- Part 7: [File Sharing](/article/diy-linux-router-part-7-file-sharing)
+- Part 8: [Backup](/article/diy-linux-router-part-8-backup)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
 ## Introduction
