@@ -550,7 +550,7 @@ systemctl --user restart unbound.service
 
 In this part of the series, we configured **Podman** as our container engine and set up **Unbound** to provide DNS resolution and ad-blocking capabilities within a rootless container. By utilizing **Podman**, we achieved a more secure and flexible environment compared to traditional root-based containers while leveraging a pre-built image to simplify the deployment process.
 
-We also implemented custom **firewall rules** to ensure all DNS traffic, including DNS over TLS, is routed through our **Unbound** server, enhancing the security and control of our network traffic. 
+We also implemented custom **firewall rules** to ensure all DNS traffic, including DNS over TLS, is routed through our **Unbound** server, enhancing the security and control of our network traffic.
 
 In the next part, we will extend our setup to configure a wireless network using a **Ubiquiti UniFi Access Point**.
 
