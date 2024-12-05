@@ -20,7 +20,7 @@ This is the fifth part of this series, we will configure our wireless network us
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
-Já temos um roteador de internet funcional e confiável, mas ainda não configuramos nossa rede **Wifi** e este capítulo enderecerá isso.
+Our Mac Mini already works as a very functional and reliable router, but we still don't have Wifi. Let's set up our Wifi using the Unifi AP 6 in this chapter.
 
 ![Stephen Herber's Unifi Logo as a dinner plate](/assets/images/diy-linux-router/unifi-c6-lite.webp)
 *Stephen Herber's old blogpost about [DIY Linux as a router: Web archived link](https://web.archive.org/web/20240203171515/https://www.sherbers.de/diy-linux-router-part-7-wifi/)*
@@ -28,18 +28,31 @@ Já temos um roteador de internet funcional e confiável, mas ainda não configu
 - [Introduction](#introduction)
 - [Physical Connection](#physical-connection)
 - [Pod Setup](#pod-setup)
+  1. [Create the unifi-secret.yaml file](#create-the-unifi-secretyaml-file)
+  2. [Write the unifi.yaml pod file](#write-the-unifiyaml-pod-file)
+  3. [Start Pod and Enable its Systemd Service](#start-pod-and-enable-its-systemd-service)
+  4. [Configure Unbound to resolve the unifi name](#configure-unbound-to-resolve-the-unifi-name)
 - [Firewall](#firewall)
+  1. [Add Unbound service chain](#add-unbound-service-chain)
+- [Configuration](#configuration)
+  1. [Device Adoption](#device-adoption)
+  2. [Troubleshooting Adoption Problems](#troubleshooting-adoption-problems)
+  3. [Manual Adoption](#manual-adotion)
 - [Conclusion](#conclusion)
+
+---
 
 ## Introduction
 
-This **Mac mini**, like many machines, has a built-in wireless interface that could be used to create the intended wireless network. But, in most of cases, the card is not that reliable, and with a poor performance and low speed that does not worth using it. With this in mind, I choose touse a different approach. A proper **Acess Point** and this one provided by **Unifi** is reliable, cost-effective, and easy to use and setup.
+This **Mac mini**, like many machines, has a built-in wireless interface that can be used to create the desired wireless network. But in most cases, the card is unreliable, and with poor performance and low speeds, it is not worth using it. With that in mind, I choose to take a different approach. A proper **Access Point**, which **Unifi** provides, is reliable, cost-effective, and easy to use and configure.
+
+---
 
 ## Physical Connection
 
-As mentioned in [part 2](/articles/diy-linux-part-2-network-and-internet) the **Unifi AP** needs to be connected to the **Port 3** of the **Switch**, as this port was already configured the intended **VLANs** at this port.
+As mentioned in [part 2](/articles/diy-linux-part-2-network-and-internet) the **Unifi AP** needs to be connected to the **Port 3** of the **Switch**, as this port was already configured for the intended **VLANs** at this port.
 
-Remember to install the **PoE feeder** to supply power for the **AP**. Check whether the LEDs lights up to confirm that everything is working.
+Remember to install the **PoE feeder** supplying the **AP**. Check whether the LEDs light up to confirm that everything is working.
 
 ```txt
             ┌─────► AP Unifi U6 Lite   
@@ -53,6 +66,8 @@ Remember to install the **PoE feeder** to supply power for the **AP**. Check whe
             └─────► Untagged VLAN 1, Tagged VLAN 30, 90
 ```
 
+---
+
 ## Pod Setup
 
 To manage this **AP** we need to install the **Unifi Network Application**. There's a **Docker Image** provided [LinuxServer.io](https://docs.linuxserver.io/images/docker-unifi-network-application/) that fits this purpose. Let's then set a **Pod** with.
@@ -63,9 +78,9 @@ Run all the commands as `podman` user:
 ssh router-podman
 ```
 
-### 1. Create the `unifi-secret.yaml` file
+### Create the `unifi-secret.yaml` file
 
-The **Unifi Network Application** uses a **MongoDB Database** to persist information, which demands setting up **usernames** and **passwords**. We could create a generic password as plain text, but this would be a security risk. It is better to use a complex password and store it securely. **Podman** offers a functionality of this which is the `secrets repository`. I made a simple script that generates the intended passwords randomly and then creates the `unifi-secret.yaml` file with it file for deployment.
+The **Unifi Network Application** uses a **MongoDB Database** to persist information, which requires setting up **usernames** and **passwords**. We could create a generic password in plain text but this is a security risk. It is better to use a complex password and store it securely. **Podman** provides a feature named the `secrets repository`. I made a simple script that generates passwords randomly and then creates the `unifi-secret.yaml` file for deployment.
 
 ```sh
 cd /home/podman/deployments/
@@ -86,7 +101,7 @@ EOF
 echo "Secret file created with the name unifi-secret.yaml"
 ```
 
-A file named `unifi-secret.yaml` wil be created at the directory you are in. Deploy it on `podman`:
+This script creates the file `unifi-secret.yaml` in the directory you are in. Deploy it on `podman`:
 
 ```bash
 podman kube play /home/podman/deployments/unifi-secret.yaml
@@ -109,9 +124,9 @@ After deploying this secret, is a good practice to delete the `secret.yaml` file
 rm /home/podman/deployments/unifi-secret.yaml
 ```
 
-### 3. Create the `unifi.yaml` pod file
+### Write the `unifi.yaml` pod file
 
-As **Podman** being able to natively deploy **Kubernetes** deployment files, let's create a deployment file for **Unifi Network Application**.
+This `yaml` aims to deploy the aplication on **Podman**, as it supports Kubernetes-like deployment files, I will create this like so.
 
 `/home/podman/deployments/unifi.yaml`
 
@@ -254,7 +269,7 @@ spec:
       claimName: unifi-application-config
 ```
 
-### 4. Start Pod and Enable its Systemd Unit
+### Start Pod and Enable its Systemd Service
 
 Start the pod and check if its working properly.
 
@@ -268,9 +283,11 @@ Enable its `systemd` unit.
 systemctl --user enable --now podman-pod@unifi.service
 ```
 
-### 5. Add an A entry to Unbound
+### Configure Unbound to resolve the `unifi` name
 
-To allow the **AP** to be adopted, it needs to reach the **Unifi Network Painel** by concatcting a host named **unifi**. Let's add an A entry to **Unbound** configuration
+These Unifi devices are designed to communicate with Unifi machines like the Dream Machine or Cloud Gateway, and they do so by searching for the `unifi` host on the network. If they can't find one, the device reverts to standalone operation, which is quite limited.
+
+Therefore, to enable the **AP** to be adopted, add the `unifi` entry to the Unbound configuration file `local.conf`.
 
 `/mnt/zdata/containers/podman/storage/volumes/unbound-conf/_data/local.conf`
 
@@ -284,6 +301,8 @@ server:
   local-data: "unifi.home.example.com. IN A 10.1.78.1"
   local-data: "unifi. IN A 10.1.78.1"
 ```
+
+---
 
 ## Firewall
 
@@ -310,7 +329,7 @@ Edit the file `services.nft` adding the `unifi_network_input` service chain. You
   ...
 ```
 
-Add the service `unifi_network_input` **chain** to `LAN` **zone**. Just add the service node.
+Add the service `unifi_network_input` **chain** to `LAN` **zone**.
 
 `/etc/nixos/nftables/zones.nft`
 
@@ -327,38 +346,44 @@ Rebuild **NixOS**
 nixos-rebuild switch
 ```
 
+---
+
 ## Configuration
 
-1. Access the **Unifi Network Application** on **Web browser** at [10.1.78.1:8443](https://10.1.78.1:8443). This will placed under a **NGINX** proxy afterwards.
+1. Access the **Unifi Network App** in your **browser** at [10.1.78.1:8443](https://10.1.78.1:8443). Later, we will put this web panel behind an **NGINX** proxy.
 2. Define your `Server Name` and your `Country`.
 3. Configure your **username** and **password**. You can create an account on [account.ui.com](https://account.ui.com/) or create an account locally.
 
 ### Device Adoption
 
-The **Unifi Network** needs to adopt your **Unifi AP**. Since the application is running on **Podman** under an **IP Address** which is not accessible by other devices. So far, everything what we did would allow new devices to be automatically adoptable by the application, but if not, try as described below:
-
-Change the **Inform IP Address**. This is done by going to **Settings** > **System** > **Advanced** and setting the **Inform Host** to a **hostname**, in that case, `macmini` or the **IP address** `10.1.78.1`. Additionally the checkbox **"Override"** has to be checked, so that devices can connect to the controller during adoption. More detailed information at the [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+The **Unifi Network** needs to adopt your **Unifi AP**. So far, everything what we did would allow new devices to be automatically adoptable by the application.
 
 ### Troubleshooting Adoption Problems
 
-You you are having trouble with automatic adoption, you can double check if the settings are correct to made it work as intended:
+If you have troubles with the AP adoption, do as described below:
 
-- Ports `8080/tcp` and `3478/udp` being open and accessible.
+Change the **Inform IP Address**. This is done by going to **Settings** > **System** > **Advanced** and setting the **Inform Host** to a **hostname**, in that case, `macmini` or the **IP address** `10.1.78.1`. Additionally the checkbox **"Override"** has to be checked, so that devices can connect to the controller during adoption. More detailed information at the [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+
+You you are having trouble with automatic adoption, you can double-check if the settings are correct to make it work as intended:
+
+- Ports `8080/tcp` and `3478/udp` are open and accessible.
 - Changed the **inform host** mentioned [above](#device-adoption).
 
 ### Manual Adotion
 
-If all the adjustaments did not made your **Unifi** device being adopted, maybe your device was adopted by other painel and needs to be manually adopted. You can do this by doing the following:
+If all the adjustments did not make your **Unifi** device adopted, maybe your device was adopted by another Unifi panel and needs to be manually adopted. You can do this by doing the following:
 
 ```bash
 ssh ubnt@$AP-IP
 set-inform http://10.1.78.1:8080/inform
 ```
 
-The default username and password is `ubnt`. If the device was previously adopted, check on their previous panel what is the `username` and `password` set under **Settings** > **System** > **Advanced**. Generally, the `username` and `password` are the **Unifi account's** one. It's valuable to mention that every time you want to replace your Ubiquiti Network Application, is a good measure to remove your devices before decommissioning that panel. Making backups for your configuration is also a good measure to prevent headaches re-adopting devices—more details on [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+The default username and password is `ubnt`. If the device was previously adopted, check on their previous panel for the `username` and `password` set under **Settings** > **System** > **Advanced**. Generally, the `username` and `password` are the **Unifi account's** one. It's valuable to mention that every time you want to replace your Ubiquiti Network Application, it is a good measure to remove your devices before decommissioning that panel. Making backups for your configuration is also a good measure to prevent headaches re-adopting devices—more details on [LinuxServer.io documentation](https://docs.linuxserver.io/images/docker-unifi-network-application/#device-adoption).
+
+---
 
 ## Conclusion
 
-If you have this far, you successfully configured the main functionalities of your **Linux Router** and can use it as your main internet connection for your home. At the next chapter we will configure other services as **Jellyfin**, a private streaming service and **Nextcloud**, a private cloud solution.
+If you have this far, you successfully configured the main functionalities of your **Linux Router** and can use it as your main internet connection for your home. In the next chapter, we will configure other services such as **Jellyfin**, a private streaming service, and **Nextcloud**, a private cloud solution.
 
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
