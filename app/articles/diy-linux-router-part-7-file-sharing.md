@@ -37,6 +37,7 @@ It's time to add file sharing capabilities to our server.
   - [Create ZFS Shares](#create-zfs-shares)
   - [Firewall for ZFS](#firewall-for-zfs)
 - [SMB File Sharing Service](#smb-file-sharing-service)
+  - [Persist SMB passwords](#persist-smb-passwords)
   - [Firewall for SMB](#firewall-for-smb)
 - [Rebuild NixOS Configuration](#rebuild-nixos-configuration)
 - [SMB Users](#smb-users)
@@ -220,6 +221,25 @@ Add the configuration file to `configuration.nix`
       ./modules/smb.nix
       ... 
     ]
+```
+
+### Persist SMB passwords
+
+Samba manages its own passwords by persisting the data at the path `/var/lib/samba/private/`. If you choose to set the root filesystem as impermanent, you have to add the aftermentioned path to the `/etc/nixos/modules/impermanence.nix`. If you not choose to setup the root filesystem as impermanent, you can skip this step.
+
+`/etc/nixos/modules/impermanence.nix`
+
+```nix
+...
+  environment.persistence."/nix/persist/system" = {
+    hideMounts = true;
+    directories = [
+      "/var/lib/nixos"
+      "/var/lib/samba/private/" #Add this entry. Leave the rest of the file as is.
+    ];
+    ...
+  };
+  ...
 ```
 
 ### Firewall for SMB

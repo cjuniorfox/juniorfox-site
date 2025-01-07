@@ -37,6 +37,7 @@ Agora é hora de adicionar recursos de compartilhamento de arquivos ao nosso ser
   - [Criar Compartilhamentos ZFS](#criar-compartilhamentos-zfs)
   - [Firewall para ZFS](#firewall-para-zfs)
 - [Serviço de Compartilhamento de Arquivos SMB](#serviço-de-compartilhamento-de-arquivos-smb)
+  - [Persistir Senhas do SMB](#persistir-senhas-do-smb)
   - [Firewall para SMB](#firewall-para-smb)
 - [Reconstruir a Configuração do NixOS](#reconstruir-a-configuração-do-nixos)
 - [Usuários SMB](#usuários-smb)
@@ -220,6 +221,25 @@ Adicione o arquivo de configuração ao `configuration.nix`.
       ./modules/smb.nix
       ... 
     ]
+```
+
+### Persistir Senhas do SMB
+
+O Samba gerencia suas próprias senhas persistindo os dados na pasta `/var/lib/samba/private/`. Se você escolher instalar o sistema de arquivos como impermanente, você precisa adicionar o caminho mencionado neste arquivo ao `/etc/nixos/modules/impermanence.nix`. Caso não escolha instalar o sistema de arquivos como impermanente, você pode pular este passo.
+
+`/etc/nixos/modules/impermanence.nix`
+
+```nix
+  ...
+  environment.persistence."/nix/persist/system" = {
+    hideMounts = true;
+    directories = [
+      "/var/lib/nixos"
+      "/var/lib/samba/private/" #Adicione este caminho. Deixe o resto do arquivo como está.
+    ];
+    ...
+  };
+  ...
 ```
 
 ### Firewall para SMB
