@@ -53,6 +53,8 @@ Nesta parte, aumentaremos a segurança criando usuários, alterando a autentica�
 
 Crie os usuários desejados. Você pode criar qualquer usuário que precisar. No meu caso, criarei três: um para atuar como usuário **administrador** chamado `admin`, outro para os **contêineres rootless** como `podman`, e um último chamado `git` para ter um repositório **Git** pessoal e privado.
 
+Para o usuário `podman`, se estiver utilizando o modo de [armazenamento não permanente](/article/roteador-linux-armazenamento-nao-permanente), você precisa alocar os `subuid` e `subgid` para o usuário de forma estática.
+
 ### 1. Gerar Senha Criptografada (opcional)
 
 Este passo é opcional, já que a única forma para se autenticar no servidor será via SSH usando `Chaves SSH`, mas você pode criar uma senha se quiser que ela seja solicitada ao usar `sudo` ou ao autenticar localmente.
@@ -126,6 +128,8 @@ Defina os usuários desejados substituindo os valores de `openssh.authorizedKeys
     # Usuário Podman para containers podman rootless
     podman = {
       uid = 1001;
+      subUidRanges = [{ startUid = 100000; count = 65536; }];
+      subGidRanges = [{ startGid = 100000; count = 65536; }];
       isNormalUser = true;
       description = "Podman Rootless";
       home = "/home/podman";

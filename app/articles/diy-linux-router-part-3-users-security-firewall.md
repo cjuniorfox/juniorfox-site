@@ -53,7 +53,7 @@ In this part, we will increase security by creating users, changing SSH authenti
 
 Create intended users. You can create whatever user you need. In my case, I will have three: one to act as an **administrator** user named `admin`, another for **rootless containers** as `podman`, and another named `git` to have a personal and private **Git** repository.
 
-For the `podman` user, if you're using the impermancence storage, you need to allocate the `subuid` and `subgid` ranges for the user. This ensures that the user's storage is isolated and changes randomly on every boot if you don't configure it.
+For the `podman` user, if you're using the [impermanence Storage](/article/diy-linux-router-impermanence-storage), you need to allocate the `subuid` and `subgid` ranges for the user.
 
 ### 1. Generate Hashed Password (optional)
 
