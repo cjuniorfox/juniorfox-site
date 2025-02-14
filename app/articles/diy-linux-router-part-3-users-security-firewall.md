@@ -53,6 +53,8 @@ In this part, we will increase security by creating users, changing SSH authenti
 
 Create intended users. You can create whatever user you need. In my case, I will have three: one to act as an **administrator** user named `admin`, another for **rootless containers** as `podman`, and another named `git` to have a personal and private **Git** repository.
 
+For the `podman` user, if you're using the impermancence storage, you need to allocate the `subuid` and `subgid` ranges for the user. This ensures that the user's storage is isolated and changes randomly on every boot if you don't configure it.
+
 ### 1. Generate Hashed Password (optional)
 
 This step is optional, as the intended way to authenticate on the server is through SSH using `SSH Keys`, but you can create a password if you want to ask for one when using `sudo` or authenticating locally.
@@ -109,6 +111,7 @@ Set the intended users by replacing the values ​​in `openssh.authorizedKeys.
 ```nix
 { config, pkgs, ... }: {
   users.users.root.initialHashedPassword = "##HashedPa$$word"; # You can remove this line if you do not want to log directly with root user.
+
   users.users = {
     # Admin user
     admin = {
@@ -126,6 +129,8 @@ Set the intended users by replacing the values ​​in `openssh.authorizedKeys.
     # Podman User for rootless pods
     podman = {
       uid = 1001;
+      subUidRanges = [{ startUid = 100000; count = 65536; }];
+      subGidRanges = [{ startGid = 100000; count = 65536; }];
       isNormalUser = true;
       description = "Podman Rootless";
       home = "/home/podman";
