@@ -18,9 +18,11 @@ This is the third part of a multi-part series describing how to build your own L
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
 - Part 5: [Wifi](/article/diy-linux-router-part-5-wifi)
 - Part 6: [Nextcloud and Jellyfin](/article/diy-linux-router-part-6-nextcloud-jellyfin)
+- Part 7: [File Sharing](/article/diy-linux-router-part-7-file-sharing)
+- Part 8: [Backup](/article/diy-linux-router-part-8-backup)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
-In the first and second parts, we installed the operating system, configured the network, and set up the Mac Mini to work as a router.
+In the first and second parts, we installed the operating system, configured the network, and set up the **Mac Mini** to work as a router.
 In this part, we will increase security by creating users, changing SSH authentication, and hardening the firewall configuration.
 
 ![Fire of wall](/assets/images/diy-linux-router/fire-of-wall.webp)
@@ -29,18 +31,35 @@ In this part, we will increase security by creating users, changing SSH authenti
 ## Table of Contents
 
 - [Users](#users)
+  1. [Generate Hashed Password (optional)](#1-generate-hashed-password-optional)
+  2. [SSH Keys](#2-ssh-keys)
+  3. [Create `users.nix` in `/etc/nixos/modules/`](#3-create-usersnix-in-etcnixosmodules)
+  4. [Disable password authentication over SSH](#4-disable-password-authentication-over-ssh)
+  5. [Update the configuration and try to log in](#5-update-the-configuration-and-try-to-log-in)
+  6. [Create the SSH configuration file](#6-create-the-ssh-configuration-file)
+  7. [Lock the root Account (optional)](#7-lock-the-root-account-optional)
 - [Firewall](#firewall)
+  - [Current Setup](#current-setup)
+  - [Planned Enhancements](#planned-enhancements)
+  - [Organizing the Firewall Configuration](#organizing-the-firewall-configuration)
+  - [Set up files](#set-up-files)
+    1. [Remove the nftables.nft file](#1-remove-the-nftablesnft-file)
+    2. [Create the NFTables Configuration Files](#2-create-the-the-nftables-configuration-files)
+    3. [Update the networking.nix Configuration File](#3-update-the-networkingnix-configuration-file)
+    4. [Rebuild the configuration and test](#4-rebuild-the-configuration-and-test)
 - [Conclusion](#conclusion)
 
 ## Users
 
 Create intended users. You can create whatever user you need. In my case, I will have three: one to act as an **administrator** user named `admin`, another for **rootless containers** as `podman`, and another named `git` to have a personal and private **Git** repository.
 
+For the `podman` user, if you're using the [impermanence Storage](/article/diy-linux-router-impermanence-storage), you need to allocate the `subuid` and `subgid` ranges for the user.
+
 ### 1. Generate Hashed Password (optional)
 
 This step is optional, as the intended way to authenticate on the server is through SSH using `SSH Keys`, but you can create a password if you want to ask for one when using `sudo` or authenticating locally.
 
-Create a password for the `admin` user. A password for the `git` user is not necessary, as it will be authenticated using an `ssh key`.
+Create the password for the users:
 
 ```bash
 mkpasswd --method=SHA-512
@@ -53,7 +72,7 @@ $6$ZeLsWXraGkrm9IDL$Y0eTIK4lQm8D0Kj7tSVzdTJ/VbPKea4ZPf0YaJR68Uz4MWCbG1EJp2YBOfWH
 
 #### 2. SSH Keys
 
-You can generate your private and public key pair or use an existing one. For example, if you have a GitHub account, you can use the keys generated when you [create a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
+Generate the private and public key pair or use an existing one. More about it at this [Github's article](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
 
 Execute the following SSH key generation steps on your computer.
 
@@ -85,13 +104,14 @@ Repeat the same process for every user you want to create.
 
 Access the server via SSH using the user `root` and the `password` defined during the installation in [part 1](/article/diy-linux-router-part-1-initial-setup) of this tutorial and do as follows:
 
-Create your users. Replace the `authorization.keys` with the one generated above as `~/.ssh/router.pub`.
+Set the intended users by replacing the values ​​in `openssh.authorizedKeys.keys`. In the example, the key for the `admin` user should be filled with the value from `~/.ssh/router-admin.pub`.
 
 `/etc/nixos/modules/users.nix`
 
 ```nix
 { config, pkgs, ... }: {
   users.users.root.initialHashedPassword = "##HashedPa$$word"; # You can remove this line if you do not want to log directly with root user.
+
   users.users = {
     # Admin user
     admin = {
@@ -109,6 +129,8 @@ Create your users. Replace the `authorization.keys` with the one generated above
     # Podman User for rootless pods
     podman = {
       uid = 1001;
+      subUidRanges = [{ startUid = 100000; count = 65536; }];
+      subGidRanges = [{ startGid = 100000; count = 65536; }];
       isNormalUser = true;
       description = "Podman Rootless";
       home = "/home/podman";
@@ -138,7 +160,7 @@ Create your users. Replace the `authorization.keys` with the one generated above
   # Enable sudo for users in the 'wheel' group
   security.sudo = {
     enable = true;
-    wheelNeedsPassword = true;  # Optional: require a password for sudo. Set as false to allow passwordless sudo or if you not set a password for the admin user.
+    wheelNeedsPassword = false;  # Optional: Requires a password to be entered for the sudo command. Set to true if you choose to create the admin user with a password.
   };
 }
 ```
@@ -175,9 +197,9 @@ Try to log in to the server using the `admin` using the private key generated ea
 ssh -i ~/.ssh/router-admin admin@10.1.78.1
 ```
 
-### 6. Add to SSH configuration file
+### 6. Create the SSH configuration file
 
-If you do not want to type `ssh -i ~/.ssh/router-admin admin@10.1.78.1` everytime to authenticate into the serverm, configure the file `~/.ssh/config` as following:
+If you do not want to type `ssh -i ~/.ssh/router-admin admin@10.1.78.1` everytime to authenticate into the serverm, on your computer, configure the file `~/.ssh/config` as following:
 
 ```yaml
 Host router-admin
@@ -196,7 +218,7 @@ Host router-git
   IdentityFile ~/.ssh/router-git
 ```
 
-Teste o acesso **SSH** sem informar o arquivo de chaves.
+Try **ssh**ing to the server without providing the **identity file** as a parameter.
 
 ```bash
 ssh router-admin
@@ -204,9 +226,10 @@ ssh router-admin
 
 ### 7. Lock the root Account (optional)
 
-Lock the `root` account increases the security of our server. It's not mandatory, but it's a good practice.
+Since the **SSH** service is configured to prevent `root` logins, I don't see the need to lock the `root` account, but you can do so if you want.
+If you configured your server with [impermanence storage](/articles/diy-linux-router-impermanence-storage), remove the line `users.users.root.initialHashedPassword = "##HashedPa$$word"` from the `users.nix` to lock out the root password without further steps.
 
-**CAUTION** If you do not have a password for the `admin` account, locking the `root` account will prevent you from logging in locally, but only through **SSH**. Also, make sure you have created the `admin` account and added it to the `wheel` group.
+**CAUTION** Be aware that locking the `root` password without a password for the `admin` account will prevent you from logging in locally, but only via **SSH**. Also, make sure you have created the `admin` account and added it to the `wheel` group.
 
 ```bash
 passwd -l root
@@ -214,61 +237,333 @@ passwd -l root
 
 ## Firewall
 
-We configured our users, and now let's increase Firewall security.
+With our user configurations complete, it's time to enhance our firewall security.
 
-So far, what we did on our firewall was:
+### Current Setup
 
-- Allow all traffic incoming from the **Home** network.
-- Block any traffic incoming from **Internet**, **Guest**, and **IoT** except the internet access.
+So far, our firewall configuration includes:
 
-The server is quite secure this way, but a more granular control over traffic is desirable, as it ensures that if any of the configured services open an additional port on our server, traffic to that port will not be automatically initiated. With this in mind, let's update our Firewall allowing only the necessary traffic. For **Home**, **Guest**, and **IoT** networks, we'll enable only the **DHCP** service. For the **Home** network, in addition to **DHCP**, we'll allow access to **SSH**. We'll also enable **SSH** on **the Internet** to allow remote access. Update our `nftables.nft` file.
+- Allowing all incoming traffic from the **LAN** network.
+- Blocking all incoming traffic from **WAN/PPPoE**, **Guest**, and **IoT** networks except for internet access.
 
-`/etc/nixos/modules/nftables.nft`
+While this setup provides a basic level of security, we can achieve better protection through more granular traffic control. By doing so, we ensure that if any service unintentionally opens additional ports on the server, unauthorized traffic will not be allowed through.
 
-```conf
-table inet filter {
-  # Keep the rest of the rules as is.
+### Planned Enhancements
 
-  # Add the following chains to `inet filter` table.
-  chain ssh_input {
-    iifname "br0" tcp dport 22 ct state { new, established } counter accept comment "Allow SSH on LAN"
-    iifname "ppp0" tcp dport 22 ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic from ppp0 interface with rate limiting"
-  }
+We will refine our firewall to allow only the traffic necessary for each network:
 
-  chain dhcp_input {
-    iifname { "br0", "enge0.30", "enge0.90" } udp dport 67 ct state { new, established } counter accept comment "Allow DHCP on LAN, Guest and IoT networks"
-  }
+- **LAN** network: Allow **DHCP** and **SSH** services.
+- **Guest** and **IoT** networks: Allow only **DHCP** service.
+- **WAN**: Enable **SSH** to remote access.
 
-  chain input {
-    type filter hook input priority filter; policy drop;
+### Organizing the Firewall Configuration
 
-    iifname "lo" counter accept
-    
-    jump ssh_input
-    jump dhcp_input
-    
-    # Remove the following rule:
-    # iifname "lan" counter accept
-     
-    iifname "ppp0" ct state { established, related } counter accept
-    iifname "ppp0" counter drop
-  }
-  
-  #Let `chain output`, `chain forward` and `table ip nas` as is.
-...
-}
+To simplify management and ensure scalability, we will structure our firewall configuration into logical sections. This approach divides interfaces, rules, and services into **zones** and organizes the configuration across multiple files. The structure will look as follows:
+
+#### **INET Table** (Main firewall rules)
+
+- **`sets.nft`**: Map **interfaces** to their respective **zones**.
+- **`services.nft`**: Define chains for **service** ports, such as **SSH** and **HTTP**.
+- **`zones.nft`**: Specify which **services** are allowed in each **zone**.
+- **`rules.nft`**: Configure **rules** for zones and manage traffic flow.
+
+#### **NAT Table** (Network Address Translation rules)
+
+- **`nat_sets.nft`**: Map **interfaces** to their respective **zones**.
+- **`nat_chains.nft`**: Define NAT chains for tasks like port redirection.
+- **`nat_zones.nft`**: Associate NAT chains with **zones**.
+- **`nat_rules.nft`**: Configure NAT rules for zones.
+
+This modular approach will make the firewall configuration more organized, easier to understand, and simpler to maintain or extend in the future.
+
+### Set up files
+
+#### 1. Remove the nftables.nft file
+
+As we will split the nftables into discrete files, there's no need to use this file anymore. You can delete or just let inactive.
+
+```bash
+rm /etc/nixos/modules/nftables.nft
 ```
 
-### Rebuild the configuration and test
+#### 2. Create the the NFTables Configuration Files
+
+Create the directory and all **NFTables** files needed.
+
+```bash
+mkdir -p /etc/nixos/nftables
+touch /etc/nixos/nftables/{nat_chains,nat_rules,nat_sets,nat_zones,rules,services,sets,zones}.nft
+```
+
+Configure every intended **NFTables** file.
+
+##### sets.nft
+
+Let's make use of variables to address the interfaces name dinamically.
+
+```bash
+cat << EOF > /etc/nixos/nftables/sets.nft 
+table inet filter {
+  set WAN {
+    type ifname;
+    elements = { \$if_wan }
+  }
+
+  set LAN {
+    type ifname;
+    elements = { \$if_lan }
+  }
+
+  set GUEST {
+    type ifname;
+    elements = { \$if_guest }
+  }
+
+  set IOT {
+    type ifname;
+    elements = { \$if_iot }
+  }
+}
+EOF
+```
+
+##### services.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/services.nft
+table inet filter {
+  chain dhcp_input {
+    udp dport 67 ct state { new, established } counter accept comment "Allow DHCP"
+  }
+
+  chain echo_input {
+    icmp type echo-request accept
+    icmp type echo-reply accept
+  }
+
+  chain public_ssh_input {
+    tcp dport ssh ct state { new, established } limit rate 10/minute burst 50 packets counter accept comment "Allow SSH traffic with rate limiting"
+  }
+
+  chain ssh_input {
+    tcp dport ssh ct state { new, established } counter accept comment "Allow SSH"
+  }
+}
+EOF 
+```
+
+##### zones.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/zones.nft
+table inet filter {
+  chain LAN_INPUT {
+    jump dhcp_input
+    jump echo_input
+    jump ssh_input
+  }
+
+  chain GUEST_INPUT {
+    jump dhcp_input
+    jump echo_input
+  }
+
+  chain IOT_INPUT {
+    jump dhcp_input
+    jump echo_input
+  }
+
+  chain WAN_INPUT {
+    jump public_ssh_input
+  }
+}
+EOF 
+```
+
+##### rules.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/rules.nft
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+    iifname "lo" counter accept
+
+    iifname @LAN jump LAN_INPUT 
+    iifname @GUEST jump GUEST_INPUT
+    iifname @IOT jump IOT_INPUT
+    iifname @WAN jump WAN_INPUT
+ 
+  
+    # Allow returning traffic from ppp0 and drop everything else
+    iifname @LAN ct state { established, related } counter accept
+    iifname @WAN ct state { established, related } counter accept
+  }
+
+  chain output {
+    type filter hook output priority 100; policy accept;
+  }
+
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+    iifname @LAN  oifname @WAN counter accept comment "Allow trusted LAN to WAN"
+    iifname @WAN oifname @LAN ct state established,related counter accept comment "Allow established back to LANs"
+    
+    iifname @GUEST  oifname @WAN counter accept comment "Allow trusted GUEST to WAN"
+    iifname @WAN oifname @GUEST ct state established,related counter accept comment "Allow established back to GUEST"
+  
+    iifname @IOT  oifname @WAN counter accept comment "Allow trusted IOT to WAN"
+    iifname @WAN oifname @IOT ct state established,related counter accept comment "Allow established back to IOT"
+
+    #Drop traffic between networks
+    iifname @GUEST oifname @LAN drop comment "Drop connections from GUEST to LAN"
+    iifname @IOT oifname @LAN drop comment "Drop connections from IOT to LAN"
+    iifname @GUEST oifname @IOT drop comment "Drop connections from GUEST to IOT"
+    iifname @IOT oifname @GUEST drop comment "Drop connection from IOT to GUEST"
+    
+    #MSS Clamp
+    oifname @WAN tcp flags syn tcp option maxseg size set 1452
+  }
+}
+EOF 
+```
+
+##### nat_sets.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/nat_sets.nft
+table nat {
+  set WAN {
+    type ifname;
+    elements = { \$if_wan }
+  }
+
+  set LAN {
+    type ifname;
+    elements = { \$if_lan }
+  }
+
+  set GUEST {
+    type ifname;
+    elements = { \$if_guest }
+  }
+
+  set IOT {
+    type ifname;
+    elements = { \$if_iot }
+  }
+}
+EOF
+```
+
+##### nat_chains.nft
+
+**NAT Chains** will be created as empty for now.
+
+```bash
+cat << EOF > /etc/nixos/nftables/nat_chains.nft 
+table ip nat {
+}
+EOF
+```
+
+##### nat_zones.nft
+
+As far as there's no **redirect chains**, **NAT zones** will be created with empty chains for now.
+
+```bash
+cat << EOF > /etc/nixos/nftables/nat_zones.nft
+table ip nat {
+  chain LAN_PREROUTING {
+  }
+
+  chain GUEST_PREROUTING {
+  }
+
+  chain IOT_PREROUTING {
+  }
+
+  chain WAN_PREROUTING {
+  }
+}
+EOF
+```
+
+##### nat_rules.nft
+
+```bash
+cat << EOF > /etc/nixos/nftables/nat_rules.nft
+table ip nat {
+  chain prerouting {
+    type nat hook prerouting priority filter; policy accept;
+    iifname @LAN jump LAN_PREROUTING 
+    iifname @GUEST jump GUEST_PREROUTING 
+    iifname @IOT jump IOT_PREROUTING 
+    iifname @WAN jump WAN_PREROUTING 
+  }
+
+  chain postrouting {
+    type nat hook postrouting priority filter; policy accept;
+    oifname @WAN tcp flags syn tcp option maxseg size set 1452
+    oifname @WAN masquerade
+  }
+}
+EOF
+```
+
+#### 3. Update the networking.nix Configuration File
+
+Edit the **network** section of **networking.nix** configuration file as follows:
+*Update just the **networking** section. Let the remaining of the file as is.*
+
+`/etc/nixos/modules/networking.nix`
+
+```nix
+...
+  networking = {
+    useDHCP = false;
+    firewall.enable = false;
+    nftables = {
+      enable = true;
+      rulesetFile = pkgs.writeText "ruleset.conf" ''
+        define if_wan = "ppp0"
+        define if_lan = "${lan}"
+        define if_guest = "${guest}"
+        define if_iot =  "${iot}"
+        define ip_lan = "${ip_lan}"
+        define ip_guest = "${ip_guest}"
+        define ip_iot = "${ip_iot}"
+        
+        # Inet filter, services and rules
+        include "${../nftables/sets.nft}"
+        include "${../nftables/services.nft}"
+        include "${../nftables/zones.nft}"
+        include "${../nftables/rules.nft}"
+
+        # Nat & redirect
+        include "${../nftables/nat_sets.nft}"
+        include "${../nftables/nat_chains.nft}"
+        include "${../nftables/nat_zones.nft}"
+        include "${../nftables/nat_rules.nft}"
+      '';
+      flattenRulesetFile = true;
+    };
+  };
+...
+```
+
+#### 4. Rebuild the configuration and test
 
 ```bash
 nixos-rebuild switch
 ```
 
-Logout and try to log in to the server using the `admin` using the private key generated earlier.
-
 ## Conclusion
 
-This wraps up this subject. In the next part, it's time to install **POdman** and configure our **DNS Server** with Unbound on it.
+With this configuration, we have improved the security of this firewall. What has been done so far:
 
+- Reduced the need to use the `root` account for certain tasks.
+- Divided our firewall into zones, making it easier to manage.
+- Created more granular control over the traffic on our server.
+. In the next part, it is time to install **Podman** and configure our **DNS Server** with Unbound on it.
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
