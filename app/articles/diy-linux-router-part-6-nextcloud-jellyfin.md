@@ -280,16 +280,15 @@ After=network-online.target
 Type=oneshot
 Environment="DOMAINS=unifi.example.com,nextcloud.example.com,jellyfin.example.com"
 Environment="EMAIL=your_email@gmail.com"
-ExecStart=/run/current-system/sw/bin/podman run --rm \
-          -v ingress-www:/var/www \
-          -v certificates:/etc/letsencrypt \
-          --log-level info --network ingress-net \
-          docker.io/certbot/certbot:v3.0.0 \
-              certonly --agree-tos --non-interactive -v \
-              --webroot -w /var/www --force-renewal \
-              --email ${EMAIL} \
-              --domains ${DOMAINS}
-
+ExecStart=/bin/sh -c '/run/current-system/sw/bin/podman run --rm \
+  -v ingress-www:/var/www \
+  -v certificates:/etc/letsencrypt \
+  --log-level info \
+  docker.io/certbot/certbot:v3.0.0 \
+  certonly --agree-tos --non-interactive -v \
+  --webroot -w /var/www --force-renewal \
+  --email ${EMAIL} \
+  --domains ${DOMAINS} && systemctl --user restart podman-pod@ingress.service'
 ```
 
 2. **Create a `timer` unit**: `/home/podman/.config/systemd/user/certbot.timer`
@@ -342,6 +341,10 @@ ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
 server {
     listen 80 default_server;
     server_name _;
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
 
     location ~ /.well-known/acme-challenge/ {
       root /var/www/;
@@ -583,11 +586,6 @@ Our services are up and running. Let's set up the Ingresses for the following su
 
 ```conf
 server {
-    listen 80;
-    server_name nextcloud.example.com;
-    return 301 https://$host$request_uri;
-}
-server {
   set $upstream http://nextcloud;
   listen 443 ssl;
   server_name nextcloud.example.com;
@@ -609,11 +607,6 @@ server {
 
 ```conf
 server {
-    listen 80;
-    server_name jellyfin.example.com;
-    return 301 https://$host$request_uri;
-}
-server {
   set $upstream http://jellyfin:8096;
   listen 443 ssl;
   server_name jellyfin.example.com;
@@ -633,11 +626,6 @@ As we have the **Unifi Network Application** already set on server, we can creat
 map $http_upgrade $connection_upgrade {
   default upgrade;
   ''      close;
-}
-server {
-    listen 80;
-    server_name unifi.example.com;
-    return 301 https://$host$request_uri;
 }
 server {
   listen 443 ssl;
