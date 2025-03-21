@@ -6,12 +6,12 @@ author: "Carlos Junior"
 category: "Linux"
 brief: "In the ninght part of this series, it's time to make our network more secure restricting network access to IoT devices."
 image: "/assets/images/diy-linux-router/iot.webp"
-keywords : ["macmini","router", "linux", "nixos", "file", "iot", "nftables", "network"
+keywords : ["macmini","router", "linux", "nixos", "file", "iot", "nftables", "network"]
 lang : "en"
 other-langs : [{"lang":"pt","article":"roteador-linux-parte-9-iot"}]
 ---
 
-This is the eighth part of a multi-part series describing how to build your own Linux router.
+This is the ninth part of a multi-part series describing how to build your own Linux router.
 
 - Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
@@ -23,7 +23,7 @@ This is the eighth part of a multi-part series describing how to build your own 
 - Part 8: [Backup](/article/diy-linux-router-part-8-backup)
 - [Impermanence Storage](/article/diy-linux-router-impermanence-storage)
 
-Out Linux router already is a strong part of our network. Let's increase our security by restricting access of IoT devices.
+Our Linux router already is a strong part of our network. Let's increase our security by restricting access of IoT devices.
 
 ![Backup](/assets/images/iot.webp)
 *Backup*
@@ -37,17 +37,17 @@ Out Linux router already is a strong part of our network. Let's increase our sec
 
 ## Introduction
 
-We live in a highly connected world ever and our homes never was so smart as now. There's a lot of gagdets hangling around your home network, like Chromecasts, Smart TVs, Alexas, Smartlamps, Wifi Printers, smart boxes and so on.
+We live in an increasingly connected world, and our homes have never been smarter than they are now. TThere are a lot of gadgets hanging around your home network. Like Chromecasts, Smart TVs, Alexas, Smartlamps, Wifi Printers, smart boxes and so on.
 
-Many of these are fairly capable machines doing simple things. Many of them also are older devices being aroung some years without receiving any security patches. They are share the same Layer 2 network with devices like your work's laptop, your mobile that you use to do online bank transactions and share up your online profile.
+Many of these are fairly capable machines doing simple things. Many of them also are older devices being aroung some years without receiving any security patches. They share the same Layer 2 network with devices like your work's laptop, your mobile that you use to do online bank transactions and share up your online profile.
 
-This combination is dangerous, as we don't really know what those smart gadgets are doing. There's some reports of some chinese smartlamps doing nasty things on the network, like capturing TCP packets and sending to some remote datacenter without the owner's concern. There's also security breaches long discovered, but unpatched on older printers that does not receive security update from 5 years or more, that puts those simple devices in a position of a threat for your home network. Even devices from reputable companies, like the **Google Chromecast** or their well faded **Google Stadia** are discontinued and there's no security updates anymore. Those devices open holes on your network and are security breaches that can be exploited anytime.
+This combination is dangerous, as we don't really know what those smart gadgets are doing. There have been reports of some Chinese smart lamps engaging in suspicious network activities, like capturing TCP packets and sending to some remote datacenter without the owner's concern. There's also security breaches long discovered, but unpatched on older printers that does not receive security update from 5 years or more, that puts those simple devices in a position of a threat for your home network. Even devices from reputable companies, like the **Google Chromecast** or the now-defunct **Google Stadia** are discontinued and there's no security updates anymore. Those devices open holes on your network and are security breaches that can be exploited anytime.
 
-We can't deny that many of the important services that we are using online are fairy secure, with connections protected by SSL certificates and cryptographic algorithms. This is good, but we can't rely our online security and privacy solely on third-parties. We have to do our part to make sure that we are on a secure environment.
+We can't deny that many online services we use today are fairly secure, with connections protected by SSL certificates and cryptographic algorithms. This is good, but we can't rely our online security and privacy solely on third-parties. We have to do our part to make sure that we are on a secure environment.
 
-## Security Measuraments
+## Security Measures
 
-Let's state some guidelines to increase the security on home network
+Let's outline some guidelines to improve security on our home network.
 
 ### 1. Protect and isolate our Layer 2 network
 
@@ -65,7 +65,7 @@ There's some praticalities, like casting a **YouTube** video to a TV on **Smartp
 
 ## Let's get started
 
-So whitout further redo, let get started.
+So whitout further ado, let get started.
 
 ### Recap the part 2 - Network and Internet
 
