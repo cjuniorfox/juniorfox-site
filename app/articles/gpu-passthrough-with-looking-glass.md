@@ -11,7 +11,6 @@ lang : "en"
 other-langs : [{"lang":"pt","article":"gpu-passthrough-com-looking-glass"}]
 ---
 
-
 ## Table of contents
 
 - [Introduction](#introduction)
@@ -32,17 +31,15 @@ other-langs : [{"lang":"pt","article":"gpu-passthrough-com-looking-glass"}]
 
 ## Introduction
 
-The idea is to enable **GPU Passthrough** to a computer with **two display adapters.** It could be an **onboard video** and **discrete GPU adapter**. Can also be two discrete **GPUs** and can be manageable to do with a **single GPU** which is more complicated, as you lose the host's video when getting inside the **Windows VM**. This configuration will also work with notebooks having two display adapters.
+This tutorial aims to guide you through enabling **GPU Passthrough** on a computer equipped with **two display adapters**: an **onboard video adapter** and a **discrete GPU**. This setup can also work with two discrete GPUs or even a single GPU, though the latter is more complex as it results in the host losing video output when the **Windows VM** is active. Additionally, this configuration is compatible with notebooks that feature both onboard and discrete display adapters.
 
 ![Desktop of a Linux Machine Running Windows 11](/assets/images/gpu-passthrough/gpu-passthrough.webp)
 
-For the sake of this tutorial, I'll do as is on my setup, which is **AMD Radeon RX 6700**, and **Onboard Radeon Vega** for onboard video card. I wanted to retain the ability to use the video card at the host operating system, so I could play games without relying on the VM while having the ability to **pass through** the display adapter to **Windows** when needed to do so.
+For this tutorial, I will demonstrate the setup using my configuration, which includes an **AMD Radeon RX 6700** as the discrete GPU and an **Onboard Radeon Vega** as the onboard video card. My goal is to retain the ability to use the discrete GPU on the host operating system for gaming while also enabling the option to **pass through** the GPU to a **Windows VM** when needed.
 
-The **display cable** (**HDMI** or **DisplayPort**) will be connected to the onboard GPU port on your motherboard. There's no problem, you'll be able to use the graphics card through that port to render the 3D accelerated graphics.
+The **display cable** (either **HDMI** or **DisplayPort**) should be connected to the onboard GPU port on your motherboard. This setup allows the onboard GPU to handle video output while the discrete GPU can still render 3D-accelerated graphics.
 
-On Windows, let's use **Looking Glass** to see what is rendered on **Windows Machine.**
-
-A **Headless HDMI Dongle** or an additional **HDMI cable** connected to your discrete display adapter will also be needed to make **GPU** render video to be passed to **Looking Glass**. This dongle will be needed only for **Windows** as **Linux** can use the **Display Adapter** to render graphics without any monitor connected to it.
+On the Windows VM, we will use **Looking Glass** to view the rendered output. Additionally, a **Headless HDMI Dongle** or an extra **HDMI cable** connected to the discrete GPU will be required to enable video rendering for **Looking Glass**. This dongle is only necessary for Windows, as Linux can utilize the discrete GPU for rendering without a connected monitor.
 
 ## Packages to install
 
@@ -64,90 +61,224 @@ Enable any related BIOS settings regarding virtualization, like **IOMMU**, **VT-
 
 ## IOMMU and VFIO
 
-### 1. Edit `/etc/default/grub`
+### Fedora
 
-```conf
-# For AMD CPU
-GRUB_CMDLINE_LINUX="rhgb quiet amd_iommu=on"
-# For Intel
-GRUB_CMDLINE_LINUX="rhgb quiet amd_iommu=on"
-```
+1. `/etc/default/grub`
 
-### 2. Add `vfio` drivers to `dracut`
+   ```conf
+   # For AMD CPU
+   GRUB_CMDLINE_LINUX="rhgb quiet amd_iommu=on iommu=pt"
+   # For Intel CPU
+   GRUB_CMDLINE_LINUX="rhgb quiet intel_iommu=on iommu=pt"
+   ```
 
-`vi /etc/dracut.conf.d/local.conf`
+    The `iommu=pt` parameter ensures that devices not explicitly assigned to the VM are handled by the host with minimal overhead.
+
+2. Save the changes and regenerate the GRUB configuration to apply the new kernel parameters:
+
+   ```sh
+   sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+   ```
+
+   If your system uses UEFI, use the following command instead:
+
+   ```sh
+   sudo grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
+   ```
+
+3. Reboot your system to apply the changes:
+
+   ```sh
+   sudo reboot
+   ```
+
+4. Verify that `IOMMU` is enabled after rebooting. Run the following command and check the output for IOMMU:
+
+   ```sh
+   dmesg | grep -i iommu
+   ```
+
+   If IOMMU is enabled, you should see messages indicating that it has been initialized.
+
+### Adding Kernel Flags on Fedora Silverblue (Immutable Version)
+
+For Fedora Silverblue or other ostree-based immutable systems, you cannot directly edit `/etc/default/grub`. Instead, you need to use the `rpm-ostree` command to append kernel arguments.
+
+To add the required kernel flags for **IOMMU**:
+
+1. Add the kernel arguments using `rpm-ostree`:
+
+   ```sh
+   sudo rpm-ostree kargs --append=amd_iommu=on \
+   --append iommu=pt
+   ```
+
+   Replace `amd_iommu=on` with `intel_iommu=on` if you're using an Intel CPU.
+
+2. Verify the kernel arguments to ensure they were added correctly:
+
+   ```sh
+   rpm-ostree kargs
+   ```
+
+   This will display the current kernel arguments, including the ones you just added.
+
+3. Reboot your system to apply the changes:
+
+   ```sh
+   systemctl reboot
+   ```
+
+### Dracut
+
+Dracut is used to regenerate the **initramfs** (initial RAM filesystem), which is required to include the necessary VFIO drivers for GPU passthrough. This ensures that the drivers are loaded early during the boot process.
+
+#### Regular Fedora
+
+1. Create a configuration file for Dracut:
+
+   ```sh
+   sudo vi /etc/dracut.conf.d/vfio.conf
+   ```
+
+   Add the following line to include the required VFIO drivers:
+
+   ```conf
+   add_drivers+=" vfio vfio_iommu_type1 vfio_pci vfio_virqfd "
+   ```
+
+2. Regenerate the `initramfs` for the current kernel:
+
+   ```sh
+   sudo dracut -f --kver $(uname -r)
+   ```
+
+3. Reboot your system to apply the changes:
+
+   ```sh
+   sudo reboot
+   ```
+
+#### Fedora Silverblue (Immutable Version)
+
+On Silverblue, you cannot directly edit system files like `/etc/dracut.conf.d/`. Instead, you need to use an **overlay** to make the necessary changes.
+
+1. Create an overlay for the Dracut configuration:
+
+   ```sh
+   sudo mkdir -p /etc/dracut.conf.d
+   sudo vi /etc/dracut.conf.d/vfio.conf
+   ```
+
+   Add the following line to include the required VFIO drivers:
+
+   ```conf
+   add_drivers+=" vfio vfio_iommu_type1 vfio_pci vfio_virqfd "
+   ```
+
+2. Regenerate the `initramfs` using the `rpm-ostree` command:
+
+   ```sh
+   sudo rpm-ostree initramfs --enable
+   ```
+
+   This command ensures that the changes are applied to the immutable system.
+
+3. Reboot your system to apply the changes:
+
+   ```sh
+   systemctl reboot
+   ```
+
+#### Verifying the Changes
+
+After rebooting, verify that the VFIO drivers are loaded correctly by running:
 
 ```sh
-add_drivers+=" vfio vfio_iommu_type1 vfio_pci vfio_virqfd "
+lsmod | grep vfio
 ```
 
-Regenerate `initramfs` with `dracut`.
+You should see output indicating that the `vfio`, `vfio_iommu_type1`, `vfio_pci`, and `vfio_virqfd` modules are loaded.
 
-```sh
-sudo dracut -f --kver `uname -r`
-```
+---
 
-### 3. Apply `grub` settings
-
-Do as `sudo` and then reboot.
-
-```sh
-grub2-mkconfig -o /etc/grub2-efi.cfg
-```
+By following these steps, you ensure that the VFIO drivers are properly included in the `initramfs`, enabling GPU passthrough functionality on both regular Fedora and Silverblue systems.
 
 ## Virtual Machine
 
-### 1. Create Virtual Machine
+First, create and install a Windows virtual machine as you normally would using either `virt-install` or `virt-manager`. This step involves setting up the VM with the desired amount of CPU, memory, and storage, as well as installing Windows.
 
-Create and install a Windows virtual machine normally as would do.
+### Setting Up the VM for GPU Passthrough
 
-### 2. Edit the VM config
+After completing the Windows installation, some additional configuration is required to ensure proper GPU passthrough functionality and to avoid encountering issues like `Error 43` (commonly seen with NVIDIA GPUs in virtualized environments).
 
-To avoid `error 43` related issues, let's add some settings:
+1. Edit the VM's XML Configuration
 
-```xml
-<domain>
-  <features>
+   To configure the VM for GPU passthrough, you need to edit its XML file. This can be done using the `virsh edit` command:
+
+   ```sh
+   virsh edit <vm-name>
+   ```
+
+2. Add the Necessary Features
+
+   Locate the `<features>` section in the XML file and add the following configuration:
+
+   ```xml
+   <domain>
     ...
-    <hyperv>
-      <vendor_id state='on' value='1234567890ab'/>
-    </hyperv>
-    <kvm>
-      <hidden state='on'/>
-    </kvm>
+    <features>
+      ...
+      <hyperv>
+        <vendor_id state='on' value='1234567890ab'/>
+      </hyperv>
+      <kvm>
+        <hidden state='on'/>
+      </kvm>
+      ...
+    </features>
     ...
-  </features>
-  ...
-</domain>
-```
+   </domain>
+   ```
 
-If you would use a **resizable bar (REBAR)** which is the ability of **GPU** to map more than **256MB** of **RAM,** add this:
+   - `<vendor_id>`: This setting masks the hypervisor's presence, helping to bypass NVIDIA's Error 43.
+   - `<hidden>`: This hides the KVM hypervisor from the guest operating system, ensuring compatibility with GPU drivers.
 
-```xml
-<domain>
-...
-  <qemu:commandline>
-    <qemu:arg value='-fw_cfg'/>
-    <qemu:arg value='opt/ovmf/X-PciMmio64Mb,string=65536'/>
-  </qemu:commandline>
-</domain>
-```
+3. Save and Exit
+
+   After making the changes, save the XML file and exit the editor. The changes will be applied to the VM configuration.
+
+---
+
+#### Why These Changes Are Necessary
+
+- `Error 43`: This is a common issue with NVIDIA GPUs in virtualized environments. The `<vendor_id>` and `<hidden>` settings help bypass this error by masking the hypervisor's presence.
+- **Improved Compatibility**: These settings ensure that the GPU drivers in the Windows VM function correctly, allowing the GPU to be fully utilized.
 
 ## VFIO
 
-By default, the **Display Adapter** is available to the **host machine.** Try to avoid using output from Graphics Cards. Use those from onboard instead. You don't have any performance harms by doing that, as the computer will render the 3D graphics with the best GPU.
+The **VFIO (Virtual Function I/O)** framework allows a virtual machine to directly access hardware devices, such as GPUs, by detaching them from the host system and assigning them to the VM. This ensures that the GPU operates as if it were directly connected to the VM, providing near-native performance.
 
-Booting the VM, the **Display Adapter** will be **detached** from the host machine and **attached** to the **VM**, becoming unavailable to the **Host Machine** until **Windows** shuts down.
+### How VFIO Works
 
-Shutting down **Windows**, the **Display Adapter** is **removed** from the **PCI Bus**. This is necessary to avoid unloading **amdgpu** driver, which would demand to exit the session, as the **Display Driver** would be restarted that way.
+1. **Default Behavior**: By default, the GPU is attached to the host system and used by the host's display drivers (e.g., `amdgpu` or `nouveau`).
+2. **Detaching the GPU**: When the VM starts, VFIO detaches the GPU from the host system and assigns it to the VM. This makes the GPU unavailable to the host until the VM shuts down.
+3. **Reattaching the GPU**: After the VM shuts down, VFIO reattaches the GPU to the host system, restoring its functionality for the host.
 
-### Which PCI GPU is on
+### Key Considerations
 
-To attach and detach the **GPU** from the host's and virtualm maquine, you have to know where your graphics card is on the **PCI bus**. You can check it with the command below. For **Radeon** look for `Navi`. For **Nvidia**, look for `Nvidia`.
+- **Onboard GPU Usage**: It is recommended to use the onboard GPU for the host's display output. This avoids conflicts and ensures the discrete GPU is fully available for passthrough.
+- **Driver Management**: When the GPU is detached from the host, the host's GPU driver (e.g., `amdgpu`) is unloaded. This prevents issues like restarting the display session, which could disrupt the host system.
+
+### Identifying Your GPU on the PCI Bus
+
+To configure VFIO, you need to know the PCI addresses of your GPU and its associated devices (e.g., audio controller). Use the following command to list PCI devices:
 
 ```sh
-lspci -nnk | grep Navi -A 3
+lspci -nnk | grep -E "VGA|3D|Audio" -A 3
 ```
+
+For AMD GPUs, look for entries containing `Navi`. For NVIDIA GPUs, look for entries containing `NVIDIA`. Example output:
 
 ```txt
 03:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 22 [Radeon RX 6700/6700 XT/6750 XT / 6800M/6850M XT] [1002:73df] (rev c1)
@@ -160,79 +291,77 @@ lspci -nnk | grep Navi -A 3
   Kernel modules: snd_hda_intel
 ```
 
-In my case, there are two devices I have to pass through. The **VGA-compatible controller** and the **Audio device.** In my case, the video card is connected to  `03:00.0` and the audio adapter is connected to `03:00.0`. Take note of these addresses that we use later.
+In this example:
+
+- The VGA-compatible controller (GPU) is at `03:00.0`.
+- The audio device is at `03:00.1`.
+
+Take note of these PCI addresses, as they will be used in later steps.
+
+Why Detaching and Reattaching is Necessary
+When the VM starts, the GPU must be detached from the host system to avoid conflicts. Similarly, when the VM shuts down, the GPU must be reattached to the host to restore its functionality. This process ensures:
+
+- The GPU is isolated for exclusive use by the VM.
+- The host system remains stable and functional after the VM shuts down.
 
 ### Dump vBIOS
 
-It's not always necessary, but in my case, it was. Do as follows
+Sometimes the display adapter became irresponsive during attach and detatch process. To avoid this, you can dump your vBIOS and use as rom file.
 
-```sh
-# 1. Unbind the GPU from the driver
-echo 0000:03:00.0 | sudo tee /sys/bus/pci/devices/0000\:03\:00.0/driver/unbind 
+1. Unbind the GPU from the driver.
 
-#2. Enable the access to dump the vBIOS
-echo 1 | sudo tee /sys/bus/pci/devices/0000\:03\:00.0/rom
+   ```sh
+   echo 0000:03:00.0 | sudo tee /sys/bus/pci/devices/0000\:03\:00.0/driver/unbind 
+   ```
 
-#3. Dump vBIOS contents to a file
-sudo cat /sys/bus/pci/devices/0000\:03\:00.0/rom > vBIOS.rom
+2. Enable access to dump the vBIOS.
 
-#4. Close the access to the vBIOS
-echo 1 | sudo tee /sys/bus/pci/devices/0000\:03\:00.0/rom
+   ```sh
+   echo 1 | sudo tee /sys/bus/pci/devices/0000\:03\:00.0/rom
+   ```
+  
+3. Dump the vBIOS sending its contents to a file
 
-#5. Load drivers again
-echo 1 | sudo tee /sys/bus/pci/drivers/amdgpu/bind
-```
+   ```sh
+   sudo cat /sys/bus/pci/devices/0000\:03\:00.0/rom > vBIOS.rom
+   ```
+
+4. Finish the vBIOS access
+
+    ```sh
+    echo 1 | sudo tee /sys/bus/pci/devices/0000\:03\:00.0/rom
+    ```
+  
+5. Load the display drivers to the host machine
+
+   ```sh
+   echo 1 | sudo tee /sys/bus/pci/drivers/amdgpu/bind
+   ```
 
 ### Add PCI Adapter to VM
 
-Add the **PCI device** regarding the **Graphics Adapter** to your VM, and edit the **XML**. My device is at the address `03:00:0`, and the audio as `03:00:1`. This translates to:
+Under `<devices>` section, add the **PCI device** of the **Graphics Adapter** and its **Sound card** to your VM.
 
-Display
+   Graphics Adapter
 
-```xml
-<hostdev mode="subsystem" type="pci" managed="yes">
-  <source>
-    <address domain="0x0000" bus="0x03" slot="0x00" function="0x0"/>
-  </source>
-  <rom file="/path/of/vBIOS.rom"/>
-</hostdev>
-```
+   ```xml
+   <hostdev mode="subsystem" type="pci" managed="yes">
+     <source>
+       <address domain="0x0000" bus="0x03" slot="0x00" function="0x0"/>
+     </source>
+     <rom file="/path/of/vBIOS.rom"/>
+   </hostdev>
+   ```
 
-Audio
+   Sound card of the graphics Adapter
 
-```xml
-<hostdev mode="subsystem" type="pci" managed="yes">
-  <source>
-    <address domain="0x0000" bus="0x03" slot="0x00" function="0x1"/>
-  </source>
-</hostdev>
-```
-
-Edit **XML's** domain by adding as follows:
-
-`virsh edit win11`
-
-```xml
-<domain>
-  ...
-  <devices>
-    ...
-    <hostdev mode="subsystem" type="pci" managed="yes">
-      <source>
-        <address domain="0x0000" bus="0x03" slot="0x00" function="0x0"/>
-      </source>
-      <rom file="/path/of/vBIOS.rom"/>
-      <address type="pci" domain="0x0000" bus="0x0a" slot="0x00" function="0x0" multifunction="on"/>
-    </hostdev>
-    <hostdev mode="subsystem" type="pci" managed="yes">
-      <source>
-        <address domain="0x0000" bus="0x03" slot="0x00" function="0x1"/>
-      </source>
-      <address type="pci" domain="0x0000" bus="0x0a" slot="0x00" function="0x1"/>
-    </hostdev>
-  </devices>
-</domain>
-```
+   ```xml
+   <hostdev mode="subsystem" type="pci" managed="yes">
+     <source>
+       <address domain="0x0000" bus="0x03" slot="0x00" function="0x1"/>
+     </source>
+   </hostdev>
+   ```
 
 ### Resizable BAR
 
