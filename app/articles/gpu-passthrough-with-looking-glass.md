@@ -768,7 +768,7 @@ On **Windows Guest Machine**, download and run the [Windows Host Binary](https:/
 Installing Looking Glass could demand compiling and installing binaries and their dependencies, but thanks for **copr** projects, which are repositories maintained by the community, compiling is not needed. Let's install through **Copr.** Run as \`sudo\`
 
 ```sh
-dnf copr enable rariotrariowario/looking-glass-client -y
+dnf copr enable cjuniorfox/hyprland-desktop -y
 ```
 
 ```sh
@@ -841,6 +841,20 @@ You can delete the **Distrobox\`s container** used to build Looking glass
 ```sh
 distrobox stop looking-glass-build && distrobox rm looking-glass-build
 ```
+
+### SELinux permissions
+
+SeLinux does not like of many of things we did so far. To overcome this, we have to configure some policies, as follows:
+
+1. Create a directory to store your policies
+
+   As sudo, you can store at `/root/polices`
+   ```sh
+   for i in my-detachgpush my-qemusystemx86 my-starthugepages virt_qemu_mount_exec my-modprobe my-reattachgpush my-sysctl virt_qemu_rescan my-mount my-rpcvirtqemud my-virsh
+     virsh' --raw | audit2allow -M $i
+     semodule -i ${i}.pp
+   done
+   ```
 
 ### Creating a Screen to Share
 
