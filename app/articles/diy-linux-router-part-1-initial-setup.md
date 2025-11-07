@@ -320,6 +320,9 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+  
+  # Use LTS kernel for better stability
+  boot.kernelPackages = pkgs.linuxPackages;
 
   i18n.defaultLocale = "en_US.UTF-8";
    console = {
@@ -368,6 +371,8 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
       grub.device = "${DISK}";
     };
     supportedFilesystems = [ "zfs" ];
+    # Use LTS kernel for better stability
+    kernelPackages = pkgs.linuxPackages;
   };
 
   i18n.defaultLocale = "en_US.UTF-8";
