@@ -177,9 +177,9 @@ Obtenha o `UUID` para partições
 
 ```bash
 BOOT="/dev/disk/by-uuid/"$(blkid -s UUID -o value ${DISK}-part2)
-SWAP="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o valor ${DISK}-part3)
-ROOT="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o valor ${DISK}-part4)
-DATA="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o valor ${DISK}-part5)
+SWAP="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part3)
+ROOT="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
+DATA="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part5)
 ```
 
 ### 5. Crie os Pools ZFS
