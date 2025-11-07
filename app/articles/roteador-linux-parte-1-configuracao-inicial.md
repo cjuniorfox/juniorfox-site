@@ -224,11 +224,9 @@ zfs create -o canmount=off ${ZROOT}/var
 zfs create -o canmount=noauto -o com.sun:auto-snapshot=false ${ZROOT}/var/log
 ```
 
-Montar os sistemas de arquivos:
+Montar os demais sistemas de arquivos:
 
 ```sh
-mount -t zfs ${ZROOT}/root ${MNT}
-zfs mount ${ZROOT}/root/nixos
 zfs mount ${ZROOT}/nix
 zfs mount ${ZROOT}/var/log
 ```
@@ -358,7 +356,7 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
     [ 
       <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
       ./hardware-configuration.nix
-      ./modules/users.nix
+      ./users.nix
     ];
   system.stateVersion = "25.05";
   boot = {
@@ -398,14 +396,13 @@ EOF
 O arquivo `users.nix` criará os usuários pretendidos para o servidor. Por enquanto, vamos apenas definir a senha root com ele e proteger o arquivo contra leitura para outros usuários além do root. Esteja ciente de que esta etapa é fundamental para garantir que você seja capaz de acessar o servidor após sua reinicialização.
 
 ```bash
-mkdir -p ${MNT}/etc/nixos/modules
-cat << EOF > ${MNT}/etc/nixos/modules/users.nix
+cat << EOF > ${MNT}/etc/nixos/users.nix
 { config, pkgs, ... }:
 {
   users.users.root.initialHashedPassword = "${PASS}";
 }
 EOF
-chmod 600 ${MNT}/etc/nixos/modules/users.nix 
+chmod 600 ${MNT}/etc/nixos/users.nix 
 ```
 
 #### Configuração de Hardware
