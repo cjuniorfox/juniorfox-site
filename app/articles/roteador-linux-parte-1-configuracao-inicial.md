@@ -218,7 +218,7 @@ Este tutorial aborda a instalação usando um sistema de arquivos **root** persi
 zfs create -o mountpoint=legacy -o canmount=noauto ${ZROOT}/root
 mount -t zfs ${ZROOT}/root ${MNT}
 zfs create -o canmount=off ${ZROOT}/etc
-zfs create ${ZROOT}/etc/nixos
+zfs create -o canmount=noauto ${ZROOT}/etc/nixos
 zfs create -o canmount=noauto ${ZROOT}/nix
 zfs create -o canmount=off ${ZROOT}/var
 zfs create -o canmount=noauto -o com.sun:auto-snapshot=false ${ZROOT}/var/log
@@ -229,6 +229,7 @@ Montar os demais sistemas de arquivos:
 ```sh
 zfs mount ${ZROOT}/nix
 zfs mount ${ZROOT}/var/log
+zfs mount ${ZROOT}/etc/nixos
 ```
 
 Agora criar os pontos de montagem de `zdata`.

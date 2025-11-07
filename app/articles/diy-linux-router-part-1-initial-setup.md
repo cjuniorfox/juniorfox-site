@@ -220,7 +220,7 @@ This tutorial covers installation using a persistent root file system.
 zfs create -o mountpoint=legacy -o canmount=noauto ${ZROOT}/root
 mount -t zfs ${ZROOT}/root ${MNT}
 zfs create -o canmount=off ${ZROOT}/etc
-zfs create ${ZROOT}/etc/nixos
+zfs create -o canmount=noauto ${ZROOT}/etc/nixos
 zfs create -o canmount=noauto ${ZROOT}/nix
 zfs create -o canmount=off ${ZROOT}/var
 zfs create -o canmount=noauto -o com.sun:auto-snapshot=false ${ZROOT}/var/log
@@ -231,6 +231,7 @@ Mount the remaining filesystems:
 ```bash
 zfs mount ${ZROOT}/nix
 zfs mount ${ZROOT}/var/log
+zfs mount ${ZROOT}/etc/nixos
 ```
 
 Now create the `zdata` mount points.
