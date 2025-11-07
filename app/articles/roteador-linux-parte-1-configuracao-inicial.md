@@ -129,7 +129,7 @@ sudo -i
 Defina o armazenamento de destino. Você pode verificar seu dispositivo de armazendo listando o conteúdo de `/dev/disk/by-id/`
 
 ```bash
-DISK=/dev/disk/by-id/DISK=/dev/disk/by-id/scsi-ID_DO_ARMAZENAMENTO
+DISK=/dev/disk/by-id/ID_DO_ARMAZENAMENTO
 MNT=$(mktemp -d)
 ```
 
@@ -165,9 +165,9 @@ mkpart primary 1MiB 2MiB \
 set 1 bios_grub on \
 mkpart EFI 2MiB 514MiB \
 set 2 esp on \
-mkpart Swap 514MiB 8GiB \
-mkpart ZFS-Root 8GiB 24GiB \
-mkpart ZFS-Data 24GiB 100%
+mkpart Swap 514MiB 16.5GB \
+mkpart ZFS-Root 16.5GB 32.5GB \
+mkpart ZFS-Data 32.5GiB 100%
 
 sleep 1
 mkfs.msdos -F 32 -n EFI ${DISK}-part2
@@ -215,10 +215,10 @@ No **NixOS**, o sistema operacional é instalado no diretório `/nix`. O **NixOS
 Este tutorial aborda a instalação usando um sistema de arquivos **root** persistente.
 
 ```bash
-zfs create -o mountpoint=none -o canmount=off ${ZROOT}/root
-zfs create -o mountpoint=/ -o canmount=noauto ${ZROOT}/root/nixos
+zfs create -o mountpoint=legacy -o canmount=noauto ${ZROOT}/root
+mount -t zfs ${ZROOT}/root ${MNT}
 zfs create -o canmount=off ${ZROOT}/etc
-zfs create -o ${ZROOT}/etc/nixos
+zfs create ${ZROOT}/etc/nixos
 zfs create -o canmount=noauto ${ZROOT}/nix
 zfs create -o canmount=off ${ZROOT}/var
 zfs create -o canmount=noauto -o com.sun:auto-snapshot=false ${ZROOT}/var/log
@@ -227,21 +227,21 @@ zfs create -o canmount=noauto -o com.sun:auto-snapshot=false ${ZROOT}/var/log
 Montar os sistemas de arquivos:
 
 ```sh
+mount -t zfs ${ZROOT}/root ${MNT}
 zfs mount ${ZROOT}/root/nixos
-zfs mount ${ZROOT}/etc/nixos
 zfs mount ${ZROOT}/nix
-zfs mount ${ZROOT}/persistent
 zfs mount ${ZROOT}/var/log
 ```
 
 Agora criar os pontos de montagem de `zdata`.
 
 ```bash
-zfs create -o canmount=noauto -o mountpoint=/home ${ZDATA}/home
-zfs mount ${ZDATA}/home
+zfs create -o canmount=noauto -o mountpoint=legacy ${ZDATA}/home
+mkdir ${MNT}/home
+mount -t zfs ${ZDATA}/home ${MNT}/home
 ```
 
-Se você quiser usar `tmpfs`, faça o seguinte:
+Por último, volumes `tmpfs`.
 
 ```bash
 mkdir ${MNT}/tmp
