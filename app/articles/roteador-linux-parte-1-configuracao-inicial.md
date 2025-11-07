@@ -312,7 +312,7 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
     [ 
       <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
       ./hardware-configuration.nix
-      ./modules/users.nix
+      ./users.nix
     ];
 
   # Use o bootloader systemd-boot para EFI.
