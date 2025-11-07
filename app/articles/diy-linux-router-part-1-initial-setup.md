@@ -13,6 +13,7 @@ other-langs : [{"lang":"pt","article":"roteador-linux-parte-1-configuracao-inici
 
 This is the first part of a multi-part series describing how to build your own Linux router.
 
+- Part 1: [Initial Setup](/article/diy-linux-router-part-1-initial-setup)
 - Part 2: [Network and Internet](/article/diy-linux-router-part-2-network-and-internet)
 - Part 3: [Users, Security and Firewall](/article/diy-linux-router-part-3-users-security-firewall)
 - Part 4: [Podman and Unbound](/article/diy-linux-router-part-4-podman-unbound)
@@ -155,7 +156,7 @@ blkdiscard -f ${DISK}
 
 Create the partition scheme. In this example, I'll create two storage pools:
 
-- `zroot` with **8 Giga** of storage.
+- `zroot` with **16 Giga** of storage.
 - `zdata` with the rest of storage space.
 
 I prefer having discrete storage pools with one for **Root** and another for **Data**, Turning maintenance a lot easier, but if you prefer keeping everything in the same pool, it's just a matter of creating only the `zroot` storage pool with `100%`
@@ -166,21 +167,21 @@ parted ${DISK} mklabel gpt \
   set 1 bios_grub on \
   mkpart EFI 2MiB 514MiB \
   set 2 esp on \
-  mkpart Swap 514MiB 8GiB \
-  mkpart ZFS-Root 8GiB 16GiB \
-  mkpart ZFS-Data 16GiB 100%
+  mkpart Swap 514MiB 16.5GB \
+  mkpart ZFS-Root 16.5GB 32.5GB \
+  mkpart ZFS-Data 32.5GiB 100%
 
 sleep 1
 mkfs.msdos -F 32 -n EFI ${DISK}-part2
 ```
 
-Get the `UUID` for partitions
+Get the ids for partitions
 
 ```bash
-BOOT="/dev/disk/by-uuid/"$(blkid -s UUID -o value ${DISK}-part2)
-SWAP="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part3)
-ROOT="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
-DATA="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part5)
+BOOT="${DISK}-part2"
+SWAP="${DISK}-part3"
+ROOT="${DISK}-part4"
+DATA="${DISK}-part5"
 ```
 
 ### 5. Create ZFS Datasets
@@ -203,10 +204,10 @@ zpool create -O canmount=off -O mountpoint=/ \
   -O xattr=sa -O acltype=posixacl \
   ${ZROOT} ${ROOT} -R ${MNT}
 
-zpool create -O canmount=off -O mountpoint=/mnt \
+zpool create -O canmount=off -O mountpoint=/mnt/zdata \
   -o ashift=12 -O atime=off -O compression=lz4 \
   -O xattr=sa -O acltype=posixacl \
-  ${ZDATA} ${ROOT} -R ${MNT}
+  ${ZDATA} ${DATA} -R ${MNT}
 ```
 
 ### Create the filesystem
@@ -216,46 +217,31 @@ On **NixOS**, the operating system is installed on `/nix` directory. **NixOS** r
 This tutorial covers installation using a persistent root file system.
 
 ```bash
-zfs create -o mountpoint=none -o canmount=off ${ZROOT}/root
-zfs create -o mountpoint=/ -o canmount=noauto ${ZROOT}/root/nixos
-zfs mount ${ZROOT}/root/nixos
-```
-
-Having a discrete `/nix` dataset is a good practice because it separates the NixOS installation from the rest of the system.
-
-```bash
-zfs create -o canmount=noauto ${ZROOT}/nix
-zfs mount ${ZROOT}/nix
-```
-
-Optionally, you can have your **NixOS configuration** and log into it's dataset.
-
-```bash
+zfs create -o mountpoint=legacy -o canmount=noauto ${ZROOT}/root
+mount -t zfs ${ZROOT}/root ${MNT}
 zfs create -o canmount=off ${ZROOT}/etc
 zfs create ${ZROOT}/etc/nixos
+zfs create -o canmount=noauto ${ZROOT}/nix
 zfs create -o canmount=off ${ZROOT}/var
-zfs create ${ZROOT}/var/log
+zfs create -o canmount=noauto -o com.sun:auto-snapshot=false ${ZROOT}/var/log
 ```
 
-Home filesytem will be created at the `zdata` pool.
+Mount the remaining filesystems:
 
 ```bash
-zfs create -o mountpoint=/home ${ZDATA}/home
+zfs mount ${ZROOT}/nix
+zfs mount ${ZROOT}/var/log
 ```
 
-You can use `tmpfs` or a **ZFS dataset** for **temporary files**. Remember that if want to use the impermanent `root` filesystem, does not make sense mount **temporary directories** as filesystem, so, in that case, just jump to the **Swap** step if you want to use swap.
-
-#### As ZFS Dataset
+Now create the `zdata` mount points.
 
 ```bash
-zfs create -o com.sun:auto-snapshot=false ${ZROOT}/tmp
-zfs create -o canmount=off ${ZROOT}/var
-zfs create -o com.sun:auto-snapshot=false ${ZROOT}/var/tmp
-chmod 1777 ${MNT}/var/tmp
-chmod 1777 ${MNT}/tmp
+zfs create -o canmount=noauto -o mountpoint=legacy ${ZDATA}/home
+mkdir ${MNT}/home
+mount -t zfs ${ZDATA}/home ${MNT}/home
 ```
 
-If you want to use `tmpfs` instead, do as follows:
+Finally, `tmpfs` volumes.
 
 ```bash
 mkdir ${MNT}/tmp
@@ -327,7 +313,7 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
     [ 
       <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
       ./hardware-configuration.nix
-      ./modules/users.nix
+      ./users.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -340,7 +326,7 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
      useXkbConfig = true; # use xkb.options in tty.
    };
   time.timeZone = "America/Sao_Paulo";
-  system.stateVersion = "24.05";
+  system.stateVersion = "25.05";
   services.openssh = {
     enable = true;
     settings = {
@@ -372,9 +358,9 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
     [ 
       <nixos-hardware/apple/macmini/4> #Specific for the Mac Mini 2010
       ./hardware-configuration.nix
-      ./modules/users.nix
+      ./users.nix
     ];
-  system.stateVersion = "24.05";
+  system.stateVersion = "25.05";
   boot = {
     loader = {
       grub.enable = true;
@@ -409,17 +395,16 @@ EOF
 
 #### users.nix
 
-The `users.nix` file will configure the intended users to the server. For now, let's just set the root password with it and secure the file against unatended reading for other users beside the root. Be aware that this step is fundamental to garantee that you will be able to access the server after reboot. Principally if you choosed to create `root` as `tmpfs`.
+The `users.nix` file will create the intended users for the server. For now, let's just set the root password with it and secure the file against reading by other users besides root. Be aware that this step is fundamental to guarantee that you will be able to access the server after reboot.
 
 ```bash
-mkdir -p /etc/nixos/modules
-cat << EOF > /etc/nixos/modules/users.nix
+cat << EOF > ${MNT}/etc/nixos/users.nix
 { config, pkgs, ... }:
 {
   users.users.root.initialHashedPassword = "${PASS}";
 }
 EOF
-chmod 600 /etc/nixos/modules/users.nix 
+chmod 600 ${MNT}/etc/nixos/users.nix 
 ```
 
 #### Hardware Configuration
