@@ -154,7 +154,7 @@ blkdiscard -f ${DISK}
 
 Crie o esquema de partição. Neste exemplo, criarei dois pools de armazenamento:
 
-- `zroot` com **8 Giga** de armazenamento.
+- `zroot` com **16 Giga** de armazenamento.
 - `zdata` ocupando o restante do dispositivo de armazenamento.
 
 Eu prefiro ter um **Pool ZFS** independente para `root` e outro para dados, facilita a manutenção, mas se você preferir manter tudo no mesmo pool, basta criar apenas o `zroot` com `100%` de armazenamento.
@@ -166,20 +166,20 @@ set 1 bios_grub on \
 mkpart EFI 2MiB 514MiB \
 set 2 esp on \
 mkpart Swap 514MiB 8GiB \
-mkpart ZFS-Root 8GiB 16GiB \
-mkpart ZFS-Data 16GiB 100%
+mkpart ZFS-Root 8GiB 24GiB \
+mkpart ZFS-Data 24GiB 100%
 
 sleep 1
 mkfs.msdos -F 32 -n EFI ${DISK}-part2
 ```
 
-Obtenha o `UUID` para partições
+Obtenha os ids para partições
 
 ```bash
-BOOT="/dev/disk/by-uuid/"$(blkid -s UUID -o value ${DISK}-part2)
-SWAP="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part3)
-ROOT="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part4)
-DATA="/dev/disk/by-partuuid/"$(blkid -s PARTUUID -o value ${DISK}-part5)
+BOOT="${DISK}-part2"
+SWAP="${DISK}-part3"
+ROOT="${DISK}-part4"
+DATA="${DISK}-part5"
 ```
 
 ### 5. Crie os Pools ZFS
@@ -202,10 +202,10 @@ zpool create -O canmount=off -O mountpoint=/ \
   -O xattr=sa -O acltype=posixacl \
   ${ZROOT} ${ROOT} -R ${MNT}
 
-zpool create -O canmount=off -O mountpoint=/mnt \
+zpool create -O canmount=off -O mountpoint=/mnt/zdata \
   -o ashift=12 -O atime=off -O compression=lz4 \
   -O xattr=sa -O acltype=posixacl \
-  ${ZDATA} ${ROOT} -R ${MNT}
+  ${ZDATA} ${DATA} -R ${MNT}
 ```
 
 ### Crie o sistema de arquivos
@@ -217,43 +217,28 @@ Este tutorial aborda a instalação usando um sistema de arquivos **root** persi
 ```bash
 zfs create -o mountpoint=none -o canmount=off ${ZROOT}/root
 zfs create -o mountpoint=/ -o canmount=noauto ${ZROOT}/root/nixos
-zfs mount ${ZROOT}/root/nixos
-```
-
-Ter um conjunto de dados discreto `/nix` é uma boa prática porque separa a instalação do NixOS do resto do sistema.
-
-```bash
-
-zfs create -o canmount=noauto ${ZROOT}/nix
-zfs mount ${ZROOT}/nix
-
-```
-
-Opcionalmente, você pode ter sua **configuração do NixOS** e efetuar login em seu próprio conjunto de dados.
-
-```bash
 zfs create -o canmount=off ${ZROOT}/etc
-zfs create ${ZROOT}/etc/nixos
+zfs create -o ${ZROOT}/etc/nixos
+zfs create -o canmount=noauto ${ZROOT}/nix
 zfs create -o canmount=off ${ZROOT}/var
-zfs create ${ZROOT}/var/log
+zfs create -o canmount=noauto -o com.sun:auto-snapshot=false ${ZROOT}/var/log
 ```
 
-O sistema de arquivos home será criado no pool `zdata`.
+Montar os sistemas de arquivos:
 
-```bash
-zfs create -o mountpoint=/home ${ZDATA}/home
+```sh
+zfs mount ${ZROOT}/root/nixos
+zfs mount ${ZROOT}/etc/nixos
+zfs mount ${ZROOT}/nix
+zfs mount ${ZROOT}/persistent
+zfs mount ${ZROOT}/var/log
 ```
 
-Você pode usar `tmpfs` ou um **conjunto de dados ZFS** para **arquivos temporários**. Lembre-se de que se quiser usar o sistema de arquivos `root` impermanente, não faz sentido montar **diretórios temporários** como sistema de arquivos, então, nesse caso, pule para a etapa **Swap** se quiser usar swap.
-
-#### Como um Dataset ZFS
+Agora criar os pontos de montagem de `zdata`.
 
 ```bash
-zfs create -o com.sun:auto-snapshot=false ${ZROOT}/tmp
-zfs create -o canmount=off ${ZROOT}/var
-zfs create -o com.sun:auto-snapshot=false ${ZROOT}/var/tmp
-chmod 1777 ${MNT}/var/tmp
-chmod 1777 ${MNT}/tmp
+zfs create -o canmount=noauto -o mountpoint=/home ${ZDATA}/home
+zfs mount ${ZDATA}/home
 ```
 
 Se você quiser usar `tmpfs`, faça o seguinte:
@@ -267,7 +252,7 @@ mount -t tmpfs tmpfs ${MNT}/var/tmp
 
 #### Partição de swap
 
-Usar um swap em um **SSD** pode reduzir a vida útil da unidade, mas em alguns onde a memória RAM é bastante limitada, se faz necessário.
+Usar um swap em um **SSD** pode reduzir a vida útil da unidade, mas em alguns onde a memória RAM é limitada, se faz necessário.
 
 Considerando que foi criada uma partição para Swap.
 
@@ -341,7 +326,7 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
      useXkbConfig = true; # use xkb.options in tty.
    };
   time.timeZone = "America/Sao_Paulo";
-  system.stateVersion = "24.05";
+  system.stateVersion = "25.05";
   services.openssh = {
     enable = true;
     settings = {
@@ -375,7 +360,7 @@ cat << EOF > ${MNT}/etc/nixos/configuration.nix
       ./hardware-configuration.nix
       ./modules/users.nix
     ];
-  system.stateVersion = "24.05";
+  system.stateVersion = "25.05";
   boot = {
     loader = {
       grub.enable = true;
@@ -413,14 +398,14 @@ EOF
 O arquivo `users.nix` criará os usuários pretendidos para o servidor. Por enquanto, vamos apenas definir a senha root com ele e proteger o arquivo contra leitura para outros usuários além do root. Esteja ciente de que esta etapa é fundamental para garantir que você seja capaz de acessar o servidor após sua reinicialização.
 
 ```bash
-mkdir -p /etc/nixos/modules
-cat << EOF > /etc/nixos/modules/users.nix
+mkdir -p ${MNT}/etc/nixos/modules
+cat << EOF > ${MNT}/etc/nixos/modules/users.nix
 { config, pkgs, ... }:
 {
   users.users.root.initialHashedPassword = "${PASS}";
 }
 EOF
-chmod 600 /etc/nixos/modules/users.nix 
+chmod 600 ${MNT}/etc/nixos/modules/users.nix 
 ```
 
 #### Configuração de Hardware
